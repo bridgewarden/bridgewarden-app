@@ -11,7 +11,7 @@
     "title": "PR 01 — Scaffold Worker, bindings, and migrations tooling",
     "category": "setup",
     "specFilePath": ".agent/tasks/TASK-2.json",
-    "passes": false
+    "passes": true
   },
   {
     "id": "TASK-3",

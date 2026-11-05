@@ -101,11 +101,11 @@ Requirement IDs are stable and become implementation task IDs. `TASK-1` is reser
 - **Acceptance:** fresh clone + install + `pnpm dev` serves a page; `pnpm build` exits 0; no SPA-mode assumptions (plugin does not support SPA/prerender).
 
 #### TASK-3 — Configure bindings, typed environment, and secrets
-- Bindings: `DB` (D1), `KV_SESSIONS` (KV), `RATE_LIMITER` (Rate Limiting binding), `R2` (declared, unused in MVP).
+- Bindings: `DB` (D1), `KV_SESSIONS` (KV), `RATE_LIMITER` (Rate Limiting binding). `R2` is deferred until R2 is enabled on the account; attachments stay phase 2.
 - Secrets read from Worker secrets in production and `.dev.vars` locally: `SESSION_SECRET`, `AUTH_PEPPER`, `TOTP_ENC_KEY`, `BOOTSTRAP_TOKEN`, `APP_ORIGIN`, `TOTP_ISSUER`, `APP_ENV`.
 - A single typed `Env` interface plus a helper that fails fast at request time if a required secret is missing.
 - `.env.local` holds placeholder names only; `.dev.vars` mirrors it for Wrangler; both are gitignored.
-- **Acceptance:** a loader can read `context.cloudflare.env.DB` and run `SELECT 1`; missing secret produces a 500 with a generic message (no secret names leaked to client); no secret appears in client bundle.
+- **Acceptance:** a loader reads the D1 binding via `context.get(cloudflareContext)` and runs `SELECT 1`; missing secret produces a 500 with a generic message (no secret names leaked to client); no secret appears in client bundle.
 
 #### TASK-4 — Migration tooling and baseline schema
 - `pnpm db:migrate:local` and `pnpm db:migrate:remote` wrap `wrangler d1 migrations apply`.
@@ -474,7 +474,7 @@ Failure paths: generic 401; lockout 423 with `Retry-After`; 2FA replay rejected.
 | Database | D1 (SQLite) | Single-threaded per DB; use `batch()` for atomic multi-statement writes |
 | Sessions | KV (`KV_SESSIONS`) | Opaque token hash → session JSON; eventual consistency acceptable |
 | Rate limiting | Workers Rate Limiting binding | Per-IP and per-email counters at the edge |
-| Object storage | R2 (declared, unused) | Reserved for phase 2 attachments |
+| Object storage | R2 (deferred) | Reserved for phase 2 attachments; not bound until R2 is enabled |
 | Styling/UI | Tailwind CSS + shadcn/ui | No third-party scripts/fonts |
 | Forms/validation | React Router actions + Zod | Validation at server boundary |
 | Crypto | WebCrypto | PBKDF2-SHA256 600k, HKDF-SHA256, AES-256-GCM; no WASM |

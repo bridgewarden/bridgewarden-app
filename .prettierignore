@@ -6,3 +6,5 @@ worker-configuration.d.ts
 .agent
 .agents
 skills-lock.json
+.commandcode
+openspec

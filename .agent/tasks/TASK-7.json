@@ -1,0 +1,75 @@
+{
+  "id": "TASK-7",
+  "title": "PR 06 — First-run setup wizard with atomic bootstrap guard",
+  "category": "functional",
+  "description": "Implement `/setup` so the very first admin can be created exactly once, gated by BOOTSTRAP_TOKEN, with client-side key generation, recovery-key confirmation, and optional 2FA enrollment handoff. Requirement ID: TASK-18.",
+  "acceptanceCriteria": [
+    "`/setup` is reachable only while `SELECT COUNT(*) FROM users` is 0; otherwise it returns 409 and redirects to `/login`",
+    "Two concurrent setup requests produce exactly one user",
+    "A missing or wrong `BOOTSTRAP_TOKEN` returns 403 and creates no user",
+    "Refreshing mid-wizard creates no partial user",
+    "The wizard collects email, display name, and a master password of at least 12 characters",
+    "The recovery key is displayed once, must be confirmed by typing a substring, and is never sent to the server",
+    "After completion the session cookie is set and the user lands on an unlocked `/app`",
+    "An audit event records the bootstrap creation"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "description": "Add the atomic user-count guard",
+      "details": "Create `app/lib/.server/bootstrap.ts` exposing `isBootstrapAvailable(db)` and `createFirstAdmin(db, input)`. Implement creation as a single statement: `INSERT INTO users (...) SELECT ... WHERE NOT EXISTS (SELECT 1 FROM users)` and treat `meta.changes === 0` as 409. Do not rely on a separate count-then-insert.",
+      "pass": false
+    },
+    {
+      "step": 2,
+      "description": "Validate the bootstrap token",
+      "details": "Compare the submitted token to `env.BOOTSTRAP_TOKEN` with a constant-time comparison over equal-length buffers. Return 403 on mismatch without revealing whether the token is unset. Add rate limiting to this route in TASK-10; for now add a TODO comment referencing it.",
+      "pass": false
+    },
+    {
+      "step": 3,
+      "description": "Build the wizard shell and steps",
+      "details": "Create `app/routes/setup.tsx` as a transport-only route plus the page entry `app/features/setup/setup.tsx` with `index.ts`. Wizard steps: token → account details → master password → recovery key confirmation → optional 2FA → done. Keep step state in a single reducer inside the feature, persist nothing to storage, and block navigation away with a confirm dialog once key material exists in memory.",
+      "pass": false
+    },
+    {
+      "step": 4,
+      "description": "Wire client-side key generation",
+      "details": "On master-password submit, generate `kdfSalt`, derive `masterKey` and `authHash`, generate `vaultKey`, wrap it, generate the recovery secret, and wrap `vaultKey` with the recovery key. POST only the derived and wrapped values plus `kdf_iterations` and salts. Clear the password field immediately after derivation.",
+      "pass": false
+    },
+    {
+      "step": 5,
+      "description": "Implement the server action",
+      "details": "Create the `action` for `/setup` that validates input with Zod (email format, display name length, base64 field sizes), re-checks availability inside the atomic insert, stores the admin with `role='admin'`, `status='active'`, and issues a session using the TASK-8 session helper (import or stub the interface if TASK-8 has not merged).",
+      "pass": false
+    },
+    {
+      "step": 6,
+      "description": "Add recovery confirmation and 2FA handoff",
+      "details": "Render the recovery-key component from TASK-6. On 2FA opt-in, route to the enrollment flow from TASK-9; if that task is not merged yet, offer a skip with the PRD warning text and a TODO reference.",
+      "pass": false
+    },
+    {
+      "step": 7,
+      "description": "Test the guard and the happy path",
+      "details": "Vitest: concurrent `Promise.all` of two `createFirstAdmin` calls yields one row and one 409; wrong token yields 403; empty table check flips after creation. Playwright: complete the wizard, confirm the landing page is unlocked, reload `/setup` and confirm 409 redirect.",
+      "pass": false
+    }
+  ],
+  "dependencies": ["TASK-3", "TASK-5", "TASK-6"],
+  "estimatedComplexity": "high",
+  "technicalNotes": [
+    "The guard must be enforced in SQL, not in application logic; D1 is single-threaded per database but request interleaving still occurs.",
+    "Never return the submitted token, password, auth hash, or recovery secret in a response or log.",
+    "If TASK-8 (sessions) is not merged, define the session interface in this PR and let TASK-8 implement it, so PR 06 is not blocked.",
+    "The wizard must tolerate a failed network call without losing derived keys, but must not persist them to storage."
+  ],
+  "pullRequest": {
+    "title": "feat(auth): first-run setup wizard with atomic bootstrap",
+    "branch": "feat/setup-wizard",
+    "requirementIds": ["TASK-18"],
+    "scope": "Setup route, atomic bootstrap guard, token validation, client key generation, recovery confirmation, 2FA handoff.",
+    "outOfScope": "Login flow, session middleware details, 2FA implementation, admin panel."
+  }
+}

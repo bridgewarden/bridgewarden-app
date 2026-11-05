@@ -1,0 +1,77 @@
+{
+  "id": "TASK-13",
+  "title": "PR 12 — Encrypted cache, outbox, sync engine, and key lifetime",
+  "category": "functional",
+  "description": "Make the vault usable offline and fast: cache ciphertext and metadata in IndexedDB, queue mutations in an outbox, reconcile conflicts, and keep the vault key only in memory with a strict lock lifecycle. Requirement IDs: TASK-36, TASK-37.",
+  "acceptanceCriteria": [
+    "IndexedDB stores items, folders, wrapped key material, sync state, and an outbox; no plaintext item content is ever persisted",
+    "`vaultKey` lives in a module-scoped variable, never in React state, localStorage, sessionStorage, or IndexedDB plaintext",
+    "Reloading the page after unlock renders from cache without a network request",
+    "An offline create survives reload and syncs exactly once after reconnect",
+    "Mutations flush in order and stop on the first failure, preserving the queue",
+    "A 409 conflict triggers a refetch and surfaces a visible conflict notice rather than overwriting",
+    "Logout and account switch wipe every store, including the wrapped key",
+    "Switching between vault routes does not prompt for the password again",
+    "The manual lock action works from any vault route"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "description": "Define the local schema",
+      "details": "Create `app/lib/vault/local-db.ts` using idb with stores: `items` (key id, index by rev), `folders`, `keys` (userId, wrappedVaultKey, wrapSalt, kdfSalt, kdfIterations), `sync` (userId → serverRev, cursor), `outbox` (auto-increment id, op, payload, queuedAt), `meta` (preferences). Add an `openDb()` that creates stores on upgrade and a `wipeDb()`.",
+      "pass": false
+    },
+    {
+      "step": 2,
+      "description": "Implement the key provider",
+      "details": "Create `app/lib/vault/key-store.ts` holding the unwrapped `vaultKey` in a module variable with `setKey`, `getKey` (throws when locked), `clearKey`. Never expose it through context values that could be serialized; expose only `isUnlocked` and operations that use it internally.",
+      "pass": false
+    },
+    {
+      "step": 3,
+      "description": "Implement cache reads and writes",
+      "details": "Create `app/lib/vault/cache.ts` with `putItems`, `putFolders`, `getAllItems`, `getAllFolders`, `deleteItem`, `applyTombstone`, each operating on ciphertext and metadata only. Decryption happens in a separate selector layer that takes the key from `keyStore`.",
+      "pass": false
+    },
+    {
+      "step": 4,
+      "description": "Implement the sync engine",
+      "details": "Create `app/lib/vault/sync.ts` with `sync()` that reads `serverRev`, calls `/api/vault?since=`, applies items and tombstones to the cache, updates `serverRev` and cursor, and loops until no `nextCursor`. Skip work when offline and expose a `syncStatus` observable for the UI.",
+      "pass": false
+    },
+    {
+      "step": 5,
+      "description": "Implement the outbox",
+      "details": "Create `app/lib/vault/outbox.ts` with `enqueue(op)`, `flush()` that processes entries in order, stops on the first network error, and retains failures for retry. On success, update the cached row with the server-returned rev. On 409, drop the optimistic change, trigger a refetch, and emit a conflict event.",
+      "pass": false
+    },
+    {
+      "step": 6,
+      "description": "Wire lock and wipe behavior",
+      "details": "On lock, clear the in-memory key and any decrypted selector cache but keep ciphertext stores and wrapped keys. On logout, call `wipeDb()` and clear the key. On login as a different user, wipe before writing new keys. Verify with an IndexedDB inspector that no plaintext remains.",
+      "pass": false
+    },
+    {
+      "step": 7,
+      "description": "Test offline and conflict paths",
+      "details": "Vitest with fake-indexeddb: enqueue offline create, reopen the database, flush once, assert a single POST; simulate 409 and assert refetch plus conflict event. Playwright: unlock, go offline, create an item, reload, go online, assert the item exists server-side once.",
+      "pass": false
+    }
+  ],
+  "dependencies": ["TASK-6", "TASK-11", "TASK-12"],
+  "estimatedComplexity": "very high",
+  "technicalNotes": [
+    "Never cache decrypted item objects; decrypt on read into component scope.",
+    "Outbox operations must be idempotent from the server's perspective; use client-generated ids for creates so a retry after an ambiguous failure does not duplicate.",
+    "IndexedDB may be unavailable in private mode; degrade to online-only with a clear notice.",
+    "Do not use localStorage for keys or item data, even encrypted, because it is synchronous and easily leaked by XSS.",
+    "This PR has no visual design work; it exposes hooks and status for TASK-14 and later."
+  ],
+  "pullRequest": {
+    "title": "feat(vault): encrypted cache, outbox, sync engine, and key lifetime",
+    "branch": "feat/vault-client-core",
+    "requirementIds": ["TASK-36", "TASK-37"],
+    "scope": "IndexedDB schema, key store, cache layer, sync engine, outbox, conflict handling, lock/wipe behavior, tests.",
+    "outOfScope": "Vault list UI, editors, search, generators, responsive layout."
+  }
+}

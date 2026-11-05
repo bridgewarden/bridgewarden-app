@@ -1,0 +1,77 @@
+{
+  "id": "TASK-14",
+  "title": "PR 13 — Vault list, filters, keyboard navigation, and search",
+  "category": "ui-ux",
+  "description": "Render the decrypted vault list with sorting, filtering, keyboard navigation, a command-palette search, and an empty state, all computed in memory over cached ciphertext. Requirement IDs: TASK-38, TASK-39.",
+  "acceptanceCriteria": [
+    "List rows show decrypted name, secondary line (username or note snippet), folder, favorite, and type",
+    "Sorting by name and updated-at works; filtering by type, folder, and favorite works and combines",
+    "Keyboard navigation supports arrow keys and `j`/`k`, Enter to open, and `Ctrl/Cmd+K` to focus search",
+    "Search matches name, username, URL, and notes substring with debounce and match highlighting",
+    "Search performs no network request and works offline",
+    "Results update within 100ms for 1000 items",
+    "A 500-item list renders without visible jank or layout thrash",
+    "An empty vault shows a primary call to action to create the first item",
+    "Every action is reachable by keyboard alone"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "description": "Add the decryption selector layer",
+      "details": "Create `app/lib/vault/selectors.ts` that takes cached ciphertext rows, opens each envelope with the in-memory key, and returns a memoized list of `{ id, type, favorite, folderId, rev, updatedAt, decrypted: { name, username, url, notes } }`. Cache results by `rev` and invalidate on cache writes.",
+      "pass": false
+    },
+    {
+      "step": 2,
+      "description": "Build the list surface",
+      "details": "Create `app/routes/vault.tsx` as a transport-only route plus the page entry `app/features/vault-list/vault-list.tsx` with `index.ts`, `components/`, and `vault-list.hooks.ts`. Use a two-pane layout on desktop (list + detail placeholder) and a single-pane flow on mobile. Render rows with name, secondary line, folder chip, favorite star, and type icon. Include a toolbar with new-item, sort, and filter controls.",
+      "pass": false
+    },
+    {
+      "step": 3,
+      "description": "Implement sorting and filtering",
+      "details": "Add a reducer for `{ sort: 'name'|'updated', direction, type?, folderId?, favoriteOnly }`. Persist the preference in the `meta` store. Apply filters before sorting and memoize by the filter key.",
+      "pass": false
+    },
+    {
+      "step": 4,
+      "description": "Implement keyboard navigation",
+      "details": "Add a roving tabindex list with ArrowUp/ArrowDown and `j`/`k`, Enter to open, Escape to clear focus, and a visible focus ring. Ensure shortcuts do not fire while typing in an input or textarea.",
+      "pass": false
+    },
+    {
+      "step": 5,
+      "description": "Implement the search palette",
+      "details": "Add a `Ctrl/Cmd+K` command palette using the dialog primitive with a debounced input (150ms), matching over decrypted fields, highlighted substrings, and keyboard selection. Show a short empty-result message. No fetch calls.",
+      "pass": false
+    },
+    {
+      "step": 6,
+      "description": "Add the empty and locked states",
+      "details": "Empty vault: illustration-free message plus a primary new-item button. Locked: render nothing beyond the lock overlay. Loading: skeleton rows sized to the final row height to avoid layout shift.",
+      "pass": false
+    },
+    {
+      "step": 7,
+      "description": "Verify performance and behavior",
+      "details": "Add a fixture with 1000 cached items; measure initial decrypt+render and search latency in a Playwright trace. Assert search under 100ms and no long task over 200ms during scrolling. Verify offline search by blocking the network.",
+      "pass": false
+    }
+  ],
+  "dependencies": ["TASK-3", "TASK-13"],
+  "estimatedComplexity": "high",
+  "technicalNotes": [
+    "Decrypt only what is needed; do not keep decrypted objects in a global store longer than necessary.",
+    "Search must never hit the server; the server cannot read names by design.",
+    "Virtualize the list only if measurement shows it is needed for 1000 items; do not add a dependency preemptively.",
+    "Keyboard shortcuts must be inert inside editable fields.",
+    "Folder names are ciphertext too; decrypt them with the same selector layer."
+  ],
+  "pullRequest": {
+    "title": "feat(vault): list, filters, keyboard navigation, and search",
+    "branch": "feat/vault-list",
+    "requirementIds": ["TASK-38", "TASK-39"],
+    "scope": "Decryption selectors, list surface, sort/filter state, keyboard nav, command palette search, empty/locked states.",
+    "outOfScope": "Item editors, generators, trash, responsive polish beyond the single-pane flow."
+  }
+}

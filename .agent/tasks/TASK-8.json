@@ -1,0 +1,76 @@
+{
+  "id": "TASK-8",
+  "title": "PR 07 — Login, KV sessions, route guard, and logout",
+  "category": "functional",
+  "description": "Implement the password step of login, opaque KV-backed sessions in an httpOnly cookie, a server guard for `/app` routes, logout, and session revocation. Requirement IDs: TASK-19, TASK-20.",
+  "acceptanceCriteria": [
+    "`POST /auth/login` accepts email plus the client-derived auth hash and returns a generic 401 for both unknown email and wrong password",
+    "Server verification uses the stored HMAC pepper and a constant-time comparison",
+    "Successful login sets `bw_session` with HttpOnly, Secure, SameSite=Lax, Path=/, Max-Age 30 days",
+    "KV stores only `sha256(token)` mapped to session metadata; the raw token is never persisted",
+    "Unauthenticated access to `/app/*` redirects to `/login` and preserves the intended path",
+    "`POST /auth/logout` deletes the KV entry, clears the cookie, and is idempotent",
+    "A revoked session cannot be reused even with the old cookie value",
+    "The login response returns only post-auth parameters needed by the client (`kdfSalt`, `kdfIterations`, wrapped vault key), never ciphertext items"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "description": "Add the session store",
+      "details": "Create `app/lib/.server/session.ts` with `createSession(env, userId, meta)`, `getSession(env, request)`, `destroySession(env, request)`, and `revokeUserSessions(env, userId)`. Store `sess:<sha256(token)>` in KV with JSON `{ userId, createdAt, lastSeenAt, uaHash, ipHash, ver }` and a 30-day expiration. Use a per-user `ver` counter stored on the user row so revocation can invalidate all tokens without listing KV keys.",
+      "pass": false
+    },
+    {
+      "step": 2,
+      "description": "Implement auth-hash verification",
+      "details": "Create `app/lib/.server/verify.ts` with `hashAuthHash(authHash, serverSalt)` = HMAC-SHA256(AUTH_PEPPER, authHash || serverSalt) and a constant-time compare against `users.auth_hash`. Accept base64url input, reject wrong lengths early without timing differences that distinguish user existence.",
+      "pass": false
+    },
+    {
+      "step": 3,
+      "description": "Build the login route",
+      "details": "Create `app/routes/login.tsx` as a transport-only route plus the page entry `app/features/login/login.tsx` with `index.ts`. On submit, derive `authHash` client-side from the entered password and the KDF parameters fetched for that email. Return `{ kdfSalt, kdfIterations }` from a `GET`-free lookup step or a single POST that returns a generic 401 for unknown email, then a second step posts the hash. Never echo the email back in an error message.",
+      "pass": false
+    },
+    {
+      "step": 4,
+      "description": "Issue and refresh sessions",
+      "details": "On successful verification, create the session and set the cookie via `Set-Cookie` with the attributes from the acceptance criteria. Refresh `lastSeenAt` at most once per hour to limit KV writes. If a user's `ver` differs from the session's `ver`, treat the session as invalid.",
+      "pass": false
+    },
+    {
+      "step": 5,
+      "description": "Add the route guard",
+      "details": "Create `requireUser(request, env)` that resolves the session, loads the user, rejects `status='disabled'`, and throws a redirect to `/login?next=<path>` with the path encoded safely. Apply it to `/app`, `/app/trash`, and all `/api/*` handlers. Return 401 JSON for API routes instead of a redirect.",
+      "pass": false
+    },
+    {
+      "step": 6,
+      "description": "Implement logout and revocation",
+      "details": "Create `POST /auth/logout` that destroys the session and clears the cookie. Add an admin-triggered `revokeUserSessions` that increments the user's session version. Include a helper that password change and recovery reset will call in TASK-11.",
+      "pass": false
+    },
+    {
+      "step": 7,
+      "description": "Test the flows",
+      "details": "Vitest: wrong email and wrong password produce the same status and body; cookie attributes are exact; a session with a stale `ver` is rejected. Playwright: login → `/app` reachable; logout → `/app` redirects; visiting `/app` first redirects to login and then back to `/app` after auth.",
+      "pass": false
+    }
+  ],
+  "dependencies": ["TASK-3", "TASK-5", "TASK-6"],
+  "estimatedComplexity": "high",
+  "technicalNotes": [
+    "Do not store the session token in D1; KV with a hashed key is the design.",
+    "KV is eventually consistent; treat revocation via the `ver` column in D1 as authoritative.",
+    "Never log request bodies for auth routes.",
+    "The client must clear the entered master password from component state as soon as the hash is derived.",
+    "2FA is intentionally out of scope; the login response shape must be extensible with `requires2fa`."
+  ],
+  "pullRequest": {
+    "title": "feat(auth): login, KV sessions, route guard, and logout",
+    "branch": "feat/auth-sessions",
+    "requirementIds": ["TASK-19", "TASK-20"],
+    "scope": "Session store, auth-hash verification, login route, requireUser guard, logout, revocation helper.",
+    "outOfScope": "2FA, rate limiting, admin panel, vault data fetching."
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "id": "TASK-15",
+  "title": "PR 14 — Login and secure note item editors",
+  "category": "ui-ux",
+  "description": "Build the create/edit surfaces for login items and secure notes, encrypting on save and integrating with the optimistic cache and outbox. Requirement IDs: TASK-40, TASK-41.",
+  "acceptanceCriteria": [
+    "Login editor supports name, username, password, multiple URLs, notes, folder, favorite, TOTP secret, and custom fields with a hidden toggle",
+    "Secure note editor supports name, multiline body, folder, and favorite",
+    "Saving encrypts with the in-memory vault key and writes through the outbox; the server stores ciphertext only",
+    "A query against D1 after a save shows no plaintext name, username, password, or note body",
+    "Required name validation blocks save with an inline error",
+    "Unsaved changes trigger a confirm dialog on navigation, route change, and browser close",
+    "Delete from the editor moves the item to trash",
+    "A 50KB note body saves and reloads correctly; a larger body is blocked client-side with a clear message",
+    "Create, edit, and delete round-trip correctly after a reload"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "description": "Define the item schemas",
+      "details": "Create `app/features/vault-item/vault-item.schema.ts` with Zod schemas for the decrypted plaintext of `login` and `note`, including limits (name 256 chars, username 256, password 1024, 10 URLs, 20 custom fields, note body 50KB). Reuse the same schema before encryption so client and future clients agree.",
+      "pass": false
+    },
+    {
+      "step": 2,
+      "description": "Build the editor shell",
+      "details": "Create `app/routes/vault.$itemId.tsx` as a transport-only route plus the page entry `app/features/vault-item/vault-item.tsx` with `index.ts`, `components/`, and `vault-item.hooks.ts`. Handle both `new` and existing ids, with a shared header (title, favorite toggle, delete, save) and a form container. Use the same route for create with `id = 'new'`.",
+      "pass": false
+    },
+    {
+      "step": 3,
+      "description": "Implement the login editor",
+      "details": "Add fields with proper `autocomplete=\"off\"`, `spellcheck=\"false\"`, and `type=\"password\"` for secrets. Include a reveal toggle, a generate button wired to the TASK-16 generator (stub the callback if not merged), a custom-fields repeater with hidden flags, and a TOTP secret field with format validation.",
+      "pass": false
+    },
+    {
+      "step": 4,
+      "description": "Implement the secure note editor",
+      "details": "Add a name field and a textarea with a character counter and a 50KB hard limit. Keep it minimal: no rich text, no Markdown rendering.",
+      "pass": false
+    },
+    {
+      "step": 5,
+      "description": "Wire save through encryption and outbox",
+      "details": "On save: validate → build plaintext object → `sealItem` → enqueue create or update with the current `rev` → update the cache → navigate back to the list with a saved indicator. On 409, show a conflict dialog offering reload or save-as-copy; do not silently overwrite.",
+      "pass": false
+    },
+    {
+      "step": 6,
+      "description": "Add the unsaved-changes guard",
+      "details": "Track a dirty flag from react-hook-form. Register a `beforeunload` handler while dirty and intercept in-app navigation with a confirm dialog. Reset the flag after a successful save.",
+      "pass": false
+    },
+    {
+      "step": 7,
+      "description": "Implement delete to trash",
+      "details": "Add a delete action that soft-deletes through the outbox, updates the cache, and returns to the list. Show a toast with an undo affordance that restores within the toast lifetime.",
+      "pass": false
+    },
+    {
+      "step": 8,
+      "description": "Verify encryption at rest",
+      "details": "Playwright: create a login item with a known password, then query local D1 via a test helper and assert the plaintext does not appear in `data_ct`. Repeat for a note body. Also assert reload shows the decrypted values.",
+      "pass": false
+    }
+  ],
+  "dependencies": ["TASK-14"],
+  "estimatedComplexity": "high",
+  "technicalNotes": [
+    "Never put secret values into URLs, analytics, or error reports.",
+    "Do not render secret field values in SSR output; editors are client-rendered after unlock.",
+    "Use client-generated item ids so offline creates and retries stay idempotent.",
+    "Custom fields are part of the encrypted payload, not separate columns.",
+    "The item plaintext schema is a shared contract for future extension and Android clients."
+  ],
+  "pullRequest": {
+    "title": "feat(vault): login and secure note editors",
+    "branch": "feat/vault-editors",
+    "requirementIds": ["TASK-40", "TASK-41"],
+    "scope": "Item schemas, editor routes, login and note forms, encryption on save, dirty guard, delete-to-trash.",
+    "outOfScope": "Generators (TASK-16), trash page (TASK-17), responsive polish, attachments."
+  }
+}

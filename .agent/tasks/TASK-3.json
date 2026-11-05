@@ -1,0 +1,73 @@
+{
+  "id": "TASK-3",
+  "title": "Design system, app shell, and i18n-ready copy catalog",
+  "category": "ui-ux",
+  "description": "Introduce Tailwind and shadcn/ui primitives, build the persistent app shell (header, lock action, user menu, theme toggle), and centralize all user-facing strings in an English catalog so a second locale can be added later. Requirement ID: TASK-5.",
+  "acceptanceCriteria": [
+    "Tailwind CSS and the selected shadcn/ui primitives are installed and themed with CSS variables",
+    "App shell renders on every route with header, user menu placeholder, manual lock button, and theme toggle",
+    "Light, dark, and system themes work and persist across reloads",
+    "Every visible string is referenced from a single message catalog (`app/lib/i18n/en.ts`)",
+    "No third-party scripts, remote fonts, or analytics are loaded",
+    "No inline `<style>` or `<script>` is emitted by components",
+    "Placeholder routes exist for `/login`, `/setup`, `/app`, and `/app/trash`"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "description": "Install and configure Tailwind",
+      "details": "Add Tailwind with the Vite plugin. Create `app/app.css` with theme tokens (background, foreground, muted, primary, destructive, border, ring) for light and dark. Set `font-family` to a system font stack; do not load remote fonts.",
+      "pass": false
+    },
+    {
+      "step": 2,
+      "description": "Add shadcn/ui primitives",
+      "details": "Initialize shadcn/ui (new-york style, CSS variables). Add only the primitives needed by the MVP: button, input, label, textarea, select, checkbox, dialog, alert-dialog, dropdown-menu, toast/sonner, tooltip, sheet, skeleton, badge, switch, tabs.",
+      "pass": false
+    },
+    {
+      "step": 3,
+      "description": "Create the message catalog",
+      "details": "Create `app/lib/i18n/types.ts` (flat key union) and `app/lib/i18n/en.ts` with namespaced keys such as `auth.login.title`, `vault.list.empty`, `common.save`. Add a `t(key, params?)` helper that throws in development on a missing key and falls back to the key in production.",
+      "pass": false
+    },
+    {
+      "step": 4,
+      "description": "Build the app shell",
+      "details": "Create `app/components/app-shell.tsx` exporting `AppShell` with a sticky header (product mark, lock button slot, user menu slot, theme toggle), a main content area with max-width container, and a footer-free layout. Make the header responsive down to 360px.",
+      "pass": false
+    },
+    {
+      "step": 5,
+      "description": "Implement theme switching",
+      "details": "Add a theme provider that writes `class=\"dark\"` on `<html>` and stores the preference in localStorage under a non-sensitive key. Default to system. Apply the theme class in `root.tsx` before hydration to avoid flash.",
+      "pass": false
+    },
+    {
+      "step": 6,
+      "description": "Add placeholder routes",
+      "details": "Create minimal route modules in `app/routes/` for `/login`, `/setup`, `/app`, and `/app/trash`, each rendering a page entry `app/features/<feature>/<feature>.tsx` with `index.ts` (features: `login`, `setup`, `vault-list`, `vault-trash`). Headings come from the catalog. Nothing functional yet.",
+      "pass": false
+    },
+    {
+      "step": 7,
+      "description": "Verify visual and copy rules",
+      "details": "Run the app at 360px, 768px, and 1280px. Confirm no remote requests in the network panel, no inline style/script violations, every string resolves through the catalog, and the theme survives reload.",
+      "pass": false
+    }
+  ],
+  "dependencies": ["TASK-2"],
+  "estimatedComplexity": "medium",
+  "technicalNotes": [
+    "English only in MVP; the catalog structure is the i18n readiness requirement, not translated strings.",
+    "Do not add any analytics or error-reporting script; observability is server-side only.",
+    "Keep the shell free of vault-specific logic so it can render before unlock."
+  ],
+  "pullRequest": {
+    "title": "feat(ui): design system, app shell, and copy catalog",
+    "branch": "feat/ui-foundation",
+    "requirementIds": ["TASK-5"],
+    "scope": "Tailwind theme, shadcn primitives, shell, theme provider, message catalog, placeholder routes.",
+    "outOfScope": "Auth logic, vault UI, accessibility pass, responsive polish beyond the shell."
+  }
+}

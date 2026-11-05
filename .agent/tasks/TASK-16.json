@@ -1,0 +1,77 @@
+{
+  "id": "TASK-16",
+  "title": "PR 15 — Password generator, TOTP item generator, and clipboard",
+  "category": "ui-ux",
+  "description": "Add the utility features that make the vault useful day to day: a CSPRNG password generator, an RFC 6238 code generator for stored item secrets, and clipboard/reveal handling with auto-clear. Requirement IDs: TASK-42, TASK-43, TASK-44.",
+  "acceptanceCriteria": [
+    "Generator supports length 8–64, upper/lower/digits/symbols, exclude-ambiguous, and passphrase mode with 3–6 words",
+    "Generation uses `crypto.getRandomValues` and rejects a configuration with no character sets enabled",
+    "Generated output satisfies the selected policy and the strength indicator reflects it",
+    "TOTP codes are RFC 6238 (SHA-1, 6 digits, 30s) and match reference test vectors",
+    "TOTP parsing accepts `otpauth://` URIs and raw base32, with an inline error for invalid input",
+    "TOTP countdown resets at the correct step boundary and codes are copyable",
+    "Copy actions show a toast and clear the clipboard after 30s where the browser permits verification",
+    "Password reveal auto-hides after 30s and on route change or lock",
+    "Item TOTP secrets remain inside the encrypted envelope and are never sent to the server"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "description": "Implement the password generator core",
+      "details": "Create `app/lib/generator.ts` with `generatePassword(options)` and `generatePassphrase(options)` using `crypto.getRandomValues` and rejection sampling to avoid modulo bias. Enforce policy validation (at least one set, length bounds) and return the policy used for display.",
+      "pass": false
+    },
+    {
+      "step": 2,
+      "description": "Build the generator UI",
+      "details": "Create the page entry `app/features/generator/generator.tsx` plus the transport-only route `app/routes/generator.tsx`, and an embeddable panel component. Include length slider, set toggles, exclude-ambiguous, passphrase mode with separator and capitalization options, a strength meter, regenerate, and copy. Persist the last-used options in the `meta` store.",
+      "pass": false
+    },
+    {
+      "step": 3,
+      "description": "Implement the TOTP client library",
+      "details": "Create `app/lib/totp.ts` with base32 decode, `parseOtpAuthUri`, and `generateTotp(secret, timeStep)` using `crypto.subtle` HMAC-SHA1. Handle padding, lowercase input, spaces, and invalid characters with typed errors.",
+      "pass": false
+    },
+    {
+      "step": 4,
+      "description": "Build the TOTP display",
+      "details": "Add a TOTP panel in the item detail view showing the current code grouped as `123 456`, a circular countdown, and copy. Update on the step boundary using a single interval cleared on unmount and on lock. Use ±1 step tolerance only for display of the next code, never to accept a wrong current code.",
+      "pass": false
+    },
+    {
+      "step": 5,
+      "description": "Implement clipboard handling",
+      "details": "Create `app/lib/clipboard.ts` with `copySecret(value)` that writes to the clipboard, schedules a 30s clear, cancels a pending clear on a new copy, and attempts to verify the clipboard still contains our value before clearing. When verification is unsupported, show a toast instructing manual clearing. Register cleanup on lock and route change.",
+      "pass": false
+    },
+    {
+      "step": 6,
+      "description": "Implement reveal behavior",
+      "details": "Add a reveal toggle that auto-hides after 30s, on route change, on lock, and on window blur. Never persist reveal state.",
+      "pass": false
+    },
+    {
+      "step": 7,
+      "description": "Test algorithms and timers",
+      "details": "Vitest: RFC 4226/6238 vectors, base32 edge cases, generator bias sanity test over many samples, policy rejection, and a fake-timer clipboard clear test. Playwright: generate → copy → paste into a field, TOTP countdown resets, reveal hides after the timeout using fake timers.",
+      "pass": false
+    }
+  ],
+  "dependencies": ["TASK-15"],
+  "estimatedComplexity": "medium",
+  "technicalNotes": [
+    "Never use `Math.random` for secrets, including for separators or capitalization decisions that affect entropy.",
+    "Clipboard write requires a user gesture; do not attempt background copies.",
+    "Some browsers deny clipboard read, so verification must be optional.",
+    "TOTP for items is generated client-side only; the server never sees item seeds.",
+    "Do not add a third-party OTP library; the algorithm is small and testable."
+  ],
+  "pullRequest": {
+    "title": "feat(vault): password generator, TOTP codes, and clipboard safety",
+    "branch": "feat/vault-tools",
+    "requirementIds": ["TASK-42", "TASK-43", "TASK-44"],
+    "scope": "Generator core and UI, client TOTP library and display, clipboard and reveal handling, tests.",
+    "outOfScope": "QR camera scanning, item editor layout changes, server-side TOTP."
+  }
+}

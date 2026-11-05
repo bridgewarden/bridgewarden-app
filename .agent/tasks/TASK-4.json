@@ -1,0 +1,66 @@
+{
+  "id": "TASK-4",
+  "title": "Test harness: Vitest for Workers and Playwright for E2E",
+  "category": "setup",
+  "description": "Establish unit/integration testing against the Workers runtime and end-to-end testing against a running dev server, with reusable fixtures for users and vault data. Requirement ID: TASK-6.",
+  "acceptanceCriteria": [
+    "`pnpm test` runs Vitest with the Workers pool and exits non-zero on failure",
+    "`pnpm test:e2e` runs Playwright against `pnpm dev` and exits non-zero on failure",
+    "Playwright captures a screenshot and trace on failure",
+    "Fixtures create a user and vault rows without duplicating production logic",
+    "A deliberately failing assertion makes each command exit non-zero",
+    "Total E2E runtime for the placeholder suite is under 60 seconds"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "description": "Configure Vitest for Workers",
+      "details": "Add `vitest.config.ts` using `@cloudflare/vitest-pool-workers`. Provide a test-only D1 binding pointing at a local test database and a KV namespace. Add `tsconfig` types for `cloudflare:test`.",
+      "pass": false
+    },
+    {
+      "step": 2,
+      "description": "Add isolated test database setup",
+      "details": "Create `app/__test__/setup.ts` that applies migrations to the test D1 instance and truncates tables between test files. Ensure tests never touch the development database.",
+      "pass": false
+    },
+    {
+      "step": 3,
+      "description": "Configure Playwright",
+      "details": "Add `playwright.config.ts` with `webServer` running `pnpm dev --port 8787`, baseURL, one chromium project, trace `on-first-retry`, screenshot `only-on-failure`. Add `e2e/` directory.",
+      "pass": false
+    },
+    {
+      "step": 4,
+      "description": "Create domain fixtures",
+      "details": "Add helpers `createTestUser(role)`, `createTestItem(userId, type)`, and `bootstrapComplete(page)` that call real routes or use D1 directly where authentication is not the subject of the test. Never hardcode real secrets.",
+      "pass": false
+    },
+    {
+      "step": 5,
+      "description": "Add one passing and one negative check per layer",
+      "details": "Add a Vitest test asserting `/health` returns 200 and a Playwright test asserting the shell renders the catalog title. Temporarily add an intentionally failing assertion locally, confirm the non-zero exit, then remove it.",
+      "pass": false
+    },
+    {
+      "step": 6,
+      "description": "Document the commands",
+      "details": "Add README entries for `pnpm test`, `pnpm test:watch`, `pnpm test:e2e`, and how to run a single test file.",
+      "pass": false
+    }
+  ],
+  "dependencies": ["TASK-2"],
+  "estimatedComplexity": "medium",
+  "technicalNotes": [
+    "Use the official Cloudflare Vitest pool so `context.cloudflare.env` behaves like production.",
+    "Keep E2E fixtures free of real secrets and generated recovery keys that survive in the repo.",
+    "Browser tests must not depend on Internet access."
+  ],
+  "pullRequest": {
+    "title": "test: add Workers unit harness and Playwright E2E harness",
+    "branch": "chore/test-harness",
+    "requirementIds": ["TASK-6"],
+    "scope": "Vitest/Workers config, test DB setup, Playwright config, fixtures, smoke tests, docs.",
+    "outOfScope": "Full critical-flow E2E coverage (that is TASK-24)."
+  }
+}

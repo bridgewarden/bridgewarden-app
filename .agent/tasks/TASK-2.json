@@ -1,0 +1,101 @@
+{
+  "id": "TASK-2",
+  "title": "PR 01 \u2014 Scaffold Worker, bindings, migrations tooling, and verify gates",
+  "category": "setup",
+  "description": "Create the single Worker application that serves both UI and API, wire Cloudflare bindings and typed secrets, establish forward-only D1 migrations, and put the lint/format/typecheck/CI gates in place so every later PR is verifiable. Requirement IDs: TASK-2, TASK-3, TASK-4, TASK-59.",
+  "acceptanceCriteria": [
+    "Project uses React Router v8 framework mode with SSR and the Cloudflare Vite plugin",
+    "Route modules live only in `app/routes/`; page UI is never added to a route module, matching the feature layout in AGENTS.md",
+    "`pnpm dev` serves the app in the Workers runtime, and `pnpm build` exits 0",
+    "`wrangler.jsonc` declares DB (D1), KV_SESSIONS (KV), RATE_LIMITER (rate limiting), and R2 (declared, unused)",
+    "A loader can read `context.cloudflare.env.DB` and successfully run `SELECT 1`",
+    "A missing required secret produces a generic 500 and never leaks the secret name to the client",
+    "No secret appears in the client bundle",
+    "`pnpm db:migrate:local`, `pnpm db:migrate:remote`, and a local reset script work",
+    "`pnpm typecheck` runs `tsc --noEmit` in strict mode and fails on a type error",
+    "`pnpm lint` and `pnpm format:check` pass on a clean checkout and fail on a seeded violation",
+    "A GitHub Actions workflow runs install, typecheck, lint, unit tests, and build on pull requests",
+    "`packageManager` is pinned in `package.json` and the Node version is pinned in `.nvmrc`",
+    "`.dev.vars` and `.env.local` are gitignored"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "description": "Scaffold the application",
+      "details": "Run `npx create-cloudflare@latest -- . --framework=react-router` (or scaffold into a temp directory and move contents if the CLI refuses a non-empty directory, preserving `.agent/`, AGENTS.md, and dotfiles from PR 00). Keep SSR enabled in `react-router.config.ts`. Confirm the tree matches: `app/routes`, `app/root.tsx`, `app/routes.ts`, `workers/app.ts`, `vite.config.ts`, `wrangler.jsonc`.",
+      "pass": false
+    },
+    {
+      "step": 2,
+      "description": "Configure wrangler bindings",
+      "details": "Edit `wrangler.jsonc`: keep `main: ./workers/app.ts`, `assets.directory: ./build/client`, `compatibility_flags: [\"nodejs_compat\"]`, `observability.enabled: true`. Add `d1_databases` binding DB with the id from PR 00, `kv_namespaces` binding KV_SESSIONS, `r2_buckets` binding R2, and a rate limiting binding RATE_LIMITER with namespace_id 1001 and a 60-per-60s simple limit.",
+      "pass": false
+    },
+    {
+      "step": 3,
+      "description": "Add typed environment and secret accessor",
+      "details": "Create `app/lib/.server/env.ts` exporting an `Env` interface covering all bindings and secret names, plus `requireEnv(env, name)` that throws a generic `ServerConfigError` when a secret is empty. Declare `interface CloudflareEnvironment extends Env` in `workers/app.ts`. Never import this module from client code.",
+      "pass": false
+    },
+    {
+      "step": 4,
+      "description": "Add migration tooling and scripts",
+      "details": "Create `migrations/` with a comment-only `0001_noop.sql`. Add scripts: `db:migrate:local` \u2192 `wrangler d1 migrations apply bridgewarden-db --local`, `db:migrate:remote` \u2192 `--remote`, `db:reset:local` \u2192 remove the local D1 state then re-apply.",
+      "pass": false
+    },
+    {
+      "step": 5,
+      "description": "Configure verify gates",
+      "details": "Add TypeScript strict mode, ESLint (with React hooks and import rules) or Biome, and Prettier. Add scripts `typecheck`, `lint`, `lint:fix`, `format`, `format:check`. Add `.nvmrc` with the Node major version and a `packageManager` field pinned to the installed pnpm version. Ensure `pnpm typecheck && pnpm lint && pnpm format:check` passes on the scaffold.",
+      "pass": false
+    },
+    {
+      "step": 6,
+      "description": "Add the CI workflow",
+      "details": "Create `.github/workflows/ci.yml` triggered on `pull_request` and `push` to `main`: checkout, setup Node from `.nvmrc`, setup pnpm with cache, `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm build`. Do not deploy from CI in this PR.",
+      "pass": false
+    },
+    {
+      "step": 7,
+      "description": "Wire secrets for local development",
+      "details": "Confirm `.dev.vars` from PR 00 is present with placeholder names and that `.gitignore` covers `.env.local`, `.dev.vars`, `.wrangler/`, and `build/`. Add a README note that real values are filled manually.",
+      "pass": false
+    },
+    {
+      "step": 8,
+      "description": "Add a health route that proves bindings work",
+      "details": "Create `app/routes/health.tsx` with a loader that runs `SELECT 1 AS ok` against DB and returns `{ ok: true }`. Do not expose binding names or secret values. Add a Vitest test using the Workers pool that asserts 200 and a generic shape.",
+      "pass": false
+    },
+    {
+      "step": 9,
+      "description": "Verify build and gates",
+      "details": "Run `pnpm dev`, `pnpm build`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and `pnpm exec wrangler deploy --dry-run`. Seed a deliberate type error, a lint violation, and a failing test one at a time; confirm each gate exits non-zero; revert. Grep `build/client` for every secret value to confirm none leaked.",
+      "pass": false
+    }
+  ],
+  "dependencies": [
+    "TASK-1"
+  ],
+  "estimatedComplexity": "medium",
+  "technicalNotes": [
+    "React Router v8 with the Cloudflare Vite plugin does not support SPA mode or prerendering; keep SSR.",
+    "Bindings are available at `context.cloudflare.env` inside loaders/actions.",
+    "Do not create a monorepo; the extension and Android app will be separate projects that reuse the documented contract.",
+    "Use pnpm and Node 24, matching the local toolchain.",
+    "The scaffold step must preserve PR 00 artifacts (.agent/, AGENTS.md, .gitignore, .editorconfig). Scaffold into a temp directory if necessary rather than deleting them.",
+    "CI must not require Cloudflare credentials in this PR."
+  ],
+  "pullRequest": {
+    "title": "chore: scaffold React Router v8 Worker with bindings and verify gates",
+    "branch": "chore/scaffold-foundation",
+    "requirementIds": [
+      "TASK-2",
+      "TASK-3",
+      "TASK-4",
+      "TASK-59"
+    ],
+    "scope": "Project scaffold, wrangler config, typed env, migration tooling, lint/format/typecheck, CI workflow, health route, gitignore.",
+    "outOfScope": "Design system, real schema tables, auth, vault features."
+  }
+}

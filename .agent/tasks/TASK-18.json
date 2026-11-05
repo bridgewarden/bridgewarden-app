@@ -1,0 +1,78 @@
+{
+  "id": "TASK-18",
+  "title": "PR 17 — Security headers, a11y, performance budgets, and PWA",
+  "category": "security",
+  "description": "Harden the deployed surface and finish quality budgets: nonce-based CSP and headers, WCAG 2.1 AA on core flows, bundle and LCP budgets with no ciphertext in SSR HTML, and an installable offline shell. Requirement IDs: TASK-48, TASK-49, TASK-50, TASK-51.",
+  "acceptanceCriteria": [
+    "Responses set HSTS, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, and a restrictive Permissions-Policy",
+    "CSP uses a per-request nonce and blocks inline scripts without the nonce; any exception is minimal and documented",
+    "Mutating requests reject cross-origin Origin/Host mismatches and no GET mutates state",
+    "axe-core reports zero critical or serious violations on setup, login, 2FA, unlock, list, editor, and generator",
+    "A keyboard-only run completes setup → create item → lock → unlock, and dialog focus is restored on close",
+    "Initial JS for unauthenticated routes is under 200KB gzip and the vault route chunk is under 150KB gzip",
+    "Unlock derivation stays under the p95 budget and LCP is under 2.5s on throttled 4G",
+    "No ciphertext appears in server-rendered HTML for vault routes",
+    "The app is installable and boots its shell offline, with vault data served only from IndexedDB",
+    "A new deploy triggers an update prompt"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "description": "Implement nonce-based CSP",
+      "details": "Generate a per-request nonce in `entry.server.tsx`, attach it to React Router's inline hydration scripts, and emit a `Content-Security-Policy` header from the Worker or entry server. Start from `default-src 'self'; script-src 'self' 'nonce-<n>'; style-src 'self' 'nonce-<n>'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'`. If an inline script cannot be covered, document the narrowest exception in the PR body and in `docs/threat-model.md`.",
+      "pass": false
+    },
+    {
+      "step": 2,
+      "description": "Add remaining security headers and CSRF checks",
+      "details": "Set HSTS (1 year, includeSubDomains), nosniff, `Referrer-Policy: no-referrer`, and `Permissions-Policy: camera=(), microphone=(), geolocation=()`. Add a helper that rejects mutating requests whose `Origin` does not match `APP_ORIGIN`. Verify every mutation uses POST/PATCH/DELETE and no loader mutates.",
+      "pass": false
+    },
+    {
+      "step": 3,
+      "description": "Run the accessibility pass",
+      "details": "Add axe-core to Playwright and run it on the seven listed surfaces. Fix landmarks, heading order, labels, `aria-describedby` error associations, focus trap/restore in dialogs, live regions for toasts, and contrast. Document any intentional exclusion in the PR body.",
+      "pass": false
+    },
+    {
+      "step": 4,
+      "description": "Enforce performance budgets",
+      "details": "Move crypto imports behind dynamic `import()` on unlock/setup routes, lazy-load editor routes, and remove unused shadcn primitives. Add a build-size check script that fails when budgets are exceeded. Add a Lighthouse CI or Playwright trace assertion for LCP on throttled 4G.",
+      "pass": false
+    },
+    {
+      "step": 5,
+      "description": "Prove no ciphertext in SSR HTML",
+      "details": "Make vault routes render only after unlock via client loaders, and add an integration test that fetches `/app` HTML with a seeded vault and asserts the response body contains no `data_ct` or item identifier beyond what is required. Assert the response has `Cache-Control: no-store` for authenticated HTML.",
+      "pass": false
+    },
+    {
+      "step": 6,
+      "description": "Implement the PWA shell",
+      "details": "Add a web manifest (name, short_name, icons, theme_color, display standalone, start_url `/app`). Add a service worker that precaches the app shell and static assets with a versioned cache, uses network-first for navigations with an offline fallback, and never caches `/api/*`. Add an update prompt when a new worker activates.",
+      "pass": false
+    },
+    {
+      "step": 7,
+      "description": "Verify hardening end to end",
+      "details": "Playwright: assert headers on the document and on API responses; assert a cross-origin POST is rejected; run axe; assert budget gate; block network and reload to confirm the shell boots and shows the locked overlay. Capture before/after Lighthouse numbers for the PR body.",
+      "pass": false
+    }
+  ],
+  "dependencies": ["TASK-17"],
+  "estimatedComplexity": "very high",
+  "technicalNotes": [
+    "CSP nonce support for React Router's inline hydration scripts is the highest-risk item in this PR; validate early and split the PR if it cannot be done cleanly.",
+    "Do not use `unsafe-inline` for scripts in production.",
+    "Never cache API responses in the service worker, even encrypted ones.",
+    "Keep the offline shell free of vault data; the lock overlay must appear before any decryption.",
+    "If Lighthouse CI is unavailable, use Playwright with CDP throttling and record the trace."
+  ],
+  "pullRequest": {
+    "title": "feat(security): CSP, headers, a11y, performance budgets, and PWA",
+    "branch": "feat/hardening",
+    "requirementIds": ["TASK-48", "TASK-49", "TASK-50", "TASK-51"],
+    "scope": "CSP and headers, CSRF checks, a11y fixes, bundle and LCP budgets, SSR ciphertext test, manifest and service worker.",
+    "outOfScope": "E2E critical-flow suite, audit logging, docs, production deploy."
+  }
+}

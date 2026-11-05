@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+build/
+dist/
+.wrangler/
+.dev.vars
+.env.local
+
+# Test artifacts
+coverage/
+playwright-report/
+test-results/
+blob-report/
+
+# Editor and OS
+.claude/
+.DS_Store
+*.log
+
+# Local agent/session state
+.commandcode/settings.local.json

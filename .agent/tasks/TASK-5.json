@@ -1,0 +1,76 @@
+{
+  "id": "TASK-5",
+  "title": "Database schema: users, vault, folders, 2FA, audit, dormant orgs",
+  "category": "data-model",
+  "description": "Create the forward-only migration that defines every MVP table, index, and constraint, plus dormant organization tables reserved for phase 2. Requirement IDs: TASK-7 through TASK-12.",
+  "acceptanceCriteria": [
+    "`users` table has all PRD columns, a case-insensitive unique email constraint, and an email index",
+    "`vault_items` has an index on `(user_id, rev)`, `(user_id, deleted_at)`, `(user_id, folder_id)`, and `(user_id, type)`",
+    "`folders` stores only ciphertext names and metadata",
+    "`user_2fa` and `backup_codes` support TOTP enrollment, replay protection, and one-time code use",
+    "`audit_events` has an index on `(user_id, created_at)` and no column intended for secrets",
+    "Dormant `orgs`, `org_members`, `collections`, `collection_items` tables exist and are referenced by no route",
+    "Migration applies cleanly to a fresh local D1 and to the test database",
+    "A D1 inspection shows no column capable of holding plaintext vault content beyond identifiers and metadata"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "description": "Write the users migration",
+      "details": "Create `migrations/0002_users.sql`. Columns per PRD §8: id TEXT PK, email TEXT NOT NULL COLLATE NOCASE UNIQUE, display_name, auth_hash, server_salt, kdf_alg, kdf_iterations, kdf_salt, vault_key_wrapped, vault_key_wrap_iv, recovery_key_wrapped, recovery_key_wrap_iv, role CHECK(role IN ('admin','member')), status CHECK(status IN ('active','disabled')), vault_rev INTEGER NOT NULL DEFAULT 0, failed_login_count INTEGER NOT NULL DEFAULT 0, locked_until INTEGER, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL. Add `CREATE UNIQUE INDEX idx_users_email ON users(email)`.",
+      "pass": false
+    },
+    {
+      "step": 2,
+      "description": "Write vault_items and folders migrations",
+      "details": "Create `migrations/0003_vault.sql`. `vault_items(id TEXT PK, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, org_id TEXT NULL, folder_id TEXT NULL REFERENCES folders(id) ON DELETE SET NULL, type TEXT NOT NULL CHECK(type IN ('login','note')), favorite INTEGER NOT NULL DEFAULT 0, data_ct TEXT NOT NULL, data_iv TEXT NOT NULL, data_version INTEGER NOT NULL, rev INTEGER NOT NULL, deleted_at INTEGER, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)`. `folders(id TEXT PK, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, name_ct TEXT NOT NULL, name_iv TEXT NOT NULL, data_version INTEGER NOT NULL, rev INTEGER NOT NULL, created_at, updated_at)`. Add the four vault indexes and a folders user index.",
+      "pass": false
+    },
+    {
+      "step": 3,
+      "description": "Write 2FA and backup-code migrations",
+      "details": "Create `migrations/0004_two_factor.sql`. `user_2fa(user_id TEXT PK REFERENCES users(id) ON DELETE CASCADE, totp_secret_ct TEXT NOT NULL, totp_secret_iv TEXT NOT NULL, enabled INTEGER NOT NULL DEFAULT 0, last_totp_step INTEGER NOT NULL DEFAULT 0, created_at, updated_at)`. `backup_codes(id TEXT PK, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, code_hash TEXT NOT NULL UNIQUE, used_at INTEGER, created_at INTEGER NOT NULL)` with an index on `(user_id, used_at)`.",
+      "pass": false
+    },
+    {
+      "step": 4,
+      "description": "Write the audit table",
+      "details": "Create `migrations/0005_audit.sql`. `audit_events(id TEXT PK, user_id TEXT NULL REFERENCES users(id) ON DELETE SET NULL, type TEXT NOT NULL, ip_hash TEXT, ua_hash TEXT, metadata TEXT, created_at INTEGER NOT NULL)` with `CREATE INDEX idx_audit_user_time ON audit_events(user_id, created_at)`.",
+      "pass": false
+    },
+    {
+      "step": 5,
+      "description": "Write dormant organization tables",
+      "details": "Create `migrations/0006_orgs_dormant.sql` with orgs, org_members (role owner|admin|member), collections, and collection_items. Add a header comment stating these tables are unused in MVP and must not be exposed by any route.",
+      "pass": false
+    },
+    {
+      "step": 6,
+      "description": "Apply and inspect",
+      "details": "Run `pnpm db:migrate:local`. Execute `npx wrangler d1 execute bridgewarden-db --local --command \"SELECT name FROM sqlite_master WHERE type='table'\"` and `PRAGMA index_list('vault_items')` to confirm tables and indexes. Apply to the test database via `pnpm test`.",
+      "pass": false
+    },
+    {
+      "step": 7,
+      "description": "Prove uniqueness and cascade behavior",
+      "details": "Insert a user twice with different case emails and confirm the second fails. Insert a user, a folder, and an item; delete the user and confirm cascade removes all rows; delete a folder and confirm the item survives with `folder_id` NULL.",
+      "pass": false
+    }
+  ],
+  "dependencies": ["TASK-2"],
+  "estimatedComplexity": "medium",
+  "technicalNotes": [
+    "D1 is SQLite; timestamps are integer epoch milliseconds.",
+    "D1 enforces foreign keys when declared; verify ON DELETE behavior empirically rather than assuming.",
+    "Do not store plaintext item names anywhere; folder names are ciphertext too.",
+    "The email unique index must be case-insensitive via COLLATE NOCASE.",
+    "Never add a column for plaintext vault content, even temporarily."
+  ],
+  "pullRequest": {
+    "title": "feat(db): add MVP schema and dormant organization tables",
+    "branch": "feat/db-schema",
+    "requirementIds": ["TASK-7", "TASK-8", "TASK-9", "TASK-10", "TASK-11", "TASK-12"],
+    "scope": "Migrations for users, vault_items, folders, 2FA, backup codes, audit events, and dormant org tables.",
+    "outOfScope": "Query helpers, API handlers, seed data, and any route using the tables."
+  }
+}

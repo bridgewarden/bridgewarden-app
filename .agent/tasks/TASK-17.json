@@ -1,0 +1,77 @@
+{
+  "id": "TASK-17",
+  "title": "PR 16 — Trash UI, empty/loading/error states, responsive mobile",
+  "category": "ui-ux",
+  "description": "Finish the product surfaces: a trash view with restore and purge, consistent empty/loading/error/offline states, and responsive layouts down to 360px. Requirement IDs: TASK-45, TASK-46, TASK-47.",
+  "acceptanceCriteria": [
+    "Trash lists soft-deleted items with a deleted date and supports restore and permanent purge",
+    "Purging requires an explicit confirmation dialog naming the item",
+    "Restored items return to their original folder",
+    "Trashed items are excluded from list results and search",
+    "Skeletons, empty states, inline errors, a global error toast, and an offline banner exist for every vault surface",
+    "Server errors render a generic message with a retry action and never expose stack traces or raw payloads",
+    "Core flows are usable at 360px without horizontal scrolling",
+    "Touch targets are at least 44px and the editor becomes a full-screen sheet on mobile",
+    "Playwright viewport tests pass for login, list, editor, and generator at 360px and 768px"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "description": "Build the trash route",
+      "details": "Create the page entry `app/features/vault-trash/vault-trash.tsx` with `index.ts` plus the transport-only route `app/routes/trash.tsx`, reading tombstones from the cache. Show item name (decrypted), type, and deleted date. Add restore and purge actions routed through the outbox. Include an empty state and a count badge in navigation.",
+      "pass": false
+    },
+    {
+      "step": 2,
+      "description": "Add purge confirmation",
+      "details": "Use the alert-dialog primitive requiring the user to confirm by typing the item name when the vault has more than five items; otherwise a standard destructive confirm. Disable the confirm button until the input matches.",
+      "pass": false
+    },
+    {
+      "step": 3,
+      "description": "Unify state components",
+      "details": "Create `EmptyState`, `SkeletonList`, `InlineError`, `ErrorToast`, and `OfflineBanner`. Replace ad-hoc states in the list, editor, trash, generator, and settings. Ensure each has a catalog-backed message and an action where useful.",
+      "pass": false
+    },
+    {
+      "step": 4,
+      "description": "Add the global error boundary",
+      "details": "Add a route-level `ErrorBoundary` in `root.tsx` that renders a generic message, a retry link, and a request id when present. Log the real error server-side only. Ensure no error object is serialized into HTML.",
+      "pass": false
+    },
+    {
+      "step": 5,
+      "description": "Make layouts responsive",
+      "details": "Convert the vault list to single-pane under 768px, hide secondary metadata under 480px, and turn the editor into a full-screen sheet. Ensure the header collapses to icon buttons and the search palette becomes full-screen. Audit tap targets to ≥44px.",
+      "pass": false
+    },
+    {
+      "step": 6,
+      "description": "Add viewport E2E coverage",
+      "details": "Add Playwright projects for 360×640 and 768×1024 running the four critical surfaces. Assert no horizontal overflow via `document.documentElement.scrollWidth <= clientWidth`, and capture screenshots for the PR body.",
+      "pass": false
+    },
+    {
+      "step": 7,
+      "description": "Verify offline and error UX",
+      "details": "Playwright: block network and assert the offline banner appears while cached items still render; force a 500 on a save and assert a generic toast with retry and no plaintext error text.",
+      "pass": false
+    }
+  ],
+  "dependencies": ["TASK-14", "TASK-15", "TASK-16"],
+  "estimatedComplexity": "medium",
+  "technicalNotes": [
+    "Do not translate server errors directly; map to catalog keys.",
+    "Purge is irreversible; the confirmation must be deliberate and keyboard-accessible.",
+    "Mobile editor must not use a fixed height that breaks the on-screen keyboard.",
+    "Keep skeleton dimensions identical to final content to avoid layout shift.",
+    "Screenshots for this PR are required because it is primarily visual."
+  ],
+  "pullRequest": {
+    "title": "feat(ui): trash, state handling, and responsive layouts",
+    "branch": "feat/ui-polish",
+    "requirementIds": ["TASK-45", "TASK-46", "TASK-47"],
+    "scope": "Trash route, purge confirmation, shared state components, error boundary, responsive layouts, viewport tests.",
+    "outOfScope": "New vault features, accessibility audit (TASK-18), performance budgets (TASK-18)."
+  }
+}

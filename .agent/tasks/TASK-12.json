@@ -1,0 +1,103 @@
+{
+  "id": "TASK-12",
+  "title": "PR 11 \u2014 Vault API: sync, CRUD, trash, folders, authorization",
+  "category": "api-endpoint",
+  "description": "Implement the ciphertext-only vault API: incremental sync with tombstones, item create/update/delete/restore/purge, folder CRUD, strict per-user authorization, payload limits, and scheduled purge. Requirement IDs: TASK-29, TASK-30, TASK-31, TASK-32, TASK-33, TASK-34, TASK-35.",
+  "acceptanceCriteria": [
+    "`GET /api/vault?since=<rev>` returns items and folders with `rev > since`, tombstones included, page size capped at 500 with a cursor",
+    "Responses contain no plaintext vault fields; only ciphertext, IV, metadata, and rev",
+    "`POST /api/vault/items` assigns `rev = ++users.vault_rev` inside a D1 batch and returns the created row",
+    "`PATCH /api/vault/items/:id` requires the client's `rev` and returns 409 with the current row on mismatch",
+    "`DELETE` soft-deletes, restore clears `deleted_at`, and purge is permanent and idempotent",
+    "Folder CRUD works; deleting a folder sets contained items' `folder_id` to NULL and bumps their rev",
+    "Every handler scopes by the session `user_id`; foreign ids return 404, never 403",
+    "No handler accepts `user_id` from the request body or query",
+    "Requests over 256KB return 413 and malformed base64 returns 400",
+    "A daily cron purges items deleted more than 30 days ago"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "description": "Add the rev allocator",
+      "details": "Create `app/server/vault/rev.server.ts` with `allocateRev(db, userId)` implemented as `UPDATE users SET vault_rev = vault_rev + 1 WHERE id = ? RETURNING vault_rev`. Document that every mutation statement must run in the same `db.batch()` as this allocation so a failed write does not leak a rev.",
+      "pass": false
+    },
+    {
+      "step": 2,
+      "description": "Implement the sync endpoint",
+      "details": "Create `app/server/vault/sync.server.ts` with `listVaultDelta(db, userId, since, cursor)`, plus `app/routes/api.vault.ts` as a transport-only loader returning `{ serverRev, items, folders, nextCursor? }`. Query `WHERE user_id = ? AND rev > ? ORDER BY rev LIMIT 501`, return 500 rows plus a cursor when truncated, include tombstones with `deleted_at`, and never join or decrypt on the server.",
+      "pass": false
+    },
+    {
+      "step": 3,
+      "description": "Implement item create and update",
+      "details": "Add `app/server/vault/items.server.ts` use cases for `POST /api/vault/items` and `PATCH /api/vault/items/:id`; the route module stays transport-only. Validate with Zod: type enum, base64 validity, ct \u2264 64KB, iv length, favorite boolean. On update, `WHERE id = ? AND user_id = ? AND rev = ?`; when `meta.changes === 0`, fetch and return 409. Never partially update on validation failure.",
+      "pass": false
+    },
+    {
+      "step": 4,
+      "description": "Implement trash semantics",
+      "details": "Add `DELETE /api/vault/items/:id` (soft), `POST /api/vault/items/:id/restore`, and `POST /api/vault/items/:id/purge`. Purge requires an explicit body flag `confirm: true`. All of them allocate a new rev and return the row.",
+      "pass": false
+    },
+    {
+      "step": 5,
+      "description": "Implement folder CRUD",
+      "details": "Add `app/server/vault/folders.server.ts` with list, create, rename, and delete use cases, and `app/routes/api.folders.ts` as a transport-only route. Deleting uses a batch that nulls `folder_id` on contained items, allocates one rev per affected item, and deletes the folder. Validate ciphertext sizes and ownership.",
+      "pass": false
+    },
+    {
+      "step": 6,
+      "description": "Centralize authorization",
+      "details": "Create `app/server/vault/ownership.server.ts` exporting `requireOwnedItem(db, userId, itemId)` and `requireOwnedFolder(db, userId, folderId)` returning the row or throwing a 404-shaped error. Use them in every mutation path. Add a test that greps handlers for `user_id` sourced from input and fails.",
+      "pass": false
+    },
+    {
+      "step": 7,
+      "description": "Add limits and validation",
+      "details": "Add a shared `readJson(request, schema, maxBytes=262144)` helper that enforces content length, parses JSON safely, rejects unknown keys, and returns 413/400 as appropriate. Log validation failures with the request id only.",
+      "pass": false
+    },
+    {
+      "step": 8,
+      "description": "Add the purge cron",
+      "details": "Add a scheduled handler in `workers/app.ts` for `0 3 * * *` that deletes items with `deleted_at < now - 30 days` in batches of 1000 and logs counts only. Document that it runs on the Worker cron trigger.",
+      "pass": false
+    },
+    {
+      "step": 9,
+      "description": "Test isolation and concurrency",
+      "details": "Vitest: cross-user read/update/delete/restore/purge all return 404; stale rev returns 409 and does not overwrite; sync with `since=serverRev` returns an empty delta; tombstones appear once; oversized payload returns 413; cron purges only expired rows.",
+      "pass": false
+    }
+  ],
+  "dependencies": [
+    "TASK-5",
+    "TASK-8",
+    "TASK-10"
+  ],
+  "estimatedComplexity": "very high",
+  "technicalNotes": [
+    "D1 is single-threaded but requests interleave; keep rev allocation and the mutation in one batch.",
+    "Never decrypt or inspect ciphertext server-side; the API is a dumb store for opaque blobs.",
+    "Return 404 for foreign ids to avoid existence leaks.",
+    "Sync must be resumable: the client stores `serverRev` and cursor.",
+    "Do not implement conflict merging; the client resolves by refetching.",
+    "Route modules under `app/routes/` stay transport-only; vault queries and rules live in `app/server/vault/*.server.ts`."
+  ],
+  "pullRequest": {
+    "title": "feat(api): vault sync, item CRUD, trash, folders, and authorization",
+    "branch": "feat/vault-api",
+    "requirementIds": [
+      "TASK-29",
+      "TASK-30",
+      "TASK-31",
+      "TASK-32",
+      "TASK-33",
+      "TASK-34",
+      "TASK-35"
+    ],
+    "scope": "Rev allocator, sync route, item routes, trash routes, folder routes, authz helpers, validation limits, purge cron.",
+    "outOfScope": "Client cache, UI, search, attachments, organization collections."
+  }
+}

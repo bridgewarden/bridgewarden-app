@@ -1,0 +1,83 @@
+{
+  "id": "TASK-6",
+  "title": "PR 05 — Crypto core and vault recovery key",
+  "category": "security",
+  "description": "Ship the complete client-side cryptographic contract: PBKDF2 master key derivation, domain-separated HKDF subkeys, auth hash for server verification, random vault key with wrap/unwrap, versioned AES-256-GCM item envelope, and a recovery key that wraps the same vault key. Requirement IDs: TASK-13, TASK-14, TASK-15, TASK-16, TASK-17.",
+  "acceptanceCriteria": [
+    "`masterKey` derives from the master password with PBKDF2-SHA256 at the stored iteration count (default 600000) using WebCrypto",
+    "`authHash` is derived through HKDF with info `bw-auth` and cannot be reversed to the master key",
+    "`vaultKey` is 32 random bytes from `crypto.getRandomValues` and is only ever wrapped, never stored or transmitted in plaintext",
+    "Changing the master password re-wraps the same `vaultKey`, so existing ciphertext stays decryptable",
+    "Item envelope is versioned (`v: 1`, `alg: A256GCM`) with a fresh 96-bit IV per encryption and explicit rejection of unknown versions",
+    "Recovery key is 128 bits displayed as Crockford base32 and wraps the same `vaultKey` via HKDF info `bw-recovery`",
+    "Known-answer tests cover PBKDF2, HKDF, AES-GCM round-trip, tamper rejection, and wrong-password/wrong-recovery-key failures",
+    "A benchmark test reports unlock derivation time and fails the budget when exceeded",
+    "No secret value appears in console output, thrown error messages, or test snapshots"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "description": "Define the crypto contract",
+      "details": "Create `app/lib/crypto/contract.ts` documenting algorithm identifiers, HKDF info strings (`bw-auth`, `bw-wrap`, `bw-recovery`), envelope shape, base64 conventions (URL-safe no padding in transport, standard in storage), and the list of versioned parameters. Export typed constants instead of magic strings.",
+      "pass": false
+    },
+    {
+      "step": 2,
+      "description": "Implement key derivation",
+      "details": "Create `app/lib/crypto/kdf.ts` with `deriveMasterKey(password, salt, iterations)` using `crypto.subtle.deriveBits` (PBKDF2-SHA256, 32 bytes), `deriveAuthHash(masterKey)` and `deriveWrapKey(masterKey, wrapSalt)` using HKDF-SHA256, and `deriveRecoveryWrapKey(recoverySecret, recoverySalt)`. Normalize passwords with NFKC before derivation and document it, because the format is permanent.",
+      "pass": false
+    },
+    {
+      "step": 3,
+      "description": "Implement vault key lifecycle",
+      "details": "Create `app/lib/crypto/vaultKey.ts` with `generateVaultKey()`, `wrapVaultKey(vaultKey, wrapKey)` returning `{ ct, iv }`, and `unwrapVaultKey({ ct, iv }, wrapKey)`. Reject short or malformed inputs. Never log key material; use typed errors such as `WrongPasswordError` and `MalformedEnvelopeError` with no payload data.",
+      "pass": false
+    },
+    {
+      "step": 4,
+      "description": "Implement the item envelope",
+      "details": "Create `app/lib/crypto/envelope.ts` with `sealItem(plaintextObject, vaultKey)` and `openItem(envelope, vaultKey)`. Serialize plaintext as UTF-8 JSON, encrypt with AES-256-GCM using a fresh random 96-bit IV, and return `{ v: 1, alg: 'A256GCM', iv, ct }` as base64. Validate `v` and `alg` on open and throw `UnsupportedEnvelopeError` for unknown versions.",
+      "pass": false
+    },
+    {
+      "step": 5,
+      "description": "Implement the recovery key",
+      "details": "Create `app/lib/crypto/recovery.ts` with `generateRecoverySecret()` (16 random bytes), `formatRecoveryKey(bytes)` (Crockford base32, 26 chars grouped for display), `parseRecoveryKey(text)` (tolerant of spaces/dashes, rejects invalid checksum characters), and wrap/unwrap helpers that reuse `vaultKey.ts`.",
+      "pass": false
+    },
+    {
+      "step": 6,
+      "description": "Write known-answer and property tests",
+      "details": "Add tests with fixed vectors for PBKDF2 and HKDF, a round-trip test for seal/open, a test that flips one ciphertext byte and expects failure, a test that reuses an IV and asserts the implementation never does, wrong-password unwrap failure, wrong-recovery-key failure, and an NFKC normalization test (e.g. full-width characters).",
+      "pass": false
+    },
+    {
+      "step": 7,
+      "description": "Add the unlock benchmark",
+      "details": "Add `app/lib/crypto/__test__/kdf.bench.test.ts` that derives a master key at 600000 iterations and asserts completion under the budget from PRD S2, logging the measured duration. Mark it as a non-flaky benchmark by allowing one retry on shared CI hardware and documenting the threshold.",
+      "pass": false
+    },
+    {
+      "step": 8,
+      "description": "Add the recovery-key confirmation component",
+      "details": "Create a presentational component that displays the grouped recovery key, requires an explicit stored-it checkbox, and requires typing back a 6-character substring before enabling continue. No server call, no persistence beyond props.",
+      "pass": false
+    }
+  ],
+  "dependencies": ["TASK-2", "TASK-4"],
+  "estimatedComplexity": "high",
+  "technicalNotes": [
+    "WebCrypto only; do not add a WASM Argon2 dependency.",
+    "HKDF info strings are part of the permanent contract — changing them breaks every stored vault.",
+    "Never persist the vault key in localStorage, sessionStorage, IndexedDB plaintext, or React state.",
+    "Password normalization must be documented because changing it later locks users out.",
+    "This PR contains no routes and no UI beyond the confirmation component."
+  ],
+  "pullRequest": {
+    "title": "feat(crypto): contract, key derivation, envelope, and recovery key",
+    "branch": "feat/crypto-core",
+    "requirementIds": ["TASK-13", "TASK-14", "TASK-15", "TASK-16", "TASK-17"],
+    "scope": "Crypto modules, typed errors, tests, benchmark, recovery-key confirmation component.",
+    "outOfScope": "Setup/login routes, database writes, vault UI, server-side 2FA crypto."
+  }
+}

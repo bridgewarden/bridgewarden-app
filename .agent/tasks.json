@@ -1,0 +1,135 @@
+[
+  {
+    "id": "TASK-1",
+    "title": "PR 00 — Verify prerequisites and provision Cloudflare resources",
+    "category": "setup",
+    "specFilePath": ".agent/tasks/TASK-1.json",
+    "passes": false
+  },
+  {
+    "id": "TASK-2",
+    "title": "PR 01 — Scaffold Worker, bindings, and migrations tooling",
+    "category": "setup",
+    "specFilePath": ".agent/tasks/TASK-2.json",
+    "passes": false
+  },
+  {
+    "id": "TASK-3",
+    "title": "PR 02 — Design system, app shell, and copy catalog",
+    "category": "ui-ux",
+    "specFilePath": ".agent/tasks/TASK-3.json",
+    "passes": false
+  },
+  {
+    "id": "TASK-4",
+    "title": "PR 03 — Test harness: Vitest for Workers and Playwright for E2E",
+    "category": "setup",
+    "specFilePath": ".agent/tasks/TASK-4.json",
+    "passes": false
+  },
+  {
+    "id": "TASK-5",
+    "title": "PR 04 — Database schema and dormant organization tables",
+    "category": "data-model",
+    "specFilePath": ".agent/tasks/TASK-5.json",
+    "passes": false
+  },
+  {
+    "id": "TASK-6",
+    "title": "PR 05 — Crypto core and vault recovery key",
+    "category": "security",
+    "specFilePath": ".agent/tasks/TASK-6.json",
+    "passes": false
+  },
+  {
+    "id": "TASK-7",
+    "title": "PR 06 — First-run setup wizard with atomic bootstrap guard",
+    "category": "functional",
+    "specFilePath": ".agent/tasks/TASK-7.json",
+    "passes": false
+  },
+  {
+    "id": "TASK-8",
+    "title": "PR 07 — Login, KV sessions, route guard, and logout",
+    "category": "functional",
+    "specFilePath": ".agent/tasks/TASK-8.json",
+    "passes": false
+  },
+  {
+    "id": "TASK-9",
+    "title": "PR 08 — TOTP 2FA enrollment, login challenge, and backup codes",
+    "category": "functional",
+    "specFilePath": ".agent/tasks/TASK-9.json",
+    "passes": false
+  },
+  {
+    "id": "TASK-10",
+    "title": "PR 09 — Auth rate limiting, lockout, and admin user management",
+    "category": "security",
+    "specFilePath": ".agent/tasks/TASK-10.json",
+    "passes": false
+  },
+  {
+    "id": "TASK-11",
+    "title": "PR 10 — Change master password, recovery reset, and auto-lock",
+    "category": "security",
+    "specFilePath": ".agent/tasks/TASK-11.json",
+    "passes": false
+  },
+  {
+    "id": "TASK-12",
+    "title": "PR 11 — Vault API: sync, CRUD, trash, folders, authorization",
+    "category": "api-endpoint",
+    "specFilePath": ".agent/tasks/TASK-12.json",
+    "passes": false
+  },
+  {
+    "id": "TASK-13",
+    "title": "PR 12 — Encrypted cache, outbox, sync engine, and key lifetime",
+    "category": "functional",
+    "specFilePath": ".agent/tasks/TASK-13.json",
+    "passes": false
+  },
+  {
+    "id": "TASK-14",
+    "title": "PR 13 — Vault list, filters, keyboard navigation, and search",
+    "category": "ui-ux",
+    "specFilePath": ".agent/tasks/TASK-14.json",
+    "passes": false
+  },
+  {
+    "id": "TASK-15",
+    "title": "PR 14 — Login and secure note item editors",
+    "category": "ui-ux",
+    "specFilePath": ".agent/tasks/TASK-15.json",
+    "passes": false
+  },
+  {
+    "id": "TASK-16",
+    "title": "PR 15 — Password generator, TOTP item generator, and clipboard",
+    "category": "ui-ux",
+    "specFilePath": ".agent/tasks/TASK-16.json",
+    "passes": false
+  },
+  {
+    "id": "TASK-17",
+    "title": "PR 16 — Trash UI, empty/loading/error states, responsive mobile",
+    "category": "ui-ux",
+    "specFilePath": ".agent/tasks/TASK-17.json",
+    "passes": false
+  },
+  {
+    "id": "TASK-18",
+    "title": "PR 17 — Security headers, a11y, performance budgets, and PWA",
+    "category": "security",
+    "specFilePath": ".agent/tasks/TASK-18.json",
+    "passes": false
+  },
+  {
+    "id": "TASK-19",
+    "title": "PR 18 — Audit events, E2E suite, docs, and production deploy",
+    "category": "setup",
+    "specFilePath": ".agent/tasks/TASK-19.json",
+    "passes": false
+  }
+]

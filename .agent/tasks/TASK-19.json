@@ -1,0 +1,78 @@
+{
+  "id": "TASK-19",
+  "title": "PR 18 — Audit events, E2E suite, docs, and production deploy",
+  "category": "setup",
+  "description": "Close the loop on operability: persist audit events, add redaction-safe observability, cover critical flows with Playwright, write the README/threat model/runbook, and deploy with a production smoke checklist. Requirement IDs: TASK-52, TASK-53, TASK-54, TASK-55, TASK-56.",
+  "acceptanceCriteria": [
+    "Audit events are written for bootstrap, login success/failure, 2FA success/failure, backup-code use, password change, recovery use, user create/disable, session revoke, and item purge",
+    "Audit metadata contains no email, token, ciphertext, password, or TOTP code",
+    "Structured logs include request id, route, status, duration, and a hashed user id only",
+    "A global error handler returns a generic 500 with a request id and logs the stack server-side",
+    "Playwright covers setup, login+2FA, item CRUD, folders, search, generator, lock/unlock, trash, password change, recovery, and offline create-then-sync",
+    "The E2E suite runs headless against local D1 in under 5 minutes with trace and screenshot on failure",
+    "README takes a new developer from clone to deployed instance without external help",
+    "The threat model lists every server-visible field and the explicit non-guarantees",
+    "The runbook documents D1 Time Travel restore, backup cadence, and the destructive consequences of rotating AUTH_PEPPER or TOTP_ENC_KEY",
+    "Production deploy on workers.dev passes the smoke checklist and remote D1 contains ciphertext only"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "description": "Implement audit event storage",
+      "details": "Create `app/lib/.server/audit.ts` with `recordEvent(env, { type, userId?, request, metadata? })` inserting into `audit_events`, hashing IP and user agent with `AUTH_PEPPER`. Call it from the flows listed in the acceptance criteria. Keep `metadata` to counts and enum values only.",
+      "pass": false
+    },
+    {
+      "step": 2,
+      "description": "Add structured logging and the error boundary",
+      "details": "Create `app/lib/.server/log.ts` that emits one JSON line per request with request id, method, route pattern, status, duration, and user id hash. Add a Worker-level error handler that logs the stack and returns `{ error: 'internal_error', requestId }`. Add a test that greps captured logs during E2E for forbidden values.",
+      "pass": false
+    },
+    {
+      "step": 3,
+      "description": "Write the critical-flow E2E suite",
+      "details": "Add Playwright specs for each critical flow, using fixtures from TASK-4. Prefer one spec per flow with independent state. Assert on user-visible outcomes and on D1 ciphertext for the encryption checks. Enforce the 5-minute budget with a sharded or serial worker configuration and document the runtime.",
+      "pass": false
+    },
+    {
+      "step": 4,
+      "description": "Write the README",
+      "details": "Cover prerequisites, install, `.env.local` and `.dev.vars` setup without real values, migrations, `pnpm dev`, tests, `pnpm deploy`, first-run bootstrap, adding family members, and troubleshooting (D1 local reset, KV consistency, PWA cache).",
+      "pass": false
+    },
+    {
+      "step": 5,
+      "description": "Write the threat model",
+      "details": "Document assets, trust boundaries, attacker capabilities, the server-visible field list (identifiers, metadata, ciphertext, auth hash, 2FA seed), mitigations per threat, and explicit non-guarantees (JS memory, compromised client, lost recovery key, clipboard leakage, KV eventual consistency).",
+      "pass": false
+    },
+    {
+      "step": 6,
+      "description": "Write the operational runbook",
+      "details": "Document D1 Time Travel restore steps and retention, backup cadence, secret rotation with consequences (AUTH_PEPPER and TOTP_ENC_KEY rotations are destructive; SESSION_SECRET logs everyone out; BOOTSTRAP_TOKEN is only valid on an empty user table), incident steps, and how to disable a compromised user.",
+      "pass": false
+    },
+    {
+      "step": 7,
+      "description": "Deploy and smoke test production",
+      "details": "Apply remote migrations, set Worker secrets via `wrangler secret put` (never inline in config), deploy, and run the smoke checklist: `/setup` guard behavior, admin creation, login, 2FA, item CRUD, lock/unlock, recovery, and a D1 query confirming ciphertext-only storage. Record the checklist output in the PR body without secrets.",
+      "pass": false
+    }
+  ],
+  "dependencies": ["TASK-18"],
+  "estimatedComplexity": "high",
+  "technicalNotes": [
+    "Never log request bodies, query strings, cookies, or headers that may carry tokens.",
+    "Audit events must survive user deletion via `ON DELETE SET NULL`, so they remain useful for incident review.",
+    "The E2E suite must not require Internet access or real Cloudflare credentials; use local D1 and `wrangler dev`.",
+    "Production secrets are set with `wrangler secret put`; never place them in `wrangler.jsonc` vars.",
+    "Free-tier D1 Time Travel is 7 days; document that longer retention needs manual exports."
+  ],
+  "pullRequest": {
+    "title": "chore(release): audit, E2E suite, docs, and production deploy",
+    "branch": "feat/release",
+    "requirementIds": ["TASK-52", "TASK-53", "TASK-54", "TASK-55", "TASK-56"],
+    "scope": "Audit storage and calls, structured logging, error handler, Playwright critical flows, README, threat model, runbook, remote migrations, deploy and smoke checklist.",
+    "outOfScope": "New product features, phase 2 roadmap items, CI provider setup beyond documented commands."
+  }
+}

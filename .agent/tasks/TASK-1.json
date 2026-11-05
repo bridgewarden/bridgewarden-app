@@ -1,0 +1,95 @@
+{
+  "id": "TASK-1",
+  "title": "PR 00 — Verify prerequisites, initialize the repository, and write the agent context",
+  "category": "setup",
+  "description": "Establish project readiness before any feature code: verify Cloudflare access and resources, create placeholder secrets, initialize the git repository with conventions, and write the AGENTS.md contract that every later PR must follow. Requirement IDs: TASK-1, TASK-57, TASK-58.",
+  "acceptanceCriteria": [
+    "`.env.local` exists with placeholder entries for every environment variable name listed in the PRD, and `.dev.vars` mirrors it",
+    "Real secret values are not written to the PRD, task specs, repository, logs, or chat",
+    "The user has manually filled required local secret values in `.env.local` and `.dev.vars`",
+    "`wrangler whoami` returns the intended Cloudflare account, or the missing access is recorded with a user-approved proceed/block decision",
+    "D1 database exists and its id is recorded in `wrangler.jsonc`, or creation is recorded as a blocker",
+    "KV namespace for sessions exists and its id is recorded",
+    "Git repository is initialized, `main` is the integration branch, and the initial commit is clean",
+    "`.gitignore` ignores `.env.local`, `.dev.vars`, `.wrangler/`, `build/`, `node_modules/`, and test artifacts",
+    "`.editorconfig` fixes UTF-8, LF, 2-space indent, final newline, and trim-on-save",
+    "Conventional Commits and the `type(scope): summary` PR title format are documented",
+    "`AGENTS.md` states the verify commands, architecture invariants, file layout, required reading, and secret policy",
+    "`AGENTS.md` links to the PRD, PR plan, and task index instead of duplicating them",
+    "`AGENTS.md` lists the project skills under `.agents/skills/` and states that `/preflight` runs before any PR is opened",
+    "The bootstrap-admin path is documented, and no password or recovery key is stored in the repository"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "description": "Review the PRD prerequisite section",
+      "details": "Open `.agent/prd/PRD.md` §7. List required accounts, resources, secrets, docs, and test users. Note every item marked 'unverified'.",
+      "pass": false
+    },
+    {
+      "step": 2,
+      "description": "Verify `.env.local` and `.dev.vars` placeholder names",
+      "details": "Confirm `.env.local` contains SESSION_SECRET, AUTH_PEPPER, TOTP_ENC_KEY, BOOTSTRAP_TOKEN, APP_ORIGIN, TOTP_ISSUER, APP_ENV, CLOUDFLARE_D1_DATABASE_ID, CLOUDFLARE_KV_SESSIONS_ID, CLOUDFLARE_KV_RATE_LIMIT_ID, CLOUDFLARE_R2_BUCKET_NAME, CLOUDFLARE_ACCOUNT_ID. Create `.dev.vars` with the same names. Add missing names with `TODO_FILL_MANUALLY` only.",
+      "pass": false
+    },
+    {
+      "step": 3,
+      "description": "Confirm local secret values are filled manually",
+      "details": "Ask the user to confirm they filled real values. Do not print, copy, or commit them. Provide the commands for the user to run themselves: `openssl rand -base64 32` for SESSION_SECRET, AUTH_PEPPER, TOTP_ENC_KEY, and BOOTSTRAP_TOKEN.",
+      "pass": false
+    },
+    {
+      "step": 4,
+      "description": "Verify Cloudflare authentication",
+      "details": "Run `npx wrangler whoami`. Confirm the account id matches CLOUDFLARE_ACCOUNT_ID. If not authenticated, record `wrangler login` as the blocker and ask for a proceed/block decision.",
+      "pass": false
+    },
+    {
+      "step": 5,
+      "description": "Create and verify D1 and KV resources",
+      "details": "Run `npx wrangler d1 create bridgewarden-db` and `npx wrangler kv namespace create KV_SESSIONS`. Record returned ids in `wrangler.jsonc` and the matching `.env.local` keys. Verify `npx wrangler d1 execute bridgewarden-db --local --command \"SELECT 1\"` succeeds.",
+      "pass": false
+    },
+    {
+      "step": 6,
+      "description": "Initialize the git repository",
+      "details": "Run `git init -b main`, create `.gitignore` covering `.env.local`, `.dev.vars`, `.wrangler/`, `build/`, `node_modules/`, coverage and Playwright artifacts, and `.editorconfig` with `charset = utf-8`, `end_of_line = lf`, `indent_style = space`, `indent_size = 2`, `insert_final_newline = true`, `trim_trailing_whitespace = true`. Make the initial commit `chore: initialize repository`. Confirm `git status` is clean and that seeding `.env.local` does not show up as untracked.",
+      "pass": false
+    },
+    {
+      "step": 7,
+      "description": "Document commit and PR conventions",
+      "details": "Add a short `CONTRIBUTING.md` section: Conventional Commits for commit messages, PR titles `type(scope): summary`, one requirement group per PR, and the PR body template (what changed, requirement IDs, how verified, risk/rollback, screenshots for UI).",
+      "pass": false
+    },
+    {
+      "step": 8,
+      "description": "Write AGENTS.md",
+      "details": "Create `AGENTS.md` at the repo root covering: required reading order (`.agent/prd/PRD.md`, `.agent/prd/PR-PLAN.md`, `.agent/tasks.json`), verify commands (`pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm test:e2e`) marked as available from PR 01, architecture invariants (crypto client-only, no vault plaintext server-side, no ciphertext in SSR HTML, no third-party scripts, secrets only in `.dev.vars`), file layout to be created in PR 01, PR conventions, and the rule that requirement IDs are cited in PR bodies. Keep it under ~120 lines and link rather than duplicate.",
+      "pass": false
+    },
+    {
+      "step": 9,
+      "description": "Record prerequisite decisions",
+      "details": "Append a short note in `docs/readiness.md` or the PR description listing each prerequisite, its status, and any user-approved gaps. Do not include secret values.",
+      "pass": false
+    }
+  ],
+  "dependencies": [],
+  "estimatedComplexity": "medium",
+  "technicalNotes": [
+    "This task gates implementation. Do not start dependent feature tasks until prerequisites are verified or explicitly approved as gaps.",
+    "PR 00 creates repository scaffolding only: no `package.json`, no application source, no dependencies.",
+    "Wrangler reads local secrets from `.dev.vars`, not `.env.local`; both files must be gitignored.",
+    "Free-tier D1 caps a database at 500MB, which is sufficient for family scale.",
+    "No MCP server is required for this project.",
+    "AGENTS.md must not contain secret values, real account ids, or database ids."
+  ],
+  "pullRequest": {
+    "title": "chore: verify prerequisites, initialize repo, and add agent context",
+    "branch": "chore/prerequisites",
+    "requirementIds": ["TASK-1", "TASK-57", "TASK-58"],
+    "scope": "Prerequisite checklist, wrangler resource ids, git init, .gitignore, .editorconfig, CONTRIBUTING conventions, AGENTS.md, readiness note.",
+    "outOfScope": "package.json, application source, dependencies, schema, lint/CI implementation (PR 01)."
+  }
+}

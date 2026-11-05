@@ -1,0 +1,84 @@
+{
+  "id": "TASK-11",
+  "title": "PR 10 — Change master password, recovery reset, and auto-lock",
+  "category": "security",
+  "description": "Let users rotate their master password without re-encrypting items, recover with the vault recovery key when the password is lost, and lock the vault automatically after idle time. Requirement IDs: TASK-26, TASK-27, TASK-28.",
+  "acceptanceCriteria": [
+    "Changing the master password requires the current password, re-wraps the existing `vaultKey`, and updates `auth_hash` atomically",
+    "Items are not re-encrypted; the operation touches only the user row",
+    "Old password stops working immediately and all other sessions are revoked while the current session stays valid",
+    "A failure mid-operation leaves the account on the old password",
+    "`/recover` unwraps the vault with the recovery key, forces a new master password, revokes all sessions, and issues a new recovery key",
+    "The old recovery key fails after a successful reset",
+    "Auto-lock defaults to 15 minutes, is configurable (1/5/15/30/60/never), and can be triggered manually",
+    "Locking discards the vault key and decrypted state from memory while keeping the encrypted cache and the session",
+    "Unlock after auto-lock re-derives the key locally without a server round trip and works offline",
+    "Five wrong unlock attempts force a full logout"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "description": "Implement the password-change API",
+      "details": "Create `POST /api/account/password` accepting `{ authHash, kdfSalt, kdfIterations, vaultKeyWrapped, vaultKeyWrapIv, recoveryKeyWrapped?, recoveryKeyWrapIv? }` plus a proof of the current password as `currentAuthHash`. Verify the current hash, then apply the update in one D1 batch. Reject if the new wrapped key cannot be validated by shape and size.",
+      "pass": false
+    },
+    {
+      "step": 2,
+      "description": "Wire the client rewrap flow",
+      "details": "Build the change-password form that derives the current `masterKey`, unwraps `vaultKey`, derives the new `masterKey'` and `authHash'`, re-wraps `vaultKey` with a new wrap key, and posts the result. On success, keep the in-memory `vaultKey` and update local KDF parameters so auto-lock unlock keeps working.",
+      "pass": false
+    },
+    {
+      "step": 3,
+      "description": "Revoke other sessions",
+      "details": "Increment the user's session version except for the current session, or store a `sessionVer` on the session and bump the user's version while re-issuing the current cookie. Verify with two concurrent browser contexts that the non-current one is forced back to login.",
+      "pass": false
+    },
+    {
+      "step": 4,
+      "description": "Implement the recovery reset flow",
+      "details": "Create `/recover` with steps: email → recovery key → new master password. On the client, derive the recovery wrap key, unwrap `vaultKey`, then wrap it under the new master key and generate a fresh recovery secret. Post only derived/wrapped values. Revoke all sessions on success and issue a new session for the resetting device.",
+      "pass": false
+    },
+    {
+      "step": 5,
+      "description": "Add the auto-lock provider",
+      "details": "Create `app/lib/vault/lock.tsx` with a context holding the `vaultKey`, `lock()`, `unlock(password)`, and an idle timer listening to pointer/keyboard/visibility events. Store the timeout preference in localStorage under a non-sensitive key. Lock discards the key and any decrypted item cache.",
+      "pass": false
+    },
+    {
+      "step": 6,
+      "description": "Implement local re-unlock",
+      "details": "Cache the wrapped vault key, wrap salt, and KDF parameters (public values) in IndexedDB so unlock does not need the network. Derive on submit, unwrap, and restore the session state. Track failures; on the fifth failure call logout and revoke the session.",
+      "pass": false
+    },
+    {
+      "step": 7,
+      "description": "Build the lock overlay and settings",
+      "details": "Add the full-screen lock overlay component in `app/lib/vault/lock.tsx` and the settings UI in `app/features/account-settings/` (page entry, components). The overlay has a password field, recovery link, and sign-out action. Settings cover the auto-lock timeout, the change-password form, recovery-key regeneration, and a warning that regenerating invalidates the old key.",
+      "pass": false
+    },
+    {
+      "step": 8,
+      "description": "Test rotation and locking",
+      "details": "Vitest: old auth hash fails after change; user row update is atomic on injected failure; session version bump invalidates old sessions. Playwright: change password → relogin with new → old fails; recover with recovery key → old recovery key fails; idle lock → unlock offline with devtools network offline.",
+      "pass": false
+    }
+  ],
+  "dependencies": ["TASK-6", "TASK-8", "TASK-9"],
+  "estimatedComplexity": "very high",
+  "technicalNotes": [
+    "Never re-encrypt items on password change; the vault key wrapper is the only thing that changes.",
+    "The recovery key is a cryptographic secret and must never be transmitted; only derived/wrapped values reach the server.",
+    "A failed recovery attempt must not reveal whether the email exists.",
+    "Auto-lock must not destroy the encrypted IndexedDB cache, otherwise offline unlock breaks.",
+    "Verify in a real browser that the vault key is not reachable from localStorage, sessionStorage, or IndexedDB after lock."
+  ],
+  "pullRequest": {
+    "title": "feat(account): password rotation, recovery reset, and auto-lock",
+    "branch": "feat/account-security",
+    "requirementIds": ["TASK-26", "TASK-27", "TASK-28"],
+    "scope": "Password-change API and UI, session revocation, recovery reset flow, auto-lock provider, lock overlay, settings.",
+    "outOfScope": "Key escrow, email recovery, passkeys, vault item re-encryption."
+  }
+}

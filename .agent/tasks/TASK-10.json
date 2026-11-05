@@ -1,0 +1,84 @@
+{
+  "id": "TASK-10",
+  "title": "PR 09 — Auth rate limiting, lockout, and admin user management",
+  "category": "security",
+  "description": "Protect authentication endpoints from brute force, add account lockout, and give the first admin a panel to create, disable, and re-session users without email delivery. Requirement IDs: TASK-24, TASK-25.",
+  "acceptanceCriteria": [
+    "`/auth/login`, `/auth/2fa`, `/auth/recover`, and `/setup` are rate limited per IP hash and per email via the Workers Rate Limiting binding",
+    "Requests over the limit return 429 with a `Retry-After` header",
+    "Ten consecutive failed password attempts lock the account for 15 minutes and return 423 with `Retry-After`",
+    "A successful login resets `failed_login_count` and `locked_until`",
+    "One account's lockout does not consume another account's per-email budget",
+    "Admin can list users, create a user, disable/enable a user, and revoke sessions",
+    "Creating a user returns a one-time 24-hour setup token that the admin copies manually; no email is sent",
+    "A disabled user cannot log in and all existing sessions are rejected",
+    "The last active admin cannot be disabled or demoted",
+    "Every admin mutation emits an audit event"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "description": "Wire the rate limiting binding",
+      "details": "Create `app/lib/.server/rate-limit.ts` using `env.RATE_LIMITER.limit({ key })` with keys such as `login:ip:<hash>` and `login:email:<hash>`. Hash IPs and emails with HMAC-SHA256 using `AUTH_PEPPER` so raw identifiers are never stored. Apply to the auth routes listed in the acceptance criteria and return 429 with `Retry-After` when `success` is false.",
+      "pass": false
+    },
+    {
+      "step": 2,
+      "description": "Implement account lockout",
+      "details": "On failed password verification, atomically update `failed_login_count = failed_login_count + 1` and set `locked_until` when the count reaches 10. On success, reset both. Check `locked_until` before verifying the hash and return 423 with the remaining seconds. Use a conditional update so concurrent attempts cannot bypass the threshold.",
+      "pass": false
+    },
+    {
+      "step": 3,
+      "description": "Add the admin guard and routes",
+      "details": "Create `requireAdmin(request, env)` that calls `requireUser` and checks `role === 'admin'`, returning 403 otherwise. Add `app/routes/admin.users.tsx` with a loader listing id, email, role, status, created_at, and 2FA enabled, and actions for create, disable, enable, and revoke.",
+      "pass": false
+    },
+    {
+      "step": 4,
+      "description": "Implement one-time setup tokens",
+      "details": "Create `setup_tokens` usage via KV: key `setup:<sha256(token)>` with `{ userId, expiresAt }`, TTL 24 hours. The admin create action inserts the user with `status='active'` but no vault data, then returns the setup link `APP_ORIGIN/setup/member?token=...`. The member route lets the new user set their own master password, derive keys, and confirm a recovery key; the admin never sees any of it. Token is single-use.",
+      "pass": false
+    },
+    {
+      "step": 5,
+      "description": "Enforce disable and revocation semantics",
+      "details": "Disabling a user sets `status='disabled'` and increments the session version so all sessions fail the guard. Enabling restores login but not sessions. Ensure `requireUser` rejects disabled users for both pages and API routes.",
+      "pass": false
+    },
+    {
+      "step": 6,
+      "description": "Guard the last admin",
+      "details": "Before disabling or demoting, count active admins inside the same D1 batch as the update. Abort with 409 when the count would drop to zero.",
+      "pass": false
+    },
+    {
+      "step": 7,
+      "description": "Build the admin UI",
+      "details": "Add the users UI in `app/features/admin-users/` (page entry, components, hooks); the route module stays transport-only. Include status badges, a create dialog, and row actions (disable/enable, revoke sessions). Show the setup link in a copyable, one-time panel with an explicit warning that it expires in 24 hours. No email field is sent anywhere.",
+      "pass": false
+    },
+    {
+      "step": 8,
+      "description": "Test limits and admin safety",
+      "details": "Vitest: 11th attempt returns 429; 10th failure sets `locked_until`; successful login resets counters; disabling the last admin returns 409; setup token works once and then 401. Playwright: admin creates a member, member completes setup in a separate context, admin disables them, member is logged out.",
+      "pass": false
+    }
+  ],
+  "dependencies": ["TASK-7", "TASK-8", "TASK-9"],
+  "estimatedComplexity": "high",
+  "technicalNotes": [
+    "The rate limiting binding is approximate and edge-local; account lockout in D1 is the authoritative protection.",
+    "Never persist raw IPs or emails for rate limiting; store HMACs.",
+    "Setup tokens belong in KV with TTL, not D1, to get automatic expiry.",
+    "Admin actions must not expose another user's ciphertext or wrapped keys in the list response.",
+    "Audit events are defined in TASK-19; emit through a small interface now and let TASK-19 implement storage if it has not merged."
+  ],
+  "pullRequest": {
+    "title": "feat(auth): rate limiting, lockout, and admin user management",
+    "branch": "feat/auth-abuse-admin",
+    "requirementIds": ["TASK-24", "TASK-25"],
+    "scope": "Rate limiting binding usage, lockout counters, admin guard and panel, one-time setup tokens, last-admin guard.",
+    "outOfScope": "Email delivery, roles beyond admin/member, organization membership."
+  }
+}

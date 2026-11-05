@@ -1,0 +1,83 @@
+{
+  "id": "TASK-9",
+  "title": "PR 08 — TOTP 2FA enrollment, login challenge, and backup codes",
+  "category": "functional",
+  "description": "Add optional TOTP second factor with replay protection, a short-lived login challenge, and ten single-use backup codes stored as HMACs. Requirement IDs: TASK-21, TASK-22, TASK-23.",
+  "acceptanceCriteria": [
+    "Enrollment generates a 160-bit secret, encrypts it at rest with `TOTP_ENC_KEY`, and shows an `otpauth://` URI plus a client-rendered QR code",
+    "2FA is enabled only after a valid 6-digit code is verified",
+    "The TOTP secret is never returned by any endpoint after enrollment",
+    "Login returns `{ requires2fa: true }` plus a 5-minute challenge token when 2FA is enabled, and no session cookie",
+    "Codes are accepted within ±1 time step and any step less than or equal to `last_totp_step` is rejected",
+    "Five failed 2FA attempts invalidate the challenge token",
+    "Ten backup codes are generated, displayed once, stored only as HMAC-SHA256 hashes with `AUTH_PEPPER`, and each works exactly once",
+    "Regenerating backup codes invalidates all previous codes",
+    "2FA success and failure emit audit events"
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "description": "Add server-side TOTP primitives",
+      "details": "Create `app/lib/.server/totp.ts` implementing RFC 6238 (HMAC-SHA1, 6 digits, 30s, 160-bit secret) with `generateSecret`, `buildOtpauthUri`, `verifyCode(secret, code, lastStep)` returning `{ valid, step }`, and `currentStep()`. Use `crypto.subtle` and constant-time code comparison.",
+      "pass": false
+    },
+    {
+      "step": 2,
+      "description": "Encrypt the seed at rest",
+      "details": "Create `app/lib/.server/totp-crypto.ts` using AES-256-GCM with a key derived from `TOTP_ENC_KEY` (HKDF with info `bw-totp`). Store ciphertext and IV in `user_2fa`. Decrypt only inside verification. Never include the seed in responses or logs.",
+      "pass": false
+    },
+    {
+      "step": 3,
+      "description": "Implement enrollment",
+      "details": "Create `POST /api/account/2fa/enroll` (auth required) that returns the otpauth URI and shows the secret as text once. Add `POST /api/account/2fa/verify` that checks a code and sets `enabled = 1` only on success. Render the QR client-side from the URI string with a small dependency; do not call an external QR service.",
+      "pass": false
+    },
+    {
+      "step": 4,
+      "description": "Add the challenge flow to login",
+      "details": "After password verification, if `user_2fa.enabled`, create `challenge:<sha256(token)>` in KV with `{ userId, expiresAt }` and return `{ requires2fa: true, challengeToken }`. Do not issue a session yet. `POST /auth/2fa` accepts the challenge token plus a code or backup code and issues the session on success.",
+      "pass": false
+    },
+    {
+      "step": 5,
+      "description": "Enforce replay protection",
+      "details": "On successful verification, update `last_totp_step` in the same D1 batch as the session creation. Reject any code whose step is less than or equal to the stored value. Document the ±1 window behavior and the clock-skew assumption.",
+      "pass": false
+    },
+    {
+      "step": 6,
+      "description": "Implement backup codes",
+      "details": "Create `app/features/two-factor/.server/backup-codes.ts` with `generateBackupCodes(n=10)` using an unambiguous alphabet, `hashBackupCode(code)` = HMAC-SHA256(AUTH_PEPPER, code), `consumeBackupCode(userId, code)` that atomically marks `used_at` where NULL and returns whether it consumed, and `regenerateBackupCodes(userId)` that deletes all existing rows in a batch. Display codes once with a download/copy action.",
+      "pass": false
+    },
+    {
+      "step": 7,
+      "description": "Build the settings and challenge UI",
+      "details": "Add the 2FA UI in `app/features/two-factor/` (page entry, components, hooks) and the settings section in `app/features/account-settings/`: enable flow, disable flow (requires master password), backup code generation with warning that old codes die, and remaining-code count. The challenge screen has a code input, backup-code toggle, and retry messaging. Route modules stay transport-only.",
+      "pass": false
+    },
+    {
+      "step": 8,
+      "description": "Test vectors and flows",
+      "details": "Vitest: RFC 6238 test vectors pass, reused step fails, stale code fails, backup code works once, regeneration invalidates old rows. Playwright: enroll → logout → login → challenge → success; wrong code five times invalidates the challenge.",
+      "pass": false
+    }
+  ],
+  "dependencies": ["TASK-8"],
+  "estimatedComplexity": "high",
+  "technicalNotes": [
+    "The seed must be server-decryptable because verification happens before the vault key exists; this is the one deliberate exception to zero-knowledge and must be documented in the threat model.",
+    "Do not store the challenge token in D1; KV with 5-minute TTL is sufficient and non-authoritative.",
+    "Do not log codes or secrets, including in error paths.",
+    "Backup-code consumption must be a conditional update, not read-then-write, to avoid double use.",
+    "Use `crypto.subtle` HMAC, not a JS HMAC implementation."
+  ],
+  "pullRequest": {
+    "title": "feat(auth): TOTP 2FA, challenge flow, and backup codes",
+    "branch": "feat/auth-2fa",
+    "requirementIds": ["TASK-21", "TASK-22", "TASK-23"],
+    "scope": "TOTP primitives, seed encryption, enrollment, challenge, replay protection, backup codes, settings and login UI.",
+    "outOfScope": "Passkeys, email OTP, rate limiting, admin reset of another user's 2FA."
+  }
+}

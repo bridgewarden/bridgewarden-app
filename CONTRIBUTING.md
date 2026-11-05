@@ -29,18 +29,23 @@ Body template:
 
 ```markdown
 ## What changed
+
 One paragraph, no diff restatement.
 
 ## Requirement IDs
+
 TASK-13, TASK-14 (from .agent/prd/PRD.md)
 
 ## How verified
+
 Commands run and their result, plus manual checks.
 
 ## Risk and rollback
+
 What breaks if this is wrong, and how to revert safely.
 
 ## Screenshots
+
 Required for UI changes.
 ```
 

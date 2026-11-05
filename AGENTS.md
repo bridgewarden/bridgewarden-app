@@ -50,7 +50,7 @@ pnpm typecheck        # tsc --noEmit, strict
 pnpm lint
 pnpm format:check
 pnpm test             # Vitest, Workers pool
-pnpm test:e2e         # Playwright
+pnpm test:e2e         # Playwright (available from PR 03)
 pnpm db:migrate:local
 pnpm db:migrate:remote
 pnpm db:reset:local
@@ -58,6 +58,9 @@ pnpm db:reset:local
 
 Local secrets live in `.dev.vars` (Wrangler) and `.env.local` (tooling); both are gitignored
 and both must be filled manually. Never generate and commit real values.
+
+`pnpm dev` forces `NODE_ENV=development`. This shell may export `NODE_ENV=production`, which
+breaks the SSR JSX runtime (`_jsxDEV is not a function`); do not remove that prefix.
 
 ## Project structure
 
@@ -117,19 +120,21 @@ Features planned for the MVP: `setup`, `login`, `two-factor`, `recover`,
   session and user metadata.
 - Read data through `Route.ComponentProps`. No `fetch` inside components.
 - Client cache, sync, and outbox live in `app/lib/vault/` and are hardware-agnostic of React.
-- `context` in `loader`, `action`, and `middleware` is a `RouterContextProvider` in v8.
+- `context` in `loader`, `action`, and `middleware` is a `RouterContextProvider` in v8. Read
+  Cloudflare bindings with `context.get(cloudflareContext)` from `app/lib/.server/context.ts`;
+  the provider has no `cloudflare` property.
 
 ## Server layer
 
-| Scope | Location |
-|-------|----------|
-| Shared by client and server | `app/lib/*.ts` |
-| Server infrastructure (db, env, session, verify, totp, token, rate limit, audit, log) | `app/lib/.server/` |
-| Domain logic used by 2+ features | `app/server/<domain>/` |
-| Everything specific to one feature | `features/<feature>/.server/` |
-| One route-facing operation | `features/<feature>/.server/use-cases/<use-case>.ts` |
-| Raw SQL for one table | `features/<feature>/.server/queries/<table>.ts` |
-| Fixed policy values | `features/<feature>/.server/constants/<domain>.ts` |
+| Scope                                                                                 | Location                                             |
+| ------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Shared by client and server                                                           | `app/lib/*.ts`                                       |
+| Server infrastructure (db, env, session, verify, totp, token, rate limit, audit, log) | `app/lib/.server/`                                   |
+| Domain logic used by 2+ features                                                      | `app/server/<domain>/`                               |
+| Everything specific to one feature                                                    | `features/<feature>/.server/`                        |
+| One route-facing operation                                                            | `features/<feature>/.server/use-cases/<use-case>.ts` |
+| Raw SQL for one table                                                                 | `features/<feature>/.server/queries/<table>.ts`      |
+| Fixed policy values                                                                   | `features/<feature>/.server/constants/<domain>.ts`   |
 
 - Server-only code lives in a `.server.ts` file or a `.server/` directory. React Router keeps
   both out of the client module graph.
@@ -194,13 +199,13 @@ Features planned for the MVP: `setup`, `login`, `two-factor`, `recover`,
 
 ## Project skills
 
-| Skill | Use |
-|-------|-----|
-| `preflight` | Gate plus parallel review (project rules, security, correctness/a11y, KISS) before every PR |
-| `security-review` | Deeper standalone security review of a diff or module |
-| `workers-best-practices` | Cloudflare Worker patterns, bindings, limits |
-| `wrangler` | CLI, configuration, migrations, deploy |
-| `web-perf` | Bundle and LCP budgets, profiling |
+| Skill                    | Use                                                                                         |
+| ------------------------ | ------------------------------------------------------------------------------------------- |
+| `preflight`              | Gate plus parallel review (project rules, security, correctness/a11y, KISS) before every PR |
+| `security-review`        | Deeper standalone security review of a diff or module                                       |
+| `workers-best-practices` | Cloudflare Worker patterns, bindings, limits                                                |
+| `wrangler`               | CLI, configuration, migrations, deploy                                                      |
+| `web-perf`               | Bundle and LCP budgets, profiling                                                           |
 
 `/preflight` is mandatory before opening a PR. Its security lens reads
 `.agents/skills/preflight/references/security-checklist.md`.

@@ -1,0 +1,2 @@
+-- Baseline migration.
+-- The MVP schema lands in PR 04 (requirements TASK-7 … TASK-12).

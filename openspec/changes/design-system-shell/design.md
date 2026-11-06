@@ -11,8 +11,8 @@ See proposal.md for motivation. Current state that shapes the approach:
 - `app/routes.ts` registers only `/` and `/health`. There is no `components/ui`, no feature
   directory, and no message catalog.
 - The test harness is Vitest with `@cloudflare/vitest-plugin` (Workers runtime). There is no DOM
-  test environment yet; Playwright is scheduled for PR 03.
-- CSP hardening is scheduled later (PR 17), so this design avoids inline scripts where possible.
+  test environment yet; Playwright is scheduled for PR #5.
+- CSP hardening is scheduled later (PR #19), so this design avoids inline scripts where possible.
 
 ## Goals / Non-Goals
 
@@ -29,7 +29,7 @@ See proposal.md for motivation. Current state that shapes the approach:
 
 - Auth, session, lock behavior, or vault data. Header slots are placeholders only.
 - Final visual design of the vault list, editors, or generator.
-- Playwright and accessibility automation (PR 03 and PR 17).
+- Playwright and accessibility automation (PR #5 and PR #19).
 - A theme editor or per-user theme persistence on the server.
 - Component documentation site or Storybook.
 
@@ -44,7 +44,7 @@ variants. The generated files are committed and owned by this repository.
 Alternatives: hand-writing every primitive (slow, easy to get focus management wrong) or using a
 runtime library such as Radix Themes or Mantine (adds a styled runtime, fights Tailwind tokens,
 harder to keep the bundle small). Owned source keeps the visual language under our control and
-lets PR 17 audit components directly.
+lets PR #19 audit components directly.
 
 Risk: the shadcn CLI may not detect React Router v8. Fallback: create `components.json` by hand
 and add components from the registry, copying only the primitives listed in the proposal.
@@ -69,7 +69,7 @@ Store the preference in a non-sensitive cookie `bw_theme` with values `light`, `
 sets the class on `<html>` during SSR. The client toggle updates the cookie and the document class.
 
 Rationale: a cookie lets SSR emit the correct class, so there is no flash and no inline script.
-That matters because PR 17 introduces a nonce-based CSP that would otherwise need an exception for
+That matters because PR #19 introduces a nonce-based CSP that would otherwise need an exception for
 a blocking theme script.
 
 Alternatives: localStorage plus an inline pre-hydration script (flash-free but needs a CSP
@@ -108,7 +108,7 @@ layout the next PRs depend on.
 Catalog lookup, parameter interpolation, and missing-key behavior are pure functions and are tested
 in the existing Workers Vitest project. The shell is verified through the build, SSR response
 inspection for landmarks, and a manual 360/768/1280 viewport pass. Full browser automation is
-deferred to PR 03, which adds Playwright.
+deferred to PR #5, which adds Playwright.
 
 Risk: without a DOM test environment, a regression in client-only shell behavior is only caught by
 the build or manually. Accepted for one PR because the shell has no data logic.
@@ -120,13 +120,13 @@ the build or manually. Accepted for one PR because the shell has no data logic.
 - [Theme cookie and client state drift] -> The cookie is the single source; the toggle writes the
   cookie before updating the document class, and SSR always re-derives the class from the cookie.
 - [Primitive set bloats the initial bundle] -> Primitives are separate modules and tree-shaken by
-  route; PR 17 measures the budget and trims unused ones.
+  route; PR #19 measures the budget and trims unused ones.
 - [Tailwind v4 dark variant syntax changes] -> Verify with a build and a rendered response that the
   `dark` class changes token values; keep the variant declaration in one place.
 - [Copy catalog keys drift from components] -> The key union is derived from the catalog, so an
   unknown key fails typecheck; the development throw catches dynamic misuse.
 - [Radix and sonner set inline style attributes] -> Radix positions overlays and sonner sets
-  CSS variables through `style` attributes, which a nonce cannot authorize. PR 17 must either
+  CSS variables through `style` attributes, which a nonce cannot authorize. PR #19 must either
   allow `style-src-attr 'unsafe-inline'` for these primitives or replace them; recorded here so
   the CSP task accounts for it.
 

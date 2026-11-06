@@ -1,6 +1,6 @@
 {
   "id": "TASK-2",
-  "title": "PR 01 — Scaffold Worker, bindings, migrations tooling, and verify gates",
+  "title": "PR #2 — Scaffold Worker, bindings, migrations tooling, and verify gates",
   "category": "setup",
   "description": "Create the single Worker application that serves both UI and API, wire Cloudflare bindings and typed secrets, establish forward-only D1 migrations, and put the lint/format/typecheck/CI gates in place so every later PR is verifiable. Requirement IDs: TASK-2, TASK-3, TASK-4, TASK-59.",
   "acceptanceCriteria": [
@@ -22,13 +22,13 @@
     {
       "step": 1,
       "description": "Scaffold the application",
-      "details": "Run `npx create-cloudflare@latest -- . --framework=react-router` (or scaffold into a temp directory and move contents if the CLI refuses a non-empty directory, preserving `.agent/`, AGENTS.md, and dotfiles from PR 00). Keep SSR enabled in `react-router.config.ts`. Confirm the tree matches: `app/routes`, `app/root.tsx`, `app/routes.ts`, `workers/app.ts`, `vite.config.ts`, `wrangler.jsonc`.",
+      "details": "Run `npx create-cloudflare@latest -- . --framework=react-router` (or scaffold into a temp directory and move contents if the CLI refuses a non-empty directory, preserving `.agent/`, AGENTS.md, and dotfiles from PR #1). Keep SSR enabled in `react-router.config.ts`. Confirm the tree matches: `app/routes`, `app/root.tsx`, `app/routes.ts`, `workers/app.ts`, `vite.config.ts`, `wrangler.jsonc`.",
       "pass": false
     },
     {
       "step": 2,
       "description": "Configure wrangler bindings",
-      "details": "Edit `wrangler.jsonc`: keep `main`, `compatibility_flags: [\"nodejs_compat\"]`, `observability.enabled`, and `upload_source_maps`. Add a `d1_databases` binding DB with the id from PR 00, a `kv_namespaces` binding KV_SESSIONS, and a top-level `ratelimits` entry named RATE_LIMITER with namespace_id 1001 and a 60-per-60s simple limit. Do not add an R2 binding until R2 is enabled on the account.",
+      "details": "Edit `wrangler.jsonc`: keep `main`, `compatibility_flags: [\"nodejs_compat\"]`, `observability.enabled`, and `upload_source_maps`. Add a `d1_databases` binding DB with the id from PR #1, a `kv_namespaces` binding KV_SESSIONS, and a top-level `ratelimits` entry named RATE_LIMITER with namespace_id 1001 and a 60-per-60s simple limit. Do not add an R2 binding until R2 is enabled on the account.",
       "pass": false
     },
     {
@@ -58,7 +58,7 @@
     {
       "step": 7,
       "description": "Wire secrets for local development",
-      "details": "Confirm `.dev.vars` from PR 00 is present with placeholder names and that `.gitignore` covers `.env.local`, `.dev.vars`, `.wrangler/`, and `build/`. Add a README note that real values are filled manually.",
+      "details": "Confirm `.dev.vars` from PR #1 is present with placeholder names and that `.gitignore` covers `.env.local`, `.dev.vars`, `.wrangler/`, and `build/`. Add a README note that real values are filled manually.",
       "pass": false
     },
     {
@@ -83,7 +83,7 @@
     "Bindings are available at `context.cloudflare.env` inside loaders/actions.",
     "Do not create a monorepo; the extension and Android app will be separate projects that reuse the documented contract.",
     "Use pnpm and Node 24, matching the local toolchain.",
-    "The scaffold step must preserve PR 00 artifacts (.agent/, AGENTS.md, .gitignore, .editorconfig). Scaffold into a temp directory if necessary rather than deleting them.",
+    "The scaffold step must preserve PR #1 artifacts (.agent/, AGENTS.md, .gitignore, .editorconfig). Scaffold into a temp directory if necessary rather than deleting them.",
     "CI must not require Cloudflare credentials in this PR.",
     "R2 is not enabled on the account, so the binding is intentionally absent; attachments remain phase 2.",
     "The local shell exports NODE_ENV=production; `pnpm dev` forces NODE_ENV=development to avoid a dev-only `_jsxDEV is not a function` crash.",

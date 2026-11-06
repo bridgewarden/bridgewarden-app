@@ -1,6 +1,6 @@
 {
   "id": "TASK-15",
-  "title": "PR 14 — Login and secure note item editors",
+  "title": "PR #16 — Login and secure note item editors",
   "category": "ui-ux",
   "description": "Build the create/edit surfaces for login items and secure notes, encrypting on save and integrating with the optimistic cache and outbox. Requirement IDs: TASK-40, TASK-41.",
   "acceptanceCriteria": [

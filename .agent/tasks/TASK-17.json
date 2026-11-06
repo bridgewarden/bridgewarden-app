@@ -1,6 +1,6 @@
 {
   "id": "TASK-17",
-  "title": "PR 16 — Trash UI, empty/loading/error states, responsive mobile",
+  "title": "PR #18 — Trash UI, empty/loading/error states, responsive mobile",
   "category": "ui-ux",
   "description": "Finish the product surfaces: a trash view with restore and purge, consistent empty/loading/error/offline states, and responsive layouts down to 360px. Requirement IDs: TASK-45, TASK-46, TASK-47.",
   "acceptanceCriteria": [

@@ -1,6 +1,6 @@
 {
   "id": "TASK-7",
-  "title": "PR 06 — First-run setup wizard with atomic bootstrap guard",
+  "title": "PR #8 — First-run setup wizard with atomic bootstrap guard",
   "category": "functional",
   "description": "Implement `/setup` so the very first admin can be created exactly once, gated by BOOTSTRAP_TOKEN, with client-side key generation, recovery-key confirmation, and optional 2FA enrollment handoff. Requirement ID: TASK-18.",
   "acceptanceCriteria": [
@@ -62,7 +62,7 @@
   "technicalNotes": [
     "The guard must be enforced in SQL, not in application logic; D1 is single-threaded per database but request interleaving still occurs.",
     "Never return the submitted token, password, auth hash, or recovery secret in a response or log.",
-    "If TASK-8 (sessions) is not merged, define the session interface in this PR and let TASK-8 implement it, so PR 06 is not blocked.",
+    "If TASK-8 (sessions) is not merged, define the session interface in this PR and let TASK-8 implement it, so PR #8 is not blocked.",
     "The wizard must tolerate a failed network call without losing derived keys, but must not persist them to storage."
   ],
   "pullRequest": {

@@ -1,6 +1,6 @@
 {
   "id": "TASK-18",
-  "title": "PR 17 — Security headers, a11y, performance budgets, and PWA",
+  "title": "PR #19 — Security headers, a11y, performance budgets, and PWA",
   "category": "security",
   "description": "Harden the deployed surface and finish quality budgets: nonce-based CSP and headers, WCAG 2.1 AA on core flows, bundle and LCP budgets with no ciphertext in SSR HTML, and an installable offline shell. Requirement IDs: TASK-48, TASK-49, TASK-50, TASK-51.",
   "acceptanceCriteria": [

@@ -1,6 +1,6 @@
 {
   "id": "TASK-12",
-  "title": "PR 11 \u2014 Vault API: sync, CRUD, trash, folders, authorization",
+  "title": "PR #13 \u2014 Vault API: sync, CRUD, trash, folders, authorization",
   "category": "api-endpoint",
   "description": "Implement the ciphertext-only vault API: incremental sync with tombstones, item create/update/delete/restore/purge, folder CRUD, strict per-user authorization, payload limits, and scheduled purge. Requirement IDs: TASK-29, TASK-30, TASK-31, TASK-32, TASK-33, TASK-34, TASK-35.",
   "acceptanceCriteria": [

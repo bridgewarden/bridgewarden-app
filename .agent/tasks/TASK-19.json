@@ -1,6 +1,6 @@
 {
   "id": "TASK-19",
-  "title": "PR 18 — Audit events, E2E suite, docs, and production deploy",
+  "title": "PR #20 — Audit events, E2E suite, docs, and production deploy",
   "category": "setup",
   "description": "Close the loop on operability: persist audit events, add redaction-safe observability, cover critical flows with Playwright, write the README/threat model/runbook, and deploy with a production smoke checklist. Requirement IDs: TASK-52, TASK-53, TASK-54, TASK-55, TASK-56.",
   "acceptanceCriteria": [

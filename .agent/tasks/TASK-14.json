@@ -1,6 +1,6 @@
 {
   "id": "TASK-14",
-  "title": "PR 13 — Vault list, filters, keyboard navigation, and search",
+  "title": "PR #15 — Vault list, filters, keyboard navigation, and search",
   "category": "ui-ux",
   "description": "Render the decrypted vault list with sorting, filtering, keyboard navigation, a command-palette search, and an empty state, all computed in memory over cached ciphertext. Requirement IDs: TASK-38, TASK-39.",
   "acceptanceCriteria": [

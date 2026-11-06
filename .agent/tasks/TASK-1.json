@@ -1,6 +1,6 @@
 {
   "id": "TASK-1",
-  "title": "PR 00 — Verify prerequisites, initialize the repository, and write the agent context",
+  "title": "PR #1 — Verify prerequisites, initialize the repository, and write the agent context",
   "category": "setup",
   "description": "Establish project readiness before any feature code: verify Cloudflare access and resources, create placeholder secrets, initialize the git repository with conventions, and write the AGENTS.md contract that every later PR must follow. Requirement IDs: TASK-1, TASK-57, TASK-58.",
   "acceptanceCriteria": [
@@ -65,7 +65,7 @@
     {
       "step": 8,
       "description": "Write AGENTS.md",
-      "details": "Create `AGENTS.md` at the repo root covering: required reading order (`.agent/prd/PRD.md`, `.agent/prd/PR-PLAN.md`, `.agent/tasks.json`), verify commands (`pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm test:e2e`) marked as available from PR 01, architecture invariants (crypto client-only, no vault plaintext server-side, no ciphertext in SSR HTML, no third-party scripts, secrets only in `.dev.vars`), file layout to be created in PR 01, PR conventions, and the rule that requirement IDs are cited in PR bodies. Keep it under ~120 lines and link rather than duplicate.",
+      "details": "Create `AGENTS.md` at the repo root covering: required reading order (`.agent/prd/PRD.md`, `.agent/prd/PR-PLAN.md`, `.agent/tasks.json`), verify commands (`pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm test:e2e`) marked as available from PR #2, architecture invariants (crypto client-only, no vault plaintext server-side, no ciphertext in SSR HTML, no third-party scripts, secrets only in `.dev.vars`), file layout to be created in PR #2, PR conventions, and the rule that requirement IDs are cited in PR bodies. Keep it under ~120 lines and link rather than duplicate.",
       "pass": false
     },
     {
@@ -79,7 +79,7 @@
   "estimatedComplexity": "medium",
   "technicalNotes": [
     "This task gates implementation. Do not start dependent feature tasks until prerequisites are verified or explicitly approved as gaps.",
-    "PR 00 creates repository scaffolding only: no `package.json`, no application source, no dependencies.",
+    "PR #1 creates repository scaffolding only: no `package.json`, no application source, no dependencies.",
     "Wrangler reads local secrets from `.dev.vars`, not `.env.local`; both files must be gitignored.",
     "Free-tier D1 caps a database at 500MB, which is sufficient for family scale.",
     "No MCP server is required for this project.",
@@ -90,6 +90,6 @@
     "branch": "chore/prerequisites",
     "requirementIds": ["TASK-1", "TASK-57", "TASK-58"],
     "scope": "Prerequisite checklist, wrangler resource ids, git init, .gitignore, .editorconfig, CONTRIBUTING conventions, AGENTS.md, readiness note.",
-    "outOfScope": "package.json, application source, dependencies, schema, lint/CI implementation (PR 01)."
+    "outOfScope": "package.json, application source, dependencies, schema, lint/CI implementation (PR #2)."
   }
 }

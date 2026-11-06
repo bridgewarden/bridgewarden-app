@@ -1,4 +1,4 @@
-# Readiness — PR 00
+# Readiness — PR #1
 
 Date: 2026-11-05
 Scope: `.agent/tasks/TASK-1.json` (requirements TASK-1, TASK-57, TASK-58)
@@ -21,14 +21,14 @@ Scope: `.agent/tasks/TASK-1.json` (requirements TASK-1, TASK-57, TASK-58)
 | Commit and PR conventions | Done               | `CONTRIBUTING.md`                                                                            |
 | `AGENTS.md`               | Done               | Verify commands, invariants, layout, skills, workflow                                        |
 | Documentation links       | Verified           | React Router on Cloudflare, D1 limits, migrations, rate limiting, WebCrypto                  |
-| Test users                | Not applicable yet | First admin via `/setup` after PR 06; members via admin panel after PR 09                    |
+| Test users                | Not applicable yet | First admin via `/setup` after PR #8; members via admin panel after PR #11                   |
 
 ## Remaining owner actions
 
 1. Back up `AUTH_PEPPER` and `TOTP_ENC_KEY` offline (password manager). Losing either locks
    every account out; rotating them is destructive.
 2. Approve the initial commit when ready: `git add -A && git commit`.
-3. Approve starting PR 01.
+3. Approve starting PR #2.
 
 All Cloudflare resources and local secrets are already provisioned. Do not paste secret values
 into chat, an issue, or a commit.
@@ -37,8 +37,8 @@ into chat, an issue, or a commit.
 
 | Decision                                                         | Value                                                    |
 | ---------------------------------------------------------------- | -------------------------------------------------------- |
-| Proceed with local PR 00 work while Cloudflare access is missing | Approved by owner                                        |
-| Proceed to PR 01                                                 | Unblocked: account, D1, KV, and `.dev.vars` are verified |
+| Proceed with local PR #1 work while Cloudflare access is missing | Approved by owner                                        |
+| Proceed to PR #2                                                 | Unblocked: account, D1, KV, and `.dev.vars` are verified |
 | Email provider                                                   | Not required in MVP                                      |
 | Custom domain                                                    | Not required; `workers.dev`                              |
 | Free-tier D1 500MB cap                                           | Accepted for personal/family scale                       |

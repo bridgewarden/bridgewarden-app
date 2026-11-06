@@ -13,7 +13,7 @@ projects that reuse the same crypto and API contract.
 
 1. `.agent/prd/SUMMARY.md` — one-page context
 2. `.agent/prd/PRD.md` — requirements, requirement IDs `TASK-1` … `TASK-59`
-3. `.agent/prd/PR-PLAN.md` — how requirements group into PRs `00` … `18`
+3. `.agent/prd/PR-PLAN.md` — how requirements group into PRs `#1` … `#20`
 4. `.agent/tasks.json` — PR-level task index, `passes` flags
 
 Two ID spaces exist and are not interchangeable: **requirement IDs** (`TASK-1` … `TASK-59` in
@@ -41,7 +41,7 @@ means the same thing in both.
 
 ## Commands
 
-These exist from PR 01 onward. Until then, a missing script is a blocker, not a pass.
+These exist from PR #2 onward. Until then, a missing script is a blocker, not a pass.
 
 ```bash
 pnpm dev              # Workers runtime via the Cloudflare Vite plugin
@@ -50,7 +50,7 @@ pnpm typecheck        # tsc --noEmit, strict
 pnpm lint
 pnpm format:check
 pnpm test             # Vitest, Workers pool
-pnpm test:e2e         # Playwright (available from PR 03)
+pnpm test:e2e         # Playwright (available from PR #5)
 pnpm db:migrate:local
 pnpm db:migrate:remote
 pnpm db:reset:local
@@ -185,7 +185,7 @@ Features planned for the MVP: `setup`, `login`, `two-factor`, `recover`,
 - No third-party fonts, scripts, or analytics. Every user-facing string comes from
   `app/lib/i18n/en.ts` through `t()`.
 - Radix and sonner set inline `style` attributes for positioning and CSS variables. A strict
-  `style-src` cannot nonce them; PR 17 must document an exception or replace them.
+  `style-src` cannot nonce them; PR #19 must document an exception or replace them.
 
 ## Testing
 

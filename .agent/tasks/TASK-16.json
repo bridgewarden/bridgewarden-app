@@ -1,6 +1,6 @@
 {
   "id": "TASK-16",
-  "title": "PR 15 — Password generator, TOTP item generator, and clipboard",
+  "title": "PR #17 — Password generator, TOTP item generator, and clipboard",
   "category": "ui-ux",
   "description": "Add the utility features that make the vault useful day to day: a CSPRNG password generator, an RFC 6238 code generator for stored item secrets, and clipboard/reveal handling with auto-clear. Requirement IDs: TASK-42, TASK-43, TASK-44.",
   "acceptanceCriteria": [

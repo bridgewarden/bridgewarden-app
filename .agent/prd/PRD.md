@@ -137,7 +137,7 @@ Requirement IDs are stable and become implementation task IDs. `TASK-1` is reser
 - It states the verify commands (`pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`), the architecture invariants (crypto is client-only, no vault plaintext on the server, no ciphertext in SSR HTML, secrets never leave `.dev.vars`), the file layout, and the rule that PRD requirement IDs are referenced in PR bodies.
 - It must not duplicate the PRD; it links to `.agent/prd/PRD.md`, `.agent/prd/PR-PLAN.md`, and `.agent/tasks.json`.
 - It lists the project-scoped skills in `.agents/skills/` and states that `/preflight` (gate + parallel reviewers including the security lens) runs before any PR is opened.
-- **Acceptance:** a new agent can determine what to run before opening a PR without reading source files; `AGENTS.md` contains no secrets; commands listed match `package.json` scripts once PR 01 lands.
+- **Acceptance:** a new agent can determine what to run before opening a PR without reading source files; `AGENTS.md` contains no secrets; commands listed match `package.json` scripts once PR #2 lands.
 
 #### TASK-59 — Verify gates and CI
 - `pnpm lint` (ESLint or Biome), `pnpm format:check` (Prettier), and `pnpm typecheck` (`tsc --noEmit`, strict) exist and pass on a clean checkout.

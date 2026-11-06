@@ -1,6 +1,6 @@
 {
   "id": "TASK-13",
-  "title": "PR 12 — Encrypted cache, outbox, sync engine, and key lifetime",
+  "title": "PR #14 — Encrypted cache, outbox, sync engine, and key lifetime",
   "category": "functional",
   "description": "Make the vault usable offline and fast: cache ciphertext and metadata in IndexedDB, queue mutations in an outbox, reconcile conflicts, and keep the vault key only in memory with a strict lock lifecycle. Requirement IDs: TASK-36, TASK-37.",
   "acceptanceCriteria": [

@@ -1,6 +1,6 @@
 {
   "id": "TASK-8",
-  "title": "PR 07 — Login, KV sessions, route guard, and logout",
+  "title": "PR #9 — Login, KV sessions, route guard, and logout",
   "category": "functional",
   "description": "Implement the password step of login, opaque KV-backed sessions in an httpOnly cookie, a server guard for `/app` routes, logout, and session revocation. Requirement IDs: TASK-19, TASK-20.",
   "acceptanceCriteria": [

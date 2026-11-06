@@ -1,6 +1,6 @@
 {
   "id": "TASK-10",
-  "title": "PR 09 — Auth rate limiting, lockout, and admin user management",
+  "title": "PR #11 — Auth rate limiting, lockout, and admin user management",
   "category": "security",
   "description": "Protect authentication endpoints from brute force, add account lockout, and give the first admin a panel to create, disable, and re-session users without email delivery. Requirement IDs: TASK-24, TASK-25.",
   "acceptanceCriteria": [

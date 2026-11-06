@@ -1,6 +1,6 @@
 {
   "id": "TASK-9",
-  "title": "PR 08 — TOTP 2FA enrollment, login challenge, and backup codes",
+  "title": "PR #10 — TOTP 2FA enrollment, login challenge, and backup codes",
   "category": "functional",
   "description": "Add optional TOTP second factor with replay protection, a short-lived login challenge, and ten single-use backup codes stored as HMACs. Requirement IDs: TASK-21, TASK-22, TASK-23.",
   "acceptanceCriteria": [

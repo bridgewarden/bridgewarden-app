@@ -49,6 +49,6 @@ None. No existing capability changes behavior.
   `tailwind-merge`, `lucide-react`, `sonner`) where not already installed.
 - Tests: the existing health route test must keep passing; new tests cover catalog lookup, theme
   cookie parsing, and the root loader's theme resolution. The shell is verified by build, SSR
-  markup inspection, and a viewport pass until Playwright lands in PR 03.
+  markup inspection, and a viewport pass until Playwright lands in PR #5.
 - No server, D1, KV, crypto, or secret changes. The `/health` route and Worker bindings are
   untouched.

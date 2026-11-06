@@ -1,6 +1,6 @@
 {
   "id": "TASK-11",
-  "title": "PR 10 — Change master password, recovery reset, and auto-lock",
+  "title": "PR #12 — Change master password, recovery reset, and auto-lock",
   "category": "security",
   "description": "Let users rotate their master password without re-encrypting items, recover with the vault recovery key when the password is lost, and lock the vault automatically after idle time. Requirement IDs: TASK-26, TASK-27, TASK-28.",
   "acceptanceCriteria": [

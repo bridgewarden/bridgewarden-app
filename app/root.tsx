@@ -1,11 +1,31 @@
-import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration } from 'react-router';
+import {
+  isRouteErrorResponse,
+  Links,
+  Meta,
+  Outlet,
+  Scripts,
+  ScrollRestoration,
+  useRouteLoaderData,
+} from 'react-router';
 
+import { AppShell } from './components/app-shell';
 import type { Route } from './+types/root';
+import { t } from './lib/i18n/en';
+import { DEFAULT_THEME, readThemeCookie, themeClassName } from './lib/theme';
 import './app.css';
 
+export function loader({ request }: Route.LoaderArgs) {
+  return { theme: readThemeCookie(request.headers.get('cookie')) };
+}
+
+export const headers = () => ({ 'Cache-Control': 'no-store' });
+
 export function Layout({ children }: { children: React.ReactNode }) {
+  const data = useRouteLoaderData<typeof loader>('root');
+  const theme = data?.theme ?? DEFAULT_THEME;
+
   return (
-    <html lang="en">
+    <html lang="en" className={themeClassName(theme)}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -14,7 +34,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        {children}
+        <AppShell theme={theme}>{children}</AppShell>
         <ScrollRestoration />
         <Scripts />
       </body>
@@ -27,27 +47,27 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let message = 'Oops!';
-  let details = 'An unexpected error occurred.';
+  let title = t('errors.title');
+  let details = t('errors.generic.description');
   let stack: string | undefined;
 
   if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? '404' : 'Error';
-    details = error.status === 404 ? 'The requested page could not be found.' : error.statusText || details;
+    title = error.status === 404 ? t('errors.notFound.title') : t('errors.title');
+    details = error.status === 404 ? t('errors.notFound.description') : error.statusText || details;
   } else if (import.meta.env.DEV && error instanceof Error) {
     details = error.message;
     stack = error.stack;
   }
 
   return (
-    <main className="mx-auto max-w-xl p-6">
-      <h1 className="text-2xl font-semibold">{message}</h1>
-      <p className="mt-2 text-gray-600 dark:text-gray-400">{details}</p>
+    <section className="space-y-2">
+      <h1 className="text-2xl font-semibold">{title}</h1>
+      <p className="text-muted-foreground">{details}</p>
       {stack ? (
-        <pre className="mt-4 w-full overflow-x-auto rounded bg-gray-100 p-4 text-sm dark:bg-gray-900">
+        <pre className="mt-4 w-full overflow-x-auto rounded bg-muted p-4 text-sm">
           <code>{stack}</code>
         </pre>
       ) : null}
-    </main>
+    </section>
   );
 }

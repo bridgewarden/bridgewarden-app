@@ -50,12 +50,23 @@ pnpm lint
 pnpm format
 pnpm format:check
 pnpm test
+pnpm test:watch       # Vitest in watch mode
+pnpm test app/__test__/reset-database.test.ts   # single file
+pnpm test:e2e         # Playwright smoke suite (starts its own dev server on 8787)
 pnpm db:migrate:local
 pnpm db:migrate:remote
 pnpm db:reset:local
 ```
 
 The app is served at `http://localhost:5173`. `/health` runs `SELECT 1` against D1.
+
+`pnpm test:e2e` starts its own dev server on port 8787 with an isolated `.wrangler/e2e` state
+directory, so stop any `pnpm dev` already bound to that port first. Before the first run, install
+the browser once:
+
+```bash
+pnpm exec playwright install chromium
+```
 
 ## Cloudflare resources
 

@@ -150,7 +150,8 @@ Features planned for the MVP: `setup`, `login`, `two-factor`, `recover`,
 ## File naming
 
 - kebab-case for every file: `vault-item.tsx`, not `VaultItem.tsx`.
-- Suffixes: `*.hooks.ts`, `*.types.ts`, `*.constants.ts`, `*.schema.ts`, `*.test.ts(x)`.
+- Suffixes: `*.hooks.ts`, `*.types.ts`, `*.constants.ts`, `*.schema.ts`, `*.test.ts(x)`, and
+  `*.spec.ts` for Playwright specs in `e2e/` only.
 - Server-only: `.server.ts` or a `.server/` directory (files inside need no suffix).
 - A component with one file is `components/<name>.tsx`; a directory with `index.ts` only when
   two or more public files are exported.
@@ -194,6 +195,9 @@ Features planned for the MVP: `setup`, `login`, `two-factor`, `recover`,
 - Assert observable behavior, not internals.
 - Tests never touch the development database and never depend on Internet access.
 - Every behavior change ships with a test in the same commit.
+- `pnpm test:e2e` starts its own dev server on port 5173 with isolated `.wrangler/e2e` state.
+- Auth and vault E2E specs must disable `trace` and `screenshot`: a trace captures cookies and
+  typed plaintext. Only the unauthenticated smoke project may keep failure artifacts.
 
 ## Crypto and secrets rules for code changes
 

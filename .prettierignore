@@ -8,3 +8,6 @@ worker-configuration.d.ts
 skills-lock.json
 .commandcode
 openspec
+playwright-report
+test-results
+blob-report

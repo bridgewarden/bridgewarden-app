@@ -23,5 +23,6 @@
     },
     "esModuleInterop": true,
     "resolveJsonModule": true
-  }
+  },
+  "exclude": ["app/**/__test__/**/*"]
 }

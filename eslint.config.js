@@ -5,7 +5,16 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['build/**', '.react-router/**', 'node_modules/**', 'worker-configuration.d.ts', 'pnpm-lock.yaml'],
+    ignores: [
+      'build/**',
+      '.react-router/**',
+      'playwright-report/**',
+      'test-results/**',
+      'blob-report/**',
+      'node_modules/**',
+      'worker-configuration.d.ts',
+      'pnpm-lock.yaml',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

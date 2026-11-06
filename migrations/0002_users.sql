@@ -1,0 +1,21 @@
+CREATE TABLE users (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL COLLATE NOCASE UNIQUE,
+  display_name TEXT,
+  auth_hash TEXT NOT NULL,
+  server_salt TEXT NOT NULL,
+  kdf_alg TEXT NOT NULL CHECK (kdf_alg IN ('pbkdf2-sha256')),
+  kdf_iterations INTEGER NOT NULL CHECK (kdf_iterations > 0),
+  kdf_salt TEXT NOT NULL,
+  vault_key_wrapped TEXT NOT NULL,
+  vault_key_wrap_iv TEXT NOT NULL,
+  recovery_key_wrapped TEXT,
+  recovery_key_wrap_iv TEXT,
+  role TEXT NOT NULL CHECK (role IN ('admin', 'member')),
+  status TEXT NOT NULL CHECK (status IN ('active', 'disabled')),
+  vault_rev INTEGER NOT NULL DEFAULT 0 CHECK (vault_rev >= 0),
+  failed_login_count INTEGER NOT NULL DEFAULT 0 CHECK (failed_login_count >= 0),
+  locked_until INTEGER,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);

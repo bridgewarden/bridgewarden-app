@@ -169,6 +169,24 @@ Features planned for the MVP: `setup`, `login`, `two-factor`, `recover`,
 - shadcn source in `app/components/ui/` is generated: change tokens in `app/app.css`, do not
   restyle individual primitives.
 
+## UI
+
+- Design tokens live in `app/app.css` and are declared once with `light-dark()`; `color-scheme` on
+  `.light`/`.dark` (or the OS preference) selects the value. Never use raw color values in
+  components; use the semantic Tailwind roles. `light-dark()` needs Chrome/Edge 123+, Safari 17.5+,
+  Firefox 120+.
+- Generated primitives live in `app/components/ui/`. Treat them as owned source but do not restyle
+  an individual primitive; change a token or the shared variant instead.
+- `cn` is the only class merge helper and lives in `app/lib/class-names.ts`. `components.json`
+  points its `utils` alias there; keep aliases in sync when files move.
+- Theme preference is the `bw_theme` cookie (`light`, `dark`, `system`). `system` means no
+  `light`/`dark` class and follows the OS media query, so avoid `dark:` utilities in hand-written
+  components and use tokens instead.
+- No third-party fonts, scripts, or analytics. Every user-facing string comes from
+  `app/lib/i18n/en.ts` through `t()`.
+- Radix and sonner set inline `style` attributes for positioning and CSS variables. A strict
+  `style-src` cannot nonce them; PR 17 must document an exception or replace them.
+
 ## Testing
 
 - Vitest with the Workers pool for server code; Playwright in `e2e/` for flows.

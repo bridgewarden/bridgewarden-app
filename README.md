@@ -73,8 +73,9 @@ Open `/setup` on a deployment whose `users` table is empty. The wizard creates t
 administrator and shows the recovery key once. `/setup` redirects to `/login` as soon as an account
 exists; the server also enforces the one-admin rule atomically, so a concurrent second request gets 409.
 
-There is no bootstrap token: the first visitor to an empty deployment can create the admin. Keep the
-deployment private until you have completed setup, and reset the local D1 state if you need to retry.
+While the user table is empty, `/` and `/app/*` redirect to `/setup`. There is no bootstrap token:
+the first visitor to an empty deployment can create the admin. Keep the deployment private until you
+have completed setup, and reset the local D1 state if you need to retry.
 
 E2E uses an isolated `.wrangler/e2e` database. `pnpm test:e2e` applies migrations and clears the
 `users`, `audit_events`, and session keys before starting. CI generates throwaway `.dev.vars` values.

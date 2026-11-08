@@ -8,7 +8,7 @@
     "Two concurrent setup requests produce exactly one user",
     "Refreshing mid-wizard creates no partial user",
     "The wizard collects email, display name, and a master password of at least 12 characters",
-    "The recovery key is displayed once, must be confirmed by typing a substring, and is never sent to the server",
+    "The recovery key is displayed once, must be confirmed by typing the first six normalized characters, and is never sent to the server",
     "After completion the session cookie is set and the user lands on an unlocked `/app`",
     "An audit event records the bootstrap creation"
   ],

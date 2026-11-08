@@ -215,7 +215,8 @@ Requirement IDs are stable and become implementation task IDs. `TASK-1` is reser
 
 #### TASK-18 — First-run setup wizard
 - Available only when `SELECT COUNT(*) FROM users` is 0; the create statement is a single atomic `INSERT ... SELECT ... WHERE NOT EXISTS (SELECT 1 FROM users)` so two concurrent requests cannot both create an admin.
-- Wizard steps: email + display name → master password (strength meter, min 12 chars) → recovery key display + confirmation → 2FA enrollment (skippable with warning) → done.
+- Wizard steps: email + display name → master password entered twice (strength meter, min 12 chars, exact confirmation) → recovery key display + confirmation → 2FA enrollment (skippable with warning) → done.
+- While the user table is empty, `/` and `/app/*` redirect to `/setup`.
 - **Acceptance:** second request after the first admin exists returns 409 and no row is created; a browser refresh mid-wizard does not create a partial user.
 
 #### TASK-19 — Login: password step and session issuance

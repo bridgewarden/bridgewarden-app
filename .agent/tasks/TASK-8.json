@@ -1,6 +1,6 @@
 {
   "id": "TASK-8",
-  "title": "PR #9 — Login, KV sessions, route guard, and logout",
+  "title": "PR #9 \u2014 Login, KV sessions, route guard, and logout",
   "category": "functional",
   "description": "Implement the password step of login, opaque KV-backed sessions in an httpOnly cookie, a server guard for `/app` routes, logout, and session revocation. Requirement IDs: TASK-19, TASK-20.",
   "acceptanceCriteria": [
@@ -17,7 +17,7 @@
     {
       "step": 1,
       "description": "Add the session store",
-      "details": "Create `app/lib/.server/session.ts` with `createSession(env, userId, meta)`, `getSession(env, request)`, `destroySession(env, request)`, and `revokeUserSessions(env, userId)`. Store `sess:<sha256(token)>` in KV with JSON `{ userId, createdAt, lastSeenAt, uaHash, ipHash, ver }` and a 30-day expiration. Use a per-user `ver` counter stored on the user row so revocation can invalidate all tokens without listing KV keys.",
+      "details": "Create `app/lib/.server/session.ts` with `createSession(env, userId)`, `getSession(env, request)`, `destroySession(env, request)`, and `revokeUserSessions(env, userId)`. Store `session:<sha256(token)>` in KV; extend the existing `{ userId, createdAt }` record with `lastSeenAt`, `uaHash`, `ipHash`, and `ver` and a 30-day expiration. Use a per-user `ver` counter stored on the user row so revocation can invalidate all tokens without listing KV keys.",
       "pass": false
     },
     {
@@ -53,11 +53,15 @@
     {
       "step": 7,
       "description": "Test the flows",
-      "details": "Vitest: wrong email and wrong password produce the same status and body; cookie attributes are exact; a session with a stale `ver` is rejected. Playwright: login → `/app` reachable; logout → `/app` redirects; visiting `/app` first redirects to login and then back to `/app` after auth.",
+      "details": "Vitest: wrong email and wrong password produce the same status and body; cookie attributes are exact; a session with a stale `ver` is rejected. Playwright: login \u2192 `/app` reachable; logout \u2192 `/app` redirects; visiting `/app` first redirects to login and then back to `/app` after auth.",
       "pass": false
     }
   ],
-  "dependencies": ["TASK-3", "TASK-5", "TASK-6"],
+  "dependencies": [
+    "TASK-3",
+    "TASK-5",
+    "TASK-6"
+  ],
   "estimatedComplexity": "high",
   "technicalNotes": [
     "Do not store the session token in D1; KV with a hashed key is the design.",
@@ -69,7 +73,10 @@
   "pullRequest": {
     "title": "feat(auth): login, KV sessions, route guard, and logout",
     "branch": "feat/auth-sessions",
-    "requirementIds": ["TASK-19", "TASK-20"],
+    "requirementIds": [
+      "TASK-19",
+      "TASK-20"
+    ],
     "scope": "Session store, auth-hash verification, login route, requireUser guard, logout, revocation helper.",
     "outOfScope": "2FA, rate limiting, admin panel, vault data fetching."
   }

@@ -1,14 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  initialSetupState,
-  isMasterPasswordValid,
-  passwordsMatch,
-  recoveryConfirmationMatches,
-  setupReducer,
-  validateAccount,
-  type SetupState,
-} from '../setup-state';
+import { initialSetupState, setupReducer } from '../setup.state';
+import { isMasterPasswordValid, passwordsMatch, recoveryConfirmationMatches, validateAccount } from '../setup.lib';
+import type { SetupState } from '../setup.types';
 import type { SetupTransportMaterial } from '../setup-keys';
 
 const keys: SetupTransportMaterial = {

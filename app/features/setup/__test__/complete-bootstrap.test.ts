@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createTestUser } from '../../../__test__/fixtures';
 import { resetDatabase } from '../../../__test__/reset-database';
 import { encodeBase64 } from '../../../lib/crypto/encoding';
-import { readConfig } from '../../../lib/.server/env';
 import type { SetupInput } from '../.server/setup-input';
 import { completeBootstrap } from '../.server/use-cases/complete-bootstrap';
 
@@ -23,11 +22,19 @@ const setupInput = (token: string): SetupInput => ({
   recoveryKeyWrapIv: random(12),
 });
 
-const configuredToken = () => {
-  const token = readConfig(env, 'BOOTSTRAP_TOKEN');
-  expect(token).toBeTruthy();
-  return token!;
-};
+const TOKEN = 'test-bootstrap-token';
+const PEPPER = 'test-auth-pepper';
+
+const testEnv = (overrides: Record<string, unknown> = {}) =>
+  ({
+    DB: env.DB,
+    KV_SESSIONS: env.KV_SESSIONS,
+    BOOTSTRAP_TOKEN: TOKEN,
+    AUTH_PEPPER: PEPPER,
+    ...overrides,
+  }) as unknown as Env;
+
+const configuredToken = () => TOKEN;
 
 const clearSessions = async () => {
   const list = await env.KV_SESSIONS.list({ prefix: 'session:' });
@@ -43,7 +50,7 @@ afterEach(clearSessions);
 
 describe('complete bootstrap use-case', () => {
   it('creates the admin, audits it, and issues a session', async () => {
-    const result = await completeBootstrap(env, setupInput(configuredToken()));
+    const result = await completeBootstrap(testEnv(), setupInput(configuredToken()));
 
     expect(result.status).toBe('created');
     expect(result.status === 'created' && result.cookie).toContain('bw_session=');
@@ -61,7 +68,7 @@ describe('complete bootstrap use-case', () => {
   });
 
   it('rejects a wrong token without creating anything', async () => {
-    const result = await completeBootstrap(env, setupInput(`${configuredToken()}-wrong`));
+    const result = await completeBootstrap(testEnv(), setupInput(`${configuredToken()}-wrong`));
 
     expect(result.status).toBe('forbidden');
     expect(await env.DB.prepare('SELECT COUNT(*) AS count FROM users').first<{ count: number }>()).toEqual({
@@ -73,7 +80,7 @@ describe('complete bootstrap use-case', () => {
   it('returns exists and removes the pre-created session when an admin already exists', async () => {
     await createTestUser();
 
-    const result = await completeBootstrap(env, setupInput(configuredToken()));
+    const result = await completeBootstrap(testEnv(), setupInput(configuredToken()));
 
     expect(result.status).toBe('exists');
     expect(await env.DB.prepare('SELECT COUNT(*) AS count FROM users').first<{ count: number }>()).toEqual({
@@ -93,7 +100,7 @@ describe('complete bootstrap use-case', () => {
       DB: env.DB,
       KV_SESSIONS: { put: async () => Promise.reject(new Error('kv down')), delete: async () => undefined },
       BOOTSTRAP_TOKEN: token,
-      AUTH_PEPPER: readConfig(env, 'AUTH_PEPPER'),
+      AUTH_PEPPER: PEPPER,
     } as unknown as Env;
 
     expect((await completeBootstrap(withoutPepper, setupInput(token))).status).toBe('server-error');

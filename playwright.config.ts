@@ -2,7 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: true,
+  globalSetup: './e2e/global-setup.ts',
+  workers: 1,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? [['html', { open: 'never' }], ['list']] : 'list',
@@ -11,7 +12,15 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'smoke', testMatch: /smoke\.spec\.ts/, use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'setup',
+      testMatch: /setup\.spec\.ts/,
+      dependencies: ['smoke'],
+      use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
+    },
+  ],
   webServer: {
     command: 'E2E=1 pnpm dev --port 8787 --strictPort',
     url: 'http://localhost:8787/',

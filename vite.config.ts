@@ -15,4 +15,7 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
+  optimizeDeps: {
+    include: ['qrcode/lib/browser'],
+  },
 });

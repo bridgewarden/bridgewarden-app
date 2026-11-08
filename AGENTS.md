@@ -70,7 +70,7 @@ app/
 ├── routes.ts                # the only route registry
 ├── app.css                  # Tailwind entry
 ├── routes/                  # transport only: meta, loader, action, headers, middleware
-├── features/<feature>/      # one page per top-level feature
+├── features/<feature>/      # page entry, components/, and feature-suffixed UI modules
 ├── server/<domain>/         # shared domain server code, created on first extraction
 ├── components/              # global UI; components/ui/ is generated shadcn source
 ├── hooks/                   # global hooks
@@ -157,6 +157,28 @@ Features planned for the MVP: `setup`, `login`, `two-factor`, `recover`,
   two or more public files are exported.
 - Names carry their own context: `backup-codes.ts`, not `codes.ts`.
 - Avoid `data.ts`, `helpers.ts`, `utils.ts`, `constants.ts` when a domain word exists.
+- Feature UI code uses `<feature>.<suffix>.ts` while a file stays small; see "Feature UI structure".
+
+## Feature UI structure
+
+- `features/<feature>/<feature>.tsx` is page composition only: no response types, fetcher/effect
+  flow, constants, or pure helpers.
+- Feature-owned components live in `features/<feature>/components/<component>.tsx`. A
+  `components/index.ts` barrel is allowed when two or more components are public.
+- Non-component UI code uses feature-suffixed files: `<feature>.hooks.ts`,
+  `<feature>.constants.ts`, `<feature>.lib.ts`, `<feature>.types.ts`, and `<feature>.state.ts`.
+- Keep a suffixed file while it exports at most ten functions/hooks. Above ten, split it by
+  concern into `hooks/` or `lib/` and add a barrel there. Exported types and constants do not
+  count toward the threshold.
+- A file over roughly 200 lines must be split by concern even if it exports only one function.
+- Import through a barrel from outside the directory; import concrete files inside it to avoid
+  cycles. Never barrel page entries or server code.
+- Components receive data and callbacks through props and never import the page.
+- UI shared by two or more features moves to `app/components/`. Features never import another
+  feature.
+- Domain-named modules stay descriptive when the name is the context, such as `setup-keys.ts`
+  or `.server/use-cases/<use-case>.ts`.
+- This section covers UI only; server layout and `.server/` rules stay unchanged.
 
 ## Code style
 

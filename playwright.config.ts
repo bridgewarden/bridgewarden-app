@@ -26,6 +26,13 @@ export default defineConfig({
       dependencies: ['setup'],
       use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
     },
+    {
+      name: 'two-factor',
+      testMatch: /two-factor\.spec\.ts/,
+      dependencies: ['auth'],
+      retries: 0,
+      use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
+    },
   ],
   webServer: {
     command: 'E2E=1 pnpm dev --port 8787 --strictPort',

@@ -100,6 +100,26 @@ state; incrementing it invalidates every existing session.
 `POST /auth/logout` deletes the session, clears the cookie, and records an audit event. `/` and `/app/*` redirect unauthenticated visitors to `/login?next=<same-origin path>`; unsafe return paths
 fall back to `/app`. The header shows the signed-in user with a **Sign out** action.
 
+## Two-factor authentication
+
+Enable TOTP from `/app/settings` by confirming your master password. The page shows an `otpauth://`
+URI, a locally rendered QR code, and the secret once; verify a six-digit code to enable 2FA and receive
+ten one-time backup codes. Backup codes are stored only as HMAC hashes and shown once; regenerating
+replaces every old code and also requires the master password. Until 2FA is enabled, a non-dismissible
+reminder banner stays above the header.
+
+When 2FA is enabled, `/auth/login` returns only a five-minute challenge token and no session or
+wrapped vault key. The session and unlock material are issued only after `/auth/2fa` accepts a TOTP
+code within the ±1 step window or an unused backup code. Challenge attempts are counted atomically in
+D1; the fifth failure consumes the token, and a consumed token cannot be resurrected. Replay is
+prevented by `last_totp_step`.
+
+Enrollment, regeneration, and disabling each require the current master password, re-derived in the
+browser and verified server-side.
+This is the one deliberate zero-knowledge exception: the TOTP seed must be decryptable by the server
+to verify codes before the vault key exists. It is stored with AES-256-GCM under a key derived from
+`TOTP_ENC_KEY`, bound to the user, and never returned after enrollment.
+
 ## Cloudflare resources
 
 | Binding        | Resource                                          |

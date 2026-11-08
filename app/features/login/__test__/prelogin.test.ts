@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { resetDatabase } from '../../../__test__/reset-database';
 import { lookupKdfParameters } from '../.server/use-cases/prelogin';
-import { createAuthUser, testEnv } from './auth-fixtures';
+import { createAuthUser, testEnv } from '../../../__test__/auth-fixtures';
 
 beforeEach(async () => {
   await resetDatabase();

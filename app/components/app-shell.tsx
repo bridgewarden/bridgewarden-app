@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-import { CircleUserIcon, LockIcon, ShieldIcon } from 'lucide-react';
+import { CircleUserIcon, LockIcon, ShieldAlertIcon, ShieldIcon } from 'lucide-react';
 import { Link, useFetcher, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 
@@ -21,9 +21,10 @@ type AppShellProps = {
   children: React.ReactNode;
   theme: Theme;
   user: AppUser | null;
+  twoFactorEnabled: boolean;
 };
 
-export const AppShell = ({ children, theme, user }: AppShellProps) => {
+export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellProps) => {
   const fetcher = useFetcher<{ ok: boolean; error?: string }>();
   const navigate = useNavigate();
   const wasSubmitting = useRef(false);
@@ -58,6 +59,17 @@ export const AppShell = ({ children, theme, user }: AppShellProps) => {
 
   return (
     <div className="flex min-h-screen flex-col">
+      {user && !twoFactorEnabled ? (
+        <div role="status" className="border-b border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-2 text-center">
+            <ShieldAlertIcon className="size-4 shrink-0" aria-hidden="true" />
+            <span>{t('twoFactor.banner')}</span>
+            <Link to="/app/settings" className="font-medium underline underline-offset-4">
+              {t('twoFactor.enableNow')}
+            </Link>
+          </div>
+        </div>
+      ) : null}
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex min-h-16 w-full max-w-5xl items-center gap-1 px-4">
           <Link to="/" className="mr-auto flex min-h-11 min-w-0 items-center gap-2 rounded-md px-1 font-semibold">
@@ -70,6 +82,9 @@ export const AppShell = ({ children, theme, user }: AppShellProps) => {
           <ThemeControl theme={theme} />
           {user ? (
             <>
+              <Button variant="ghost" size="sm" className="min-h-11" asChild>
+                <Link to="/app/settings">{t('common.settings')}</Link>
+              </Button>
               <span className="hidden max-w-32 truncate text-sm text-muted-foreground sm:inline">
                 {user.displayName ?? user.email}
               </span>

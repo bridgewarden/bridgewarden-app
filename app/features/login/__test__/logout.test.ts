@@ -5,7 +5,7 @@ import { resetDatabase } from '../../../__test__/reset-database';
 import { createTestUser } from '../../../__test__/fixtures';
 import { createSession, SESSION_COOKIE_NAME } from '../../../lib/.server/session';
 import { logoutCurrentSession } from '../.server/use-cases/logout';
-import { testEnv } from './auth-fixtures';
+import { testEnv } from '../../../__test__/auth-fixtures';
 
 beforeEach(async () => {
   await resetDatabase();

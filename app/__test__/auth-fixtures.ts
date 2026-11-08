@@ -1,8 +1,8 @@
 import { env } from 'cloudflare:workers';
 
-import { createTestUser } from '../../../__test__/fixtures';
-import { encodeBase64 } from '../../../lib/crypto/encoding';
-import { deriveServerAuthHash } from '../../../lib/.server/auth-hash';
+import { createTestUser } from './fixtures';
+import { encodeBase64 } from '../lib/crypto/encoding';
+import { deriveServerAuthHash } from '../lib/.server/auth-hash';
 
 export const TEST_PEPPER = 'test-auth-pepper';
 export const TEST_SESSION_SECRET = 'test-session-secret';

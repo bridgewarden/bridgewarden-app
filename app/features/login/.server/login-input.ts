@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
-import { fromBase64Url } from '../../../lib/base64-url';
-import { KEY_BYTES } from '../../../lib/crypto/contract';
+import { parseAuthHash } from '../../../lib/.server/parse-auth-hash';
 
 const emailSchema = z.string().trim().toLowerCase().pipe(z.email().max(254));
 
@@ -28,12 +27,6 @@ export const parseLoginInput = (value: unknown): LoginInput | null => {
   const parsed = loginSchema.safeParse(value);
   if (!parsed.success) return null;
 
-  try {
-    const authHashBytes = fromBase64Url(parsed.data.authHash);
-    if (authHashBytes.length !== KEY_BYTES) return null;
-
-    return { email: parsed.data.email, authHashBytes };
-  } catch {
-    return null;
-  }
+  const authHashBytes = parseAuthHash(parsed.data.authHash);
+  return authHashBytes ? { email: parsed.data.email, authHashBytes } : null;
 };

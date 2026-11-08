@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router';
+import { Outlet, type ShouldRevalidateFunctionArgs } from 'react-router';
 
 import type { Route } from './+types/protected';
 import { cloudflareContext } from '~/lib/.server/context';
@@ -17,3 +17,5 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 export default function ProtectedLayout() {
   return <Outlet />;
 }
+
+export const shouldRevalidate = ({ formAction }: ShouldRevalidateFunctionArgs) => formAction !== '/auth/logout';

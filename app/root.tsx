@@ -11,18 +11,31 @@ import {
 import { AppShell } from './components/app-shell';
 import type { Route } from './+types/root';
 import { t } from './lib/i18n/en';
+import { cloudflareContext } from './lib/.server/context';
+import { getSessionCached } from './lib/.server/session-cache';
 import { DEFAULT_THEME, readThemeCookie, themeClassName } from './lib/theme';
 import './app.css';
 
-export function loader({ request }: Route.LoaderArgs) {
-  return { theme: readThemeCookie(request.headers.get('cookie')) };
+export async function loader({ request, context }: Route.LoaderArgs) {
+  const { env } = context.get(cloudflareContext);
+  const session = await getSessionCached(env, request);
+  const user = session
+    ? {
+        id: session.user.id,
+        displayName: session.user.displayName,
+        email: session.user.email,
+        role: session.user.role,
+      }
+    : null;
+
+  return { theme: readThemeCookie(request.headers.get('cookie')), user };
 }
 
 export const headers = () => ({ 'Cache-Control': 'no-store' });
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const data = useRouteLoaderData<typeof loader>('root');
-  const theme = data?.theme ?? DEFAULT_THEME;
+  const { theme = DEFAULT_THEME, user = null } = data ?? {};
 
   return (
     <html lang="en" className={themeClassName(theme)}>
@@ -34,7 +47,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <AppShell theme={theme}>{children}</AppShell>
+        <AppShell theme={theme} user={user}>
+          {children}
+        </AppShell>
         <ScrollRestoration />
         <Scripts />
       </body>

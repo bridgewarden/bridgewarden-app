@@ -2,13 +2,14 @@ import { Outlet } from 'react-router';
 
 import type { Route } from './+types/protected';
 import { cloudflareContext } from '~/lib/.server/context';
+import { requireUser } from '~/lib/.server/require-user';
 import { requireConfigured } from '~/lib/.server/setup-guard';
 
-export async function loader({ context }: Route.LoaderArgs) {
+export async function loader({ request, context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
 
-  // TODO(TASK-8, PR #9): resolve the session and redirect unauthenticated users to /login.
   await requireConfigured(env);
+  await requireUser(request, env);
 
   return null;
 }

@@ -94,7 +94,7 @@ Migrations for `users`, `vault_items`, `folders`, `user_2fa`, `backup_codes`, `a
 WebCrypto module: PBKDF2-SHA256 600k → masterKey, HKDF domains (`bw-auth`, `bw-wrap`, `bw-recovery`), authHash, random vaultKey, wrap/unwrap, AES-256-GCM envelope v1, recovery secret format, known-answer and tamper tests, unlock benchmark. No UI beyond a recovery-key confirmation component.
 
 ### PR #8 — Setup wizard
-`/setup` server route guarded by user count, atomic `INSERT … WHERE NOT EXISTS`, `BOOTSTRAP_TOKEN` gate, multi-step UI, recovery confirmation, optional 2FA enrollment handoff, audit event.
+`/setup` server route guarded by user count, atomic `INSERT … WHERE NOT EXISTS`, multi-step UI, recovery confirmation, optional 2FA enrollment handoff, audit event.
 
 ### PR #9 — Auth sessions
 `/login` password step, generic 401, KV session store keyed by token hash, httpOnly/Secure/SameSite cookie, session resolver, `/app` guard, logout, revoke helper. No 2FA yet.

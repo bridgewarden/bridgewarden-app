@@ -54,7 +54,7 @@ leak it.
 - Disabled users are rejected by the guard for pages and APIs.
 - Password change and recovery reset revoke other sessions.
 - Setup is reachable only while the user table is empty, enforced by a single atomic
-  `INSERT … SELECT … WHERE NOT EXISTS`, plus a constant-time `BOOTSTRAP_TOKEN` check.
+  `INSERT … SELECT … WHERE NOT EXISTS`.
 
 ## 5. 2FA
 

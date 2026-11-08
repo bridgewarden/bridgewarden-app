@@ -3,7 +3,7 @@
 **What it is:** Zero-knowledge password manager for personal/family use, deployed entirely on Cloudflare as a single React Router v8 Worker with D1 + KV. Vault is encrypted/decrypted in the browser; the server only ever holds ciphertext.
 
 ## Main features (MVP)
-- First-run setup wizard (bootstrap token, works only while the user table is empty)
+- First-run setup wizard (works only while the user table is empty)
 - Master password login derived via PBKDF2-SHA256 600k, plus TOTP 2FA and one-time backup codes
 - Login items and secure notes with folders, favorites, and custom fields
 - Password generator and RFC 6238 TOTP code generator for items
@@ -13,7 +13,7 @@
 - Change master password (rewrap only) and recovery-key reset flow
 
 ## Key user flows
-1. **Setup:** bootstrap token → account → master password → recovery key confirmation → 2FA → unlocked vault.
+1. **Setup:** account → master password → recovery key confirmation → 2FA → unlocked vault.
 2. **Login:** derive auth hash client-side → server verify + pepper → optional 2FA → unwrap vault key → load cache → sync deltas.
 3. **Item lifecycle:** create/edit → encrypt → optimistic cache + outbox → API with `rev` → 409 on conflict.
 4. **Lock:** idle timeout discards the vault key in memory; unlock re-derives locally, no server call.

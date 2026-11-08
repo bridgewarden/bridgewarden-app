@@ -102,7 +102,7 @@ Requirement IDs are stable and become implementation task IDs. `TASK-1` is reser
 
 #### TASK-3 — Configure bindings, typed environment, and secrets
 - Bindings: `DB` (D1), `KV_SESSIONS` (KV), `RATE_LIMITER` (Rate Limiting binding). `R2` is deferred until R2 is enabled on the account; attachments stay phase 2.
-- Secrets read from Worker secrets in production and `.dev.vars` locally: `SESSION_SECRET`, `AUTH_PEPPER`, `TOTP_ENC_KEY`, `BOOTSTRAP_TOKEN`, `APP_ORIGIN`, `TOTP_ISSUER`, `APP_ENV`.
+- Secrets read from Worker secrets in production and `.dev.vars` locally: `SESSION_SECRET`, `AUTH_PEPPER`, `TOTP_ENC_KEY`, `APP_ORIGIN`, `TOTP_ISSUER`, `APP_ENV`.
 - A single typed `Env` interface plus a helper that fails fast at request time if a required secret is missing.
 - `.env.local` holds placeholder names only; `.dev.vars` mirrors it for Wrangler; both are gitignored.
 - **Acceptance:** a loader reads the D1 binding via `context.get(cloudflareContext)` and runs `SELECT 1`; missing secret produces a 500 with a generic message (no secret names leaked to client); no secret appears in client bundle.
@@ -215,9 +215,8 @@ Requirement IDs are stable and become implementation task IDs. `TASK-1` is reser
 
 #### TASK-18 — First-run setup wizard
 - Available only when `SELECT COUNT(*) FROM users` is 0; the create statement is a single atomic `INSERT ... SELECT ... WHERE NOT EXISTS (SELECT 1 FROM users)` so two concurrent requests cannot both create an admin.
-- Requires `BOOTSTRAP_TOKEN` in the form; invalid/missing token returns 403.
-- Wizard steps: bootstrap token → email + display name → master password (strength meter, min 12 chars) → recovery key display + confirmation → 2FA enrollment (skippable with warning) → done.
-- **Acceptance:** second request after the first admin exists returns 409 and no row is created; token is not persisted in a cookie or returned in a response; a browser refresh mid-wizard does not create a partial user.
+- Wizard steps: email + display name → master password (strength meter, min 12 chars) → recovery key display + confirmation → 2FA enrollment (skippable with warning) → done.
+- **Acceptance:** second request after the first admin exists returns 409 and no row is created; a browser refresh mid-wizard does not create a partial user.
 
 #### TASK-19 — Login: password step and session issuance
 - `POST /auth/login`: email + client `authHash`; server verifies with pepper constant-time compare; on success sets `bw_session` cookie (httpOnly, Secure, SameSite=Lax, Path=/, 30 days).
@@ -416,7 +415,7 @@ Requirement IDs are stable and become implementation task IDs. `TASK-1` is reser
 
 #### TASK-56 — Deploy and production smoke checklist
 - Deploy to `*.workers.dev`; apply remote migrations; set Worker secrets; run the smoke checklist in production (setup guard, login, 2FA, CRUD, lock, recovery).
-- **Acceptance:** production URL serves the app over HTTPS; `BOOTSTRAP_TOKEN` works only while the user table is empty (then 409); all smoke steps pass; D1 remote contains ciphertext only.
+- **Acceptance:** production URL serves the app over HTTPS; setup is available only while the user table is empty (then 409); all smoke steps pass; D1 remote contains ciphertext only.
 
 ---
 
@@ -424,13 +423,13 @@ Requirement IDs are stable and become implementation task IDs. `TASK-1` is reser
 
 ### 5.1 First-run setup (empty instance)
 1. Visitor opens `/setup`; app checks user count server-side.
-2. Enters `BOOTSTRAP_TOKEN`, email, display name.
+2. Enters email and display name.
 3. Enters master password (strength meter, min 12 chars); client derives `masterKey`, generates `vaultKey`, wraps it, derives `authHash`.
 4. Client displays recovery key; user confirms storage.
 5. Optional TOTP enrollment with QR; backup codes shown once.
 6. Redirect to `/app`; vault unlocked.
 
-Failure paths: wrong bootstrap token (403, no user); refresh mid-wizard (no partial user, restart); user count > 0 (409, redirect to login).
+Failure paths: refresh mid-wizard (no partial user, restart); user count > 0 (409, redirect to login).
 
 ### 5.2 Daily login
 1. `/login` → email + master password.
@@ -524,7 +523,6 @@ Written to `PROJECT_ROOT/.env.local` with placeholders; mirror into `.dev.vars` 
 | `SESSION_SECRET` | Cookie/token integrity helper | Secret |
 | `AUTH_PEPPER` | HMAC pepper for stored auth hash and backup codes | Secret (destructive to rotate) |
 | `TOTP_ENC_KEY` | AES-256-GCM key encrypting 2FA seeds at rest | Secret (destructive to rotate) |
-| `BOOTSTRAP_TOKEN` | Gates first-admin creation | Secret |
 | `APP_ORIGIN` | Cookie domain, redirects, TOTP issuer fallback | Config |
 | `TOTP_ISSUER` | Label in authenticator apps | Config |
 | `APP_ENV` | `development` / `production` | Config |
@@ -538,7 +536,7 @@ Written to `PROJECT_ROOT/.env.local` with placeholders; mirror into `.dev.vars` 
 
 ### 7.4 Login/test users
 
-- **First admin:** created through `/setup` using `BOOTSTRAP_TOKEN` while the user table is empty.
+- **First admin:** created through `/setup` while the user table is empty.
 - **Test member:** created by the admin panel; the admin copies a one-time setup link and the member sets their own master password.
 - No passwords or recovery keys are stored in this repository or documented here.
 

@@ -1,6 +1,6 @@
 {
   "id": "TASK-19",
-  "title": "PR #20 — Audit events, E2E suite, docs, and production deploy",
+  "title": "PR #20 \u2014 Audit events, E2E suite, docs, and production deploy",
   "category": "setup",
   "description": "Close the loop on operability: persist audit events, add redaction-safe observability, cover critical flows with Playwright, write the README/threat model/runbook, and deploy with a production smoke checklist. Requirement IDs: TASK-52, TASK-53, TASK-54, TASK-55, TASK-56.",
   "acceptanceCriteria": [
@@ -49,7 +49,7 @@
     {
       "step": 6,
       "description": "Write the operational runbook",
-      "details": "Document D1 Time Travel restore steps and retention, backup cadence, secret rotation with consequences (AUTH_PEPPER and TOTP_ENC_KEY rotations are destructive; SESSION_SECRET logs everyone out; BOOTSTRAP_TOKEN is only valid on an empty user table), incident steps, and how to disable a compromised user.",
+      "details": "Document D1 Time Travel restore steps and retention, backup cadence, secret rotation with consequences (AUTH_PEPPER and TOTP_ENC_KEY rotations are destructive; SESSION_SECRET logs everyone out), incident steps, and how to disable a compromised user.",
       "pass": false
     },
     {
@@ -59,7 +59,9 @@
       "pass": false
     }
   ],
-  "dependencies": ["TASK-18"],
+  "dependencies": [
+    "TASK-18"
+  ],
   "estimatedComplexity": "high",
   "technicalNotes": [
     "Never log request bodies, query strings, cookies, or headers that may carry tokens.",
@@ -71,7 +73,13 @@
   "pullRequest": {
     "title": "chore(release): audit, E2E suite, docs, and production deploy",
     "branch": "feat/release",
-    "requirementIds": ["TASK-52", "TASK-53", "TASK-54", "TASK-55", "TASK-56"],
+    "requirementIds": [
+      "TASK-52",
+      "TASK-53",
+      "TASK-54",
+      "TASK-55",
+      "TASK-56"
+    ],
     "scope": "Audit storage and calls, structured logging, error handler, Playwright critical flows, README, threat model, runbook, remote migrations, deploy and smoke checklist.",
     "outOfScope": "New product features, phase 2 roadmap items, CI provider setup beyond documented commands."
   }

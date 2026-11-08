@@ -25,7 +25,6 @@ Create `.dev.vars` (Wrangler local secrets) and `.env.local` (tooling) with the 
 SESSION_SECRET=...
 AUTH_PEPPER=...
 TOTP_ENC_KEY=...
-BOOTSTRAP_TOKEN=...
 APP_ORIGIN=http://localhost:5173
 TOTP_ISSUER=Bridgewarden
 APP_ENV=development
@@ -52,7 +51,7 @@ pnpm format:check
 pnpm test
 pnpm test:watch       # Vitest in watch mode
 pnpm test app/__test__/reset-database.test.ts   # single file
-pnpm test:e2e         # Playwright smoke suite (starts its own dev server on 8787)
+pnpm test:e2e         # Playwright smoke + setup suites (starts its own dev server on 8787)
 pnpm db:migrate:local
 pnpm db:migrate:remote
 pnpm db:reset:local
@@ -60,12 +59,30 @@ pnpm db:reset:local
 
 The app is served at `http://localhost:5173`. `/health` runs `SELECT 1` against D1.
 
-`pnpm test:e2e` starts its own dev server on port 8787 with an isolated `.wrangler/e2e` state
-directory, so stop any `pnpm dev` already bound to that port first. Before the first run, install
+`pnpm test:e2e` applies migrations to `.wrangler/e2e` before starting its own dev server on port
+8787 with isolated state, so stop any `pnpm dev` already bound to that port first. Before the first run, install
 the browser once:
 
 ```bash
 pnpm exec playwright install chromium
+```
+
+## First-run setup
+
+Open `/setup` on a deployment whose `users` table is empty. The wizard creates the first
+administrator and shows the recovery key once. `/setup` redirects to `/login` as soon as an account
+exists; the server also enforces the one-admin rule atomically, so a concurrent second request gets 409.
+
+While the user table is empty, `/` and `/app/*` redirect to `/setup`. There is no bootstrap token:
+the first visitor to an empty deployment can create the admin. Keep the deployment private until you
+have completed setup, and reset the local D1 state if you need to retry.
+
+E2E uses an isolated `.wrangler/e2e` database. `pnpm test:e2e` applies migrations and clears the
+`users`, `audit_events`, and session keys before starting. CI generates throwaway `.dev.vars` values.
+To reset the E2E database manually:
+
+```bash
+pnpm exec wrangler d1 execute bridgewarden-db --local --persist-to .wrangler/e2e --command "DELETE FROM users"
 ```
 
 ## Cloudflare resources

@@ -1,6 +1,6 @@
 {
   "id": "TASK-1",
-  "title": "PR #1 — Verify prerequisites, initialize the repository, and write the agent context",
+  "title": "PR #1 \u2014 Verify prerequisites, initialize the repository, and write the agent context",
   "category": "setup",
   "description": "Establish project readiness before any feature code: verify Cloudflare access and resources, create placeholder secrets, initialize the git repository with conventions, and write the AGENTS.md contract that every later PR must follow. Requirement IDs: TASK-1, TASK-57, TASK-58.",
   "acceptanceCriteria": [
@@ -23,19 +23,19 @@
     {
       "step": 1,
       "description": "Review the PRD prerequisite section",
-      "details": "Open `.agent/prd/PRD.md` §7. List required accounts, resources, secrets, docs, and test users. Note every item marked 'unverified'.",
+      "details": "Open `.agent/prd/PRD.md` \u00a77. List required accounts, resources, secrets, docs, and test users. Note every item marked 'unverified'.",
       "pass": false
     },
     {
       "step": 2,
       "description": "Verify `.env.local` and `.dev.vars` placeholder names",
-      "details": "Confirm `.env.local` contains SESSION_SECRET, AUTH_PEPPER, TOTP_ENC_KEY, BOOTSTRAP_TOKEN, APP_ORIGIN, TOTP_ISSUER, APP_ENV, CLOUDFLARE_D1_DATABASE_ID, CLOUDFLARE_KV_SESSIONS_ID, CLOUDFLARE_KV_RATE_LIMIT_ID, CLOUDFLARE_R2_BUCKET_NAME, CLOUDFLARE_ACCOUNT_ID. Create `.dev.vars` with the same names. Add missing names with `TODO_FILL_MANUALLY` only.",
+      "details": "Confirm `.env.local` contains SESSION_SECRET, AUTH_PEPPER, TOTP_ENC_KEY, APP_ORIGIN, TOTP_ISSUER, APP_ENV, CLOUDFLARE_D1_DATABASE_ID, CLOUDFLARE_KV_SESSIONS_ID, CLOUDFLARE_KV_RATE_LIMIT_ID, CLOUDFLARE_R2_BUCKET_NAME, CLOUDFLARE_ACCOUNT_ID. Create `.dev.vars` with the same names. Add missing names with `TODO_FILL_MANUALLY` only.",
       "pass": false
     },
     {
       "step": 3,
       "description": "Confirm local secret values are filled manually",
-      "details": "Ask the user to confirm they filled real values. Do not print, copy, or commit them. Provide the commands for the user to run themselves: `openssl rand -base64 32` for SESSION_SECRET, AUTH_PEPPER, TOTP_ENC_KEY, and BOOTSTRAP_TOKEN.",
+      "details": "Ask the user to confirm they filled real values. Do not print, copy, or commit them. Provide the commands for the user to run themselves: `openssl rand -base64 32` for SESSION_SECRET, AUTH_PEPPER, TOTP_ENC_KEY.",
       "pass": false
     },
     {
@@ -88,7 +88,11 @@
   "pullRequest": {
     "title": "chore: verify prerequisites, initialize repo, and add agent context",
     "branch": "chore/prerequisites",
-    "requirementIds": ["TASK-1", "TASK-57", "TASK-58"],
+    "requirementIds": [
+      "TASK-1",
+      "TASK-57",
+      "TASK-58"
+    ],
     "scope": "Prerequisite checklist, wrangler resource ids, git init, .gitignore, .editorconfig, CONTRIBUTING conventions, AGENTS.md, readiness note.",
     "outOfScope": "package.json, application source, dependencies, schema, lint/CI implementation (PR #2)."
   }

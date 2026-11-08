@@ -1,4 +1,15 @@
+import type { Route } from './+types/home';
+import { cloudflareContext } from '~/lib/.server/context';
+import { requireConfigured } from '~/lib/.server/setup-guard';
 import { t } from '~/lib/i18n/en';
+
+export async function loader({ context }: Route.LoaderArgs) {
+  const { env } = context.get(cloudflareContext);
+
+  await requireConfigured(env);
+
+  return null;
+}
 
 export const meta = () => [{ title: t('app.name') }, { name: 'description', content: t('app.tagline') }];
 

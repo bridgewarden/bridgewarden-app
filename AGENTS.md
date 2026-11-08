@@ -108,7 +108,7 @@ Features planned for the MVP: `setup`, `login`, `two-factor`, `recover`,
   `features/<feature>/pages/` and not `*.page.tsx`.
 - Protected UI lives under the `routes/protected.tsx` layout, which resolves the session and
   renders `<Outlet />`. Unauthenticated access redirects to `/login?next=…` with a validated
-  same-origin target.
+  same-origin target. Before the first admin exists, `/` and `/app/*` redirect to `/setup` first.
 - Every non-GET action checks the request `Origin`. Mutation-only routes export no component.
 
 ## Data loading

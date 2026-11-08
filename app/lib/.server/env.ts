@@ -2,7 +2,6 @@ export type AppSecrets = {
   SESSION_SECRET: string;
   AUTH_PEPPER: string;
   TOTP_ENC_KEY: string;
-  BOOTSTRAP_TOKEN: string;
   APP_ORIGIN: string;
   TOTP_ISSUER: string;
   APP_ENV: 'development' | 'production';
@@ -15,10 +14,16 @@ export class ServerConfigError extends Error {
   }
 }
 
-export const requireSecret = (env: Env, name: keyof AppSecrets): string => {
+export const readConfig = (env: Env, name: keyof AppSecrets): string | undefined => {
   const value = (env as Env & Partial<AppSecrets>)[name];
 
-  if (typeof value !== 'string' || value.trim() === '') {
+  return typeof value === 'string' ? value : undefined;
+};
+
+export const requireSecret = (env: Env, name: keyof AppSecrets): string => {
+  const value = readConfig(env, name);
+
+  if (!value?.trim()) {
     throw new ServerConfigError(name);
   }
 

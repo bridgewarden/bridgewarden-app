@@ -42,7 +42,7 @@
 | #5 | Test harness (Vitest + Playwright) | `chore/test-harness` | TASK-6 | #2 | M | Isolation from dev DB, failure exit codes |
 | #6 | Database schema + dormant org tables | `feat/db-schema` | TASK-7 … TASK-12 | #2 | M | Constraints, indexes, no plaintext columns |
 | #7 | Crypto core + vault recovery key | `feat/crypto-core` | TASK-13 … TASK-17 | #2, #5 | L | KDF params, IV handling, tamper rejection, vectors |
-| #8 | First-run setup wizard | `feat/setup-wizard` | TASK-18 | #4, #6, #7 | M | Atomic bootstrap, token gate, refresh safety |
+| #8 | First-run setup wizard | `feat/setup-wizard` | TASK-18 | #4, #6, #7 | M | Atomic bootstrap, empty-table guard, refresh safety |
 | #9 | Login, sessions, route guard, logout | `feat/auth-sessions` | TASK-19, TASK-20 | #4, #6, #7 | M | Generic errors, cookie flags, KV hashing |
 | #10 | TOTP 2FA + backup codes | `feat/auth-2fa` | TASK-21, TASK-22, TASK-23 | #9 | M | Replay protection, seed never returned |
 | #11 | Rate limiting, lockout, admin users | `feat/auth-abuse-admin` | TASK-24, TASK-25 | #8, #9, #10 | M | Bypass paths, last-admin guard |
@@ -94,7 +94,7 @@ Migrations for `users`, `vault_items`, `folders`, `user_2fa`, `backup_codes`, `a
 WebCrypto module: PBKDF2-SHA256 600k → masterKey, HKDF domains (`bw-auth`, `bw-wrap`, `bw-recovery`), authHash, random vaultKey, wrap/unwrap, AES-256-GCM envelope v1, recovery secret format, known-answer and tamper tests, unlock benchmark. No UI beyond a recovery-key confirmation component.
 
 ### PR #8 — Setup wizard
-`/setup` server route guarded by user count, atomic `INSERT … WHERE NOT EXISTS`, `BOOTSTRAP_TOKEN` gate, multi-step UI, recovery confirmation, optional 2FA enrollment handoff, audit event.
+`/setup` server route guarded by user count, atomic `INSERT … WHERE NOT EXISTS`, multi-step UI, recovery confirmation, optional 2FA enrollment handoff, audit event.
 
 ### PR #9 — Auth sessions
 `/login` password step, generic 401, KV session store keyed by token hash, httpOnly/Secure/SameSite cookie, session resolver, `/app` guard, logout, revoke helper. No 2FA yet.

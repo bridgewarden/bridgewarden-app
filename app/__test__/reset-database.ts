@@ -1,5 +1,7 @@
 import { env } from 'cloudflare:workers';
 
+import { readConfig } from '../lib/.server/env';
+
 const SYSTEM_TABLES = new Set(['d1_migrations']);
 const SYSTEM_PREFIXES = ['_cf_'];
 
@@ -31,7 +33,7 @@ const listTables = async (): Promise<string[]> => {
 };
 
 export const resetDatabase = async () => {
-  if (env.APP_ENV === 'production') {
+  if (readConfig(env, 'APP_ENV') === 'production') {
     throw new Error('resetDatabase refuses to run in production');
   }
 

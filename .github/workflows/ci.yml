@@ -28,6 +28,18 @@ jobs:
       - run: pnpm build
 
       - run: pnpm exec playwright install --with-deps chromium
+
+      - name: Prepare E2E secrets
+        run: |
+          {
+            echo "SESSION_SECRET=$(openssl rand -hex 32)"
+            echo "AUTH_PEPPER=$(openssl rand -hex 32)"
+            echo "TOTP_ENC_KEY=$(openssl rand -hex 32)"
+            echo "APP_ORIGIN=http://localhost:8787"
+            echo "TOTP_ISSUER=Bridgewarden"
+            echo "APP_ENV=development"
+          } > .dev.vars
+
       - run: pnpm test:e2e
 
       - name: Upload Playwright artifacts

@@ -1,20 +1,15 @@
 import { deriveServerAuthHash, generateServerSalt } from '../../../../lib/.server/auth-hash';
 import { recordAuditEvent } from '../../../../lib/.server/audit';
 import { createFirstAdmin } from '../../../../lib/.server/bootstrap';
-import { verifyBootstrapToken } from '../../../../lib/.server/bootstrap-token';
 import { getDatabase } from '../../../../lib/.server/db';
 import { requireSecret } from '../../../../lib/.server/env';
 import { createSession, destroySession } from '../../../../lib/.server/session';
 import type { SetupInput } from '../setup-input';
 
 export type CompleteBootstrapResult =
-  { status: 'created'; cookie: string } | { status: 'forbidden' } | { status: 'exists' } | { status: 'server-error' };
+  { status: 'created'; cookie: string } | { status: 'exists' } | { status: 'server-error' };
 
 export const completeBootstrap = async (env: Env, input: SetupInput): Promise<CompleteBootstrapResult> => {
-  if (!verifyBootstrapToken(env, input.token)) {
-    return { status: 'forbidden' };
-  }
-
   let pepper: string;
   try {
     pepper = requireSecret(env, 'AUTH_PEPPER');

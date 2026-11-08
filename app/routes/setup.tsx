@@ -41,12 +41,9 @@ export async function action({ request, context }: Route.ActionArgs) {
     return failure('invalid-input', 400);
   }
 
-  // TODO(TASK-10, PR #11): rate-limit and lock out repeated bootstrap-token attempts.
   const result = await completeBootstrap(env, input);
 
   switch (result.status) {
-    case 'forbidden':
-      return failure('forbidden', 403);
     case 'exists':
       return failure('already-configured', 409);
     case 'server-error':

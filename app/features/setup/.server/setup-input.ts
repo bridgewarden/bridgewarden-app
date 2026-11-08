@@ -14,7 +14,6 @@ const base64UrlField = z
   .regex(/^[A-Za-z0-9_-]+$/);
 
 const setupSchema = z.strictObject({
-  token: z.string().min(1).max(512),
   email: z.string().trim().toLowerCase().pipe(z.email().max(254)),
   displayName: z.string().trim().min(1).max(100),
   kdfIterations: z.number().int().min(MIN_KDF_ITERATIONS).max(MAX_KDF_ITERATIONS),
@@ -27,7 +26,6 @@ const setupSchema = z.strictObject({
 });
 
 export type SetupInput = {
-  token: string;
   email: string;
   displayName: string;
   kdfIterations: number;
@@ -53,7 +51,7 @@ export const parseSetupInput = (value: unknown): SetupInput | null => {
   const parsed = setupSchema.safeParse(value);
   if (!parsed.success) return null;
 
-  const { token, email, displayName, kdfIterations } = parsed.data;
+  const { email, displayName, kdfIterations } = parsed.data;
   const kdfSalt = decodeField(parsed.data.kdfSalt, SALT_BYTES);
   const authHash = decodeField(parsed.data.authHash, KEY_BYTES);
   const vaultKeyWrapped = decodeField(parsed.data.vaultKeyWrapped, WRAPPED_KEY_BYTES);
@@ -66,7 +64,6 @@ export const parseSetupInput = (value: unknown): SetupInput | null => {
   }
 
   return {
-    token,
     email,
     displayName,
     kdfIterations,

@@ -19,11 +19,6 @@ export const en = {
   'setup.description': 'Create the first administrator account and your vault keys.',
   'setup.step': 'Step {current} of {total}',
 
-  'setup.token.heading': 'Bootstrap token',
-  'setup.token.description': 'Enter the BOOTSTRAP_TOKEN configured for this deployment.',
-  'setup.token.label': 'Bootstrap token',
-  'setup.token.continue': 'Continue',
-
   'setup.account.heading': 'Administrator account',
   'setup.account.description': 'This account is the only one that can exist before setup completes.',
   'setup.account.email': 'Email',
@@ -65,7 +60,6 @@ export const en = {
   'setup.done.heading': 'Setup complete',
   'setup.done.description': 'Your vault is ready.',
 
-  'setup.error.forbidden': 'The bootstrap token is missing or incorrect.',
   'setup.error.invalidInput': 'Check the account details and try again.',
   'setup.error.alreadyConfigured': 'This deployment already has an administrator. Redirecting to sign in…',
   'setup.error.serverError': 'Setup could not complete. Try again.',

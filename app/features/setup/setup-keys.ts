@@ -49,14 +49,12 @@ export const generateSetupKeyMaterial = async (password: string): Promise<SetupK
 export type SetupPayload = SetupTransportMaterial & {
   email: string;
   displayName: string;
-  token: string;
 };
 
 export const toSetupPayload = (
   keys: SetupTransportMaterial,
-  account: { token: string; email: string; displayName: string },
+  account: { email: string; displayName: string },
 ): SetupPayload => ({
-  token: account.token,
   email: account.email,
   displayName: account.displayName,
   kdfSalt: keys.kdfSalt,

@@ -1,15 +1,13 @@
 import { normalizeRecoveryKey } from '../../lib/crypto/recovery';
 import type { SetupTransportMaterial } from './setup-keys';
 
-export type SetupStep =
-  'token' | 'account' | 'password' | 'recovery' | 'two-factor' | 'submitting' | 'configured' | 'done';
+export type SetupStep = 'account' | 'password' | 'recovery' | 'two-factor' | 'submitting' | 'configured' | 'done';
 
 export type SetupError =
   'forbidden' | 'invalid-input' | 'already-configured' | 'server-error' | 'network' | 'recovery-mismatch';
 
 export type SetupState = {
   step: SetupStep;
-  token: string;
   email: string;
   displayName: string;
   keys: SetupTransportMaterial | null;
@@ -20,7 +18,6 @@ export type SetupState = {
 export type SetupActionResponse = { ok: true } | { ok: false; error: SetupError };
 
 export type SetupAction =
-  | { type: 'token-accepted'; token: string }
   | { type: 'account-accepted'; email: string; displayName: string }
   | { type: 'keys-generated'; keys: SetupTransportMaterial; recoveryKey: string }
   | { type: 'recovery-confirmed' }
@@ -30,8 +27,7 @@ export type SetupAction =
   | { type: 'succeeded' };
 
 export const initialSetupState: SetupState = {
-  step: 'token',
-  token: '',
+  step: 'account',
   email: '',
   displayName: '',
   keys: null,
@@ -50,8 +46,6 @@ export const recoveryConfirmationMatches = (recoveryKey: string, confirmation: s
 
 export const setupReducer = (state: SetupState, action: SetupAction): SetupState => {
   switch (action.type) {
-    case 'token-accepted':
-      return { ...state, step: 'account', token: action.token, error: null };
     case 'account-accepted':
       return { ...state, step: 'password', email: action.email, displayName: action.displayName, error: null };
     case 'keys-generated':
@@ -65,7 +59,7 @@ export const setupReducer = (state: SetupState, action: SetupAction): SetupState
     case 'failed':
       switch (action.error) {
         case 'forbidden':
-          return { ...state, step: 'token', keys: null, recoveryKey: '', error: action.error };
+          return { ...state, step: 'account', keys: null, recoveryKey: '', error: action.error };
         case 'invalid-input':
           return { ...state, step: 'account', error: action.error };
         case 'already-configured':

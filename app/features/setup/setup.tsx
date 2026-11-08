@@ -28,7 +28,7 @@ import {
   type SetupStep,
 } from './setup-state';
 
-const STEPS = ['token', 'account', 'password', 'recovery', 'two-factor'] as const;
+const STEPS = ['account', 'password', 'recovery', 'two-factor'] as const;
 const STRENGTH_WIDTH = ['w-0', 'w-1/4', 'w-1/2', 'w-3/4', 'w-full'] as const;
 const STRENGTH_KEYS: MessageKey[] = [
   'setup.password.strength.weak',
@@ -39,7 +39,7 @@ const STRENGTH_KEYS: MessageKey[] = [
 ];
 
 const ERROR_KEY: Record<SetupError, MessageKey> = {
-  forbidden: 'setup.error.forbidden',
+  forbidden: 'setup.error.serverError',
   'invalid-input': 'setup.error.invalidInput',
   'already-configured': 'setup.error.alreadyConfigured',
   'server-error': 'setup.error.serverError',
@@ -66,7 +66,6 @@ const stepNumber = (step: SetupStep): number | null => {
 
 export const Setup = () => {
   const [state, dispatch] = useReducer(setupReducer, initialSetupState);
-  const [token, setToken] = useState('');
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
@@ -139,13 +138,10 @@ export const Setup = () => {
   const submitSetup = () => {
     if (!state.keys) return;
 
-    fetcher.submit(
-      toSetupPayload(state.keys, { token: state.token, email: state.email, displayName: state.displayName }),
-      {
-        method: 'post',
-        encType: 'application/json',
-      },
-    );
+    fetcher.submit(toSetupPayload(state.keys, { email: state.email, displayName: state.displayName }), {
+      method: 'post',
+      encType: 'application/json',
+    });
   };
 
   const currentStep = stepNumber(state.step);
@@ -166,52 +162,6 @@ export const Setup = () => {
           </p>
         ) : null}
       </div>
-
-      {state.step === 'token' ? (
-        <form
-          className="space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!token.trim()) {
-              setFieldError('setup.error.forbidden');
-              return;
-            }
-            setFieldError(null);
-            dispatch({ type: 'token-accepted', token: token.trim() });
-          }}
-        >
-          <div className="space-y-2">
-            <h2 className="text-lg font-medium">{t('setup.token.heading')}</h2>
-            <p className="text-sm text-muted-foreground">{t('setup.token.description')}</p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="setup-token">{t('setup.token.label')}</Label>
-            <Input
-              id="setup-token"
-              type="password"
-              autoComplete="off"
-              spellCheck={false}
-              value={token}
-              aria-invalid={fieldError !== null}
-              aria-describedby={fieldError ? 'setup-token-error' : undefined}
-              onChange={(event) => setToken(event.target.value)}
-            />
-          </div>
-          {fieldError ? (
-            <p id="setup-token-error" role="alert" className="text-sm text-destructive">
-              {t(fieldError)}
-            </p>
-          ) : null}
-          {errorMessage ? (
-            <p role="alert" className="text-sm text-destructive">
-              {errorMessage}
-            </p>
-          ) : null}
-          <Button type="submit" className="min-h-11">
-            {t('setup.token.continue')}
-          </Button>
-        </form>
-      ) : null}
 
       {state.step === 'account' ? (
         <form
@@ -266,27 +216,14 @@ export const Setup = () => {
               {t(fieldError)}
             </p>
           ) : null}
-          {state.error === 'invalid-input' && errorMessage ? (
+          {(state.error === 'invalid-input' || state.error === 'forbidden') && errorMessage ? (
             <p role="alert" className="text-sm text-destructive">
               {errorMessage}
             </p>
           ) : null}
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="min-h-11"
-              onClick={() => {
-                setFieldError(null);
-                dispatch({ type: 'token-accepted', token: state.token });
-              }}
-            >
-              {t('setup.back')}
-            </Button>
-            <Button type="submit" className="min-h-11">
-              {t('setup.account.continue')}
-            </Button>
-          </div>
+          <Button type="submit" className="min-h-11">
+            {t('setup.account.continue')}
+          </Button>
         </form>
       ) : null}
 

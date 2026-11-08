@@ -17,6 +17,66 @@ export const en = {
 
   'setup.title': 'Set up Bridgewarden',
   'setup.description': 'Create the first administrator account and your vault keys.',
+  'setup.step': 'Step {current} of {total}',
+
+  'setup.token.heading': 'Bootstrap token',
+  'setup.token.description': 'Enter the BOOTSTRAP_TOKEN configured for this deployment.',
+  'setup.token.label': 'Bootstrap token',
+  'setup.token.continue': 'Continue',
+
+  'setup.account.heading': 'Administrator account',
+  'setup.account.description': 'This account is the only one that can exist before setup completes.',
+  'setup.account.email': 'Email',
+  'setup.account.displayName': 'Display name',
+  'setup.account.continue': 'Continue',
+  'setup.account.invalid': 'Enter a valid email and display name.',
+
+  'setup.password.heading': 'Master password',
+  'setup.password.description': 'At least 12 characters. It never leaves this browser.',
+  'setup.password.label': 'Master password',
+  'setup.password.hint': 'Use at least 12 characters.',
+  'setup.password.tooShort': 'Use at least 12 characters.',
+  'setup.password.strength': 'Password strength',
+  'setup.password.strength.weak': 'Weak',
+  'setup.password.strength.fair': 'Fair',
+  'setup.password.strength.good': 'Good',
+  'setup.password.strength.strong': 'Strong',
+  'setup.password.generating': 'Deriving keys…',
+  'setup.password.continue': 'Create keys',
+
+  'setup.recovery.heading': 'Save your recovery key',
+  'setup.recovery.description':
+    'This key is shown once. Store it offline; it is the only way back into your vault without your master password.',
+  'setup.recovery.label': 'Recovery key',
+  'setup.recovery.confirmLabel': 'Type the first 6 characters',
+  'setup.recovery.confirmHint': 'Case-insensitive; separators are ignored.',
+  'setup.recovery.mismatch': 'Those characters do not match the recovery key.',
+  'setup.recovery.continue': 'Confirm recovery key',
+
+  'setup.twoFactor.heading': 'Two-factor authentication',
+  'setup.twoFactor.description': 'Two-factor enrollment arrives with a later milestone.',
+  'setup.twoFactor.warning': 'Skipping two-factor leaves your vault protected by the master password only.',
+  'setup.twoFactor.optIn': 'Remind me to enroll after setup',
+  'setup.twoFactor.enrollLater':
+    'Enrollment is not available in this milestone. You can enable it later from account settings.',
+  'setup.twoFactor.continue': 'Finish setup',
+
+  'setup.submitting': 'Creating your administrator account…',
+  'setup.done.heading': 'Setup complete',
+  'setup.done.description': 'Your vault is ready.',
+
+  'setup.error.forbidden': 'The bootstrap token is missing or incorrect.',
+  'setup.error.invalidInput': 'Check the account details and try again.',
+  'setup.error.alreadyConfigured': 'This deployment already has an administrator. Redirecting to sign in…',
+  'setup.error.serverError': 'Setup could not complete. Try again.',
+  'setup.error.network': 'The network request failed. Your keys are still in memory; retry when ready.',
+  'setup.retry': 'Retry',
+  'setup.back': 'Back',
+
+  'setup.leave.title': 'Leave setup?',
+  'setup.leave.description': 'Your generated keys exist only in memory and will be lost.',
+  'setup.leave.stay': 'Stay',
+  'setup.leave.leave': 'Leave setup',
 
   'vault.title': 'Vault',
   'vault.description': 'Your login items and secure notes will appear here after unlock.',

@@ -1,5 +1,67 @@
+import { data, redirect } from 'react-router';
+
+import type { Route } from './+types/setup';
+import Setup, { type SetupActionResponse, type SetupError } from '~/features/setup';
+import { parseSetupInput } from '~/features/setup/.server/setup-input';
+import { completeBootstrap } from '~/features/setup/.server/use-cases/complete-bootstrap';
+import { isBootstrapAvailable } from '~/lib/.server/bootstrap';
+import { cloudflareContext } from '~/lib/.server/context';
+import { getDatabase } from '~/lib/.server/db';
+import { readJsonBody } from '~/lib/.server/request-body';
+import { isSameOrigin } from '~/lib/.server/request-origin';
 import { t } from '~/lib/i18n/en';
 
-export { default } from '~/features/setup';
+const failure = (error: SetupError, status: number) => data<SetupActionResponse>({ ok: false, error }, { status });
+
+export async function loader({ context }: Route.LoaderArgs) {
+  const { env } = context.get(cloudflareContext);
+
+  if (!(await isBootstrapAvailable(getDatabase(env)))) {
+    throw redirect('/login');
+  }
+
+  return null;
+}
+
+export async function action({ request, context }: Route.ActionArgs) {
+  const { env } = context.get(cloudflareContext);
+
+  if (!isSameOrigin(request, env.APP_ORIGIN, env.APP_ENV === 'development')) {
+    return failure('forbidden', 403);
+  }
+
+  const body = await readJsonBody(request);
+  if (!body.ok) {
+    return failure('invalid-input', body.reason === 'too-large' ? 413 : body.reason === 'unsupported' ? 415 : 400);
+  }
+
+  const input = parseSetupInput(body.value);
+  if (!input) {
+    return failure('invalid-input', 400);
+  }
+
+  // TODO(TASK-10, PR #11): rate-limit and lock out repeated bootstrap-token attempts.
+  const result = await completeBootstrap(env, input);
+
+  switch (result.status) {
+    case 'forbidden':
+      return failure('forbidden', 403);
+    case 'exists':
+      return failure('already-configured', 409);
+    case 'server-error':
+      return failure('server-error', 500);
+    case 'created':
+      return data<SetupActionResponse>(
+        { ok: true },
+        { status: 200, headers: { 'Set-Cookie': result.cookie, 'Cache-Control': 'no-store' } },
+      );
+  }
+}
+
+export default function SetupRoute() {
+  return <Setup />;
+}
+
+export const shouldRevalidate = () => false;
 
 export const meta = () => [{ title: t('setup.title') }];

@@ -31,13 +31,10 @@ jobs:
 
       - name: Prepare E2E secrets
         run: |
-          TOKEN="$(openssl rand -hex 32)"
-          echo "E2E_BOOTSTRAP_TOKEN=$TOKEN" >> "$GITHUB_ENV"
           {
             echo "SESSION_SECRET=$(openssl rand -hex 32)"
             echo "AUTH_PEPPER=$(openssl rand -hex 32)"
             echo "TOTP_ENC_KEY=$(openssl rand -hex 32)"
-            echo "BOOTSTRAP_TOKEN=$TOKEN"
             echo "APP_ORIGIN=http://localhost:8787"
             echo "TOTP_ISSUER=Bridgewarden"
             echo "APP_ENV=development"

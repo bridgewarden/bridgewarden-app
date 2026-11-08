@@ -2,21 +2,19 @@ import { readFile } from 'node:fs/promises';
 
 import { expect, test } from '@playwright/test';
 
+import { E2E_ADMIN, waitForHydration } from './fixtures';
 import { resetE2eDatabase } from './reset-database';
 
 test.describe.configure({ mode: 'serial' });
 test.beforeAll(() => {
   resetE2eDatabase();
 });
-test.afterAll(() => {
-  resetE2eDatabase();
-});
 
 const zeros = (length: number) => Buffer.from(new Uint8Array(length)).toString('base64url');
 
 const validPayload = () => ({
-  email: 'admin@example.com',
-  displayName: 'Administrator',
+  email: E2E_ADMIN.email,
+  displayName: E2E_ADMIN.displayName,
   kdfIterations: 600_000,
   kdfSalt: zeros(16),
   authHash: zeros(32),
@@ -53,19 +51,19 @@ test('creates the first admin through the wizard and locks setup', async ({ page
 
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto('/setup');
-  await page.waitForLoadState('networkidle');
+  await waitForHydration(page);
   await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
 
-  await page.getByLabel('Email').fill('admin@example.com');
-  await page.getByLabel('Display name').fill('Administrator');
+  await page.getByLabel('Email').fill(E2E_ADMIN.email);
+  await page.getByLabel('Display name').fill(E2E_ADMIN.displayName);
   await page.getByRole('button', { name: 'Continue' }).click();
 
-  await page.getByLabel('Master password', { exact: true }).fill('correct horse battery staple');
+  await page.getByLabel('Master password', { exact: true }).fill(E2E_ADMIN.password);
   await page.getByLabel('Confirm master password').fill('different password');
   await page.getByRole('button', { name: 'Create keys' }).click();
   await expect(page.getByRole('alert')).toHaveText('The passwords do not match.');
 
-  await page.getByLabel('Confirm master password').fill('correct horse battery staple');
+  await page.getByLabel('Confirm master password').fill(E2E_ADMIN.password);
   await page.getByRole('button', { name: 'Create keys' }).click();
 
   const recoveryKey = (await page.locator('#setup-recovery-key').textContent())!.trim();
@@ -120,7 +118,7 @@ test('creates the first admin through the wizard and locks setup', async ({ page
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Trash');
 
   await page.goto('/setup');
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/app$/);
 });
 
 test('returns 409 after the first admin exists', async ({ baseURL, request }) => {

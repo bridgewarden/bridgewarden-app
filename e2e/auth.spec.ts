@@ -1,0 +1,65 @@
+import { expect, test, type Page } from '@playwright/test';
+
+import { en } from '../app/lib/i18n/en';
+import { E2E_ADMIN, waitForHydration } from './fixtures';
+
+test.describe.configure({ mode: 'serial' });
+
+const signIn = async (page: Page) => {
+  await waitForHydration(page);
+  await page.getByLabel(en['login.email']).fill(E2E_ADMIN.email);
+  await page.getByLabel(en['login.password']).fill(E2E_ADMIN.password);
+  await page.getByRole('button', { name: en['login.submit'] }).click();
+};
+
+test('unauthenticated home redirects to login', async ({ page }) => {
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/login\?next=%2F$/);
+});
+
+test('unauthenticated app access returns to the requested path after login', async ({ page }) => {
+  await page.goto('/app/trash?x=1');
+  await expect(page).toHaveURL(/\/login\?next=/);
+  await expect(page.getByLabel(en['login.email'])).toBeVisible();
+
+  await signIn(page);
+
+  await expect(page).toHaveURL(/\/app\/trash\?x=1$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(en['trash.title']);
+});
+
+test('login unlocks the app, redirects an authenticated visit, and logout revokes', async ({ page }) => {
+  await page.goto('/login');
+  await signIn(page);
+
+  await expect(page).toHaveURL(/\/app$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(en['vault.title']);
+  await expect(page.getByText(E2E_ADMIN.displayName)).toBeVisible();
+
+  const session = (await page.context().cookies()).find((cookie) => cookie.name === 'bw_session');
+  expect(session).toBeDefined();
+  expect(session?.httpOnly).toBe(true);
+  expect(session?.sameSite).toBe('Lax');
+
+  const storage = await page.evaluate(() => ({
+    local: Object.keys(localStorage),
+    session: Object.keys(sessionStorage),
+  }));
+  expect(storage).toEqual({ local: [], session: [] });
+
+  await page.goto('/login?next=%2Fapp%2Ftrash');
+  await expect(page).toHaveURL(/\/app\/trash$/);
+
+  await page.getByRole('button', { name: en['common.signOut'] }).click();
+  await expect(page).toHaveURL(/\/login$/);
+
+  await page.goto('/app');
+  await expect(page).toHaveURL(/\/login\?next=/);
+});
+
+test('unsafe next targets fall back to the app root', async ({ page }) => {
+  await page.goto('/login?next=%2F%2Fevil.example');
+  await signIn(page);
+
+  await expect(page).toHaveURL(/\/app$/);
+});

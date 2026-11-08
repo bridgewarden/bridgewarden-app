@@ -2,10 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { en } from '../app/lib/i18n/en';
 
-const pages = [
-  { path: '/login', heading: en['login.title'] },
-  { path: '/setup', heading: en['setup.title'] },
-];
+const pages = [{ path: '/setup', heading: en['setup.title'] }];
 
 test('health endpoint reports ok', async ({ request }) => {
   const response = await request.get('/health');
@@ -22,6 +19,9 @@ test('unconfigured app routes redirect to setup', async ({ page }) => {
   await expect(page).toHaveURL(/\/setup$/);
 
   await page.goto('/app/trash');
+  await expect(page).toHaveURL(/\/setup$/);
+
+  await page.goto('/login');
   await expect(page).toHaveURL(/\/setup$/);
 });
 

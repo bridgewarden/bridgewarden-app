@@ -20,6 +20,12 @@ export default defineConfig({
       dependencies: ['smoke'],
       use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
     },
+    {
+      name: 'auth',
+      testMatch: /auth\.spec\.ts/,
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
+    },
   ],
   webServer: {
     command: 'E2E=1 pnpm dev --port 8787 --strictPort',

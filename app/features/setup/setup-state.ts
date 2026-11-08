@@ -37,6 +37,8 @@ export const initialSetupState: SetupState = {
 
 export const isMasterPasswordValid = (password: string): boolean => password.length >= 12;
 
+export const passwordsMatch = (password: string, confirmation: string): boolean => password === confirmation;
+
 export const recoveryConfirmationMatches = (recoveryKey: string, confirmation: string): boolean => {
   const expected = normalizeRecoveryKey(recoveryKey).slice(0, 6);
   const actual = normalizeRecoveryKey(confirmation);

@@ -1,4 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
+import { CopyIcon, DownloadIcon } from 'lucide-react';
 import { useBlocker, useFetcher, useNavigate } from 'react-router';
 
 import {
@@ -21,6 +22,7 @@ import { generateSetupKeyMaterial, toSetupPayload } from './setup-keys';
 import {
   initialSetupState,
   isMasterPasswordValid,
+  passwordsMatch,
   recoveryConfirmationMatches,
   setupReducer,
   type SetupActionResponse,
@@ -69,7 +71,9 @@ export const Setup = () => {
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
   const [fieldError, setFieldError] = useState<MessageKey | null>(null);
   const [deriving, setDeriving] = useState(false);
   const fetcher = useFetcher<SetupActionResponse>();
@@ -237,6 +241,11 @@ export const Setup = () => {
               return;
             }
 
+            if (!passwordsMatch(password, confirmPassword)) {
+              setFieldError('setup.password.mismatch');
+              return;
+            }
+
             setFieldError(null);
             setDeriving(true);
             try {
@@ -245,6 +254,8 @@ export const Setup = () => {
               setVaultKey(vaultKey);
               vaultKey.fill(0);
               setPassword('');
+              setConfirmPassword('');
+              setCopyStatus('idle');
               dispatch({ type: 'keys-generated', keys: transport, recoveryKey });
             } catch {
               setFieldError('setup.error.serverError');
@@ -272,6 +283,18 @@ export const Setup = () => {
             <p id="setup-password-hint" className="text-sm text-muted-foreground">
               {t('setup.password.hint')}
             </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="setup-password-confirm">{t('setup.password.confirmLabel')}</Label>
+            <Input
+              id="setup-password-confirm"
+              type="password"
+              autoComplete="new-password"
+              spellCheck={false}
+              value={confirmPassword}
+              aria-invalid={fieldError !== null}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+            />
           </div>
           <div className="space-y-1">
             <div
@@ -334,14 +357,54 @@ export const Setup = () => {
             <p id="setup-recovery-label" className="text-sm font-medium">
               {t('setup.recovery.label')}
             </p>
-            <div role="group" aria-labelledby="setup-recovery-label">
-              <code
-                id="setup-recovery-key"
-                className="block rounded-md border bg-muted px-3 py-2 font-mono text-sm break-all select-all"
-              >
-                {state.recoveryKey}
-              </code>
+            <div role="group" aria-labelledby="setup-recovery-label" className="rounded-md border bg-muted">
+              <div className="flex items-start gap-2 p-3">
+                <code id="setup-recovery-key" className="min-w-0 flex-1 font-mono text-sm break-all select-all">
+                  {state.recoveryKey}
+                </code>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(state.recoveryKey);
+                      setCopyStatus('copied');
+                    } catch {
+                      setCopyStatus('failed');
+                    }
+                  }}
+                >
+                  <CopyIcon aria-hidden="true" />
+                  {copyStatus === 'copied' ? t('setup.recovery.copied') : t('setup.recovery.copy')}
+                </Button>
+              </div>
             </div>
+          </div>
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11"
+              onClick={() => {
+                const content = `${t('setup.recovery.fileTitle')}: ${state.recoveryKey}\n\n${t('setup.recovery.fileWarning')}\n`;
+                const url = URL.createObjectURL(new Blob([content], { type: 'text/plain;charset=utf-8' }));
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'bridgewarden-recovery-key.txt';
+                link.click();
+                URL.revokeObjectURL(url);
+              }}
+            >
+              <DownloadIcon aria-hidden="true" />
+              {t('setup.recovery.download')}
+            </Button>
+            {copyStatus === 'failed' ? (
+              <p role="status" className="text-sm text-destructive">
+                {t('setup.recovery.copyFailed')}
+              </p>
+            ) : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="setup-recovery-confirm">{t('setup.recovery.confirmLabel')}</Label>

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   initialSetupState,
   isMasterPasswordValid,
+  passwordsMatch,
   recoveryConfirmationMatches,
   setupReducer,
   type SetupState,
@@ -55,9 +56,11 @@ describe('setup state machine', () => {
 });
 
 describe('setup validation helpers', () => {
-  it('requires a 12-character password', () => {
+  it('requires a 12-character password and an exact confirmation', () => {
     expect(isMasterPasswordValid('12345678901')).toBe(false);
     expect(isMasterPasswordValid('123456789012')).toBe(true);
+    expect(passwordsMatch('correct horse', 'correct horse')).toBe(true);
+    expect(passwordsMatch('correct horse', 'correct horsf')).toBe(false);
   });
 
   it('matches the first six normalized recovery characters', () => {

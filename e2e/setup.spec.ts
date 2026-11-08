@@ -51,10 +51,24 @@ test('creates the first admin through the wizard and locks setup', async ({ page
   await page.getByLabel('Display name').fill('Administrator');
   await page.getByRole('button', { name: 'Continue' }).click();
 
-  await page.getByLabel('Master password').fill('correct horse battery staple');
+  await page.getByLabel('Master password', { exact: true }).fill('correct horse battery staple');
+  await page.getByLabel('Confirm master password').fill('different password');
+  await page.getByRole('button', { name: 'Create keys' }).click();
+  await expect(page.getByRole('alert')).toHaveText('The passwords do not match.');
+
+  await page.getByLabel('Confirm master password').fill('correct horse battery staple');
   await page.getByRole('button', { name: 'Create keys' }).click();
 
   const recoveryKey = (await page.locator('#setup-recovery-key').textContent())!.trim();
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.getByRole('button', { name: 'Copy' }).click();
+  await expect(page.getByRole('button', { name: 'Copied' })).toBeVisible();
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download recovery key' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('bridgewarden-recovery-key.txt');
+
   await page.getByLabel('Type the first 6 characters').fill(recoveryKey.replaceAll('-', '').slice(0, 6).toLowerCase());
   await page.getByRole('button', { name: 'Confirm recovery key' }).click();
 

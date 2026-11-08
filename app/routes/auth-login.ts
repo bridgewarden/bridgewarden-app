@@ -30,6 +30,13 @@ export async function action({ request, context }: Route.ActionArgs) {
     return data({ ok: false, error: 'server-error' }, { status: 500 });
   }
 
+  if (result.status === 'challenge') {
+    return data(
+      { ok: true, requires2fa: true, challengeToken: result.challengeToken },
+      { status: 200, headers: { 'Cache-Control': 'no-store' } },
+    );
+  }
+
   return data(
     { ok: true, ...result.body },
     { status: 200, headers: { 'Set-Cookie': result.cookie, 'Cache-Control': 'no-store' } },

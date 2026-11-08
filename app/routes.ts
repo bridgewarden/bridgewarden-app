@@ -8,5 +8,6 @@ export default [
   route('auth/prelogin', 'routes/auth-prelogin.ts'),
   route('auth/login', 'routes/auth-login.ts'),
   route('auth/logout', 'routes/auth-logout.ts'),
+  route('auth/2fa', 'routes/auth-2fa.ts'),
   layout('routes/protected.tsx', [route('app', 'routes/vault-list.tsx'), route('app/trash', 'routes/vault-trash.tsx')]),
 ] satisfies RouteConfig;

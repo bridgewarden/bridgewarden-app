@@ -7,6 +7,8 @@ import { fromBase64Url } from '../../../lib/base64-url';
 import { encodeBase64 } from '../../../lib/crypto/encoding';
 import { deriveServerAuthHash } from '../../../lib/.server/auth-hash';
 import { generateSetupKeyMaterial } from '../../setup/setup-keys';
+import { readChallenge } from '../../../lib/.server/challenge';
+import { createTwoFactorUser } from '../../two-factor/__test__/two-factor-fixtures';
 import { loginWithPassword } from '../.server/use-cases/login';
 import { prepareLogin } from '../../../lib/crypto/login-keys';
 import { clearSessions, createAuthUser, testEnv } from '../../../__test__/auth-fixtures';
@@ -108,6 +110,22 @@ describe('password login', () => {
     prepared.wrapKey.fill(0);
 
     expect(result.status).toBe('ok');
+  });
+
+  it('returns a challenge and no wrapped key when 2FA is enabled', async () => {
+    const user = await createTwoFactorUser(1);
+    const result = await loginWithPassword(testEnv(), request(), {
+      email: user.email,
+      authHashBytes: user.authHash,
+    });
+
+    expect(result.status).toBe('challenge');
+    if (result.status !== 'challenge') return;
+    expect(result.challengeToken).toHaveLength(43);
+    expect(result).not.toHaveProperty('cookie');
+    await expect(readChallenge(testEnv(), result.challengeToken)).resolves.toMatchObject({
+      record: { userId: user.userId },
+    });
   });
 
   it('fails closed without pepper or session secret', async () => {

@@ -6,12 +6,14 @@ import {
   Scripts,
   ScrollRestoration,
   useRouteLoaderData,
+  type ShouldRevalidateFunctionArgs,
 } from 'react-router';
 
 import { AppShell } from './components/app-shell';
 import type { Route } from './+types/root';
 import { t } from './lib/i18n/en';
 import { cloudflareContext } from './lib/.server/context';
+import { getDatabase } from './lib/.server/db';
 import { getSessionCached } from './lib/.server/session-cache';
 import { DEFAULT_THEME, readThemeCookie, themeClassName } from './lib/theme';
 import './app.css';
@@ -28,14 +30,23 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       }
     : null;
 
-  return { theme: readThemeCookie(request.headers.get('cookie')), user };
+  let twoFactorEnabled = false;
+  if (session) {
+    const row = await getDatabase(env)
+      .prepare('SELECT enabled FROM user_2fa WHERE user_id = ?')
+      .bind(session.user.id)
+      .first<{ enabled: number }>();
+    twoFactorEnabled = row?.enabled === 1;
+  }
+
+  return { theme: readThemeCookie(request.headers.get('cookie')), user, twoFactorEnabled };
 }
 
 export const headers = () => ({ 'Cache-Control': 'no-store' });
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const data = useRouteLoaderData<typeof loader>('root');
-  const { theme = DEFAULT_THEME, user = null } = data ?? {};
+  const { theme = DEFAULT_THEME, user = null, twoFactorEnabled = false } = data ?? {};
 
   return (
     <html lang="en" className={themeClassName(theme)}>
@@ -47,7 +58,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <AppShell theme={theme} user={user}>
+        <AppShell theme={theme} user={user} twoFactorEnabled={twoFactorEnabled}>
           {children}
         </AppShell>
         <ScrollRestoration />
@@ -86,3 +97,5 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
     </section>
   );
 }
+
+export const shouldRevalidate = ({ formAction }: ShouldRevalidateFunctionArgs) => formAction !== '/auth/logout';

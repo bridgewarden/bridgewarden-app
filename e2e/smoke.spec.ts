@@ -3,7 +3,6 @@ import { expect, test } from '@playwright/test';
 import { en } from '../app/lib/i18n/en';
 
 const pages = [
-  { path: '/', heading: en['app.name'] },
   { path: '/login', heading: en['login.title'] },
   { path: '/setup', heading: en['setup.title'] },
 ];
@@ -13,6 +12,14 @@ test('health endpoint reports ok', async ({ request }) => {
 
   expect(response.status()).toBe(200);
   await expect(response.json()).resolves.toEqual({ ok: true });
+});
+
+test('unconfigured app routes redirect to setup', async ({ page }) => {
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/setup$/);
+
+  await page.goto('/app');
+  await expect(page).toHaveURL(/\/setup$/);
 });
 
 for (const { path, heading } of pages) {

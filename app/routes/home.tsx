@@ -1,4 +1,20 @@
+import { redirect } from 'react-router';
+
+import type { Route } from './+types/home';
+import { isBootstrapAvailable } from '~/lib/.server/bootstrap';
+import { cloudflareContext } from '~/lib/.server/context';
+import { getDatabase } from '~/lib/.server/db';
 import { t } from '~/lib/i18n/en';
+
+export async function loader({ context }: Route.LoaderArgs) {
+  const { env } = context.get(cloudflareContext);
+
+  if (await isBootstrapAvailable(getDatabase(env))) {
+    throw redirect('/setup');
+  }
+
+  return null;
+}
 
 export const meta = () => [{ title: t('app.name') }, { name: 'description', content: t('app.tagline') }];
 

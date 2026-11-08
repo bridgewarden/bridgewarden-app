@@ -124,7 +124,7 @@ stored in plaintext or logged. Both salts SHALL be stored as standard padded bas
 ### Requirement: Recovery key display and confirmation
 
 The wizard SHALL display the formatted 26-character recovery key exactly once and require the user
-to type back a six-character substring before completion. The displayed key SHALL be copyable and
+to type back the first six normalized characters before completion. The displayed key SHALL be copyable and
 downloadable as a text file through explicit user actions. The recovery key MUST NOT be submitted to
 the server, written to browser storage, or included in logs, and it SHALL be discarded from memory
 after confirmation.
@@ -171,15 +171,15 @@ the new user. The event metadata MUST NOT contain credentials, tokens, ciphertex
 
 ### Requirement: Optional two-factor handoff
 
-The wizard SHALL offer an optional two-factor step that can be skipped with the PRD warning text.
-Until enrollment ships, choosing it MUST NOT block completion and MUST NOT create a partial 2FA row.
+The wizard SHALL offer an informational two-factor step with the PRD warning text. Until enrollment
+ships, continuing from it MUST NOT block completion and MUST NOT create a partial 2FA row.
 
 #### Scenario: Skipping two-factor completes setup
 - **WHEN** the user skips the optional two-factor step
 - **THEN** the account is created without a `user_2fa` row and the wizard completes
 
-#### Scenario: Choosing two-factor does not block setup
-- **WHEN** the user opts into two-factor before enrollment exists
+#### Scenario: Informational two-factor step does not block setup
+- **WHEN** the user continues from the two-factor step before enrollment exists
 - **THEN** the account is created, no 2FA row is written, and the user is told to enroll later
 
 ### Requirement: Same-origin mutation

@@ -22,8 +22,8 @@
 
 - [x] 4.1 Add `app/features/setup/.server/setup-input.ts` with a strict Zod schema and base64url byte-length checks for salt, keys, IVs, and `authHash`; verify tests cover valid input, lowercase email, short display name, malformed base64url, wrong sizes, unsafe iterations, and unknown keys
 - [x] 4.2 Implement the `/setup` loader: available data when the table is empty, redirect to `/login` otherwise; verify via the E2E redirect scenario and a direct helper test
-- [x] 4.3 Implement the `/setup` action in order: same-origin check, schema validation, token verification, auth-hash computation, atomic creation, audit event, session issuance; verify the use-case tests cover 403/409/500, missing pepper, KV failure, audit, and success with `Set-Cookie`
-- [x] 4.4 Keep `app/routes/setup.tsx` transport-only and pass loader/action data into the feature entry; verify lint and review confirm no SQL, hashing, or token logic in the route
+- [x] 4.3 Implement the `/setup` action in order: same-origin check, schema validation, auth-hash computation, atomic creation, audit event, session issuance; verify the use-case tests cover 403/409/500, missing pepper, KV failure, audit, and success with `Set-Cookie`
+- [x] 4.4 Keep `app/routes/setup.tsx` transport-only and pass loader/action data into the feature entry; verify lint and review confirm no SQL or hashing logic in the route
 
 ## 5. Client key generation and memory store
 

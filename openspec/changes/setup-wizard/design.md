@@ -29,7 +29,7 @@ Current constraints found in the repository:
 - A wizard that derives and wraps keys in the browser and sends only wrapped values.
 - Reuse of the PR #7 crypto contract without adding new crypto primitives or ciphertext columns.
 - A session handoff that is compatible with PR #9, so #9 does not need to invent a second cookie.
-- Tests that prove the race, the token gate, the transport encoding, and the browser flow.
+- Tests that prove the race, the transport encoding, the browser flow, and the route guards.
 
 **Non-Goals:**
 
@@ -136,10 +136,10 @@ the derived wrap key. The password string is not returned.
 
 ### D9. Wizard state machine with no persistence
 
-A single reducer in `features/setup/` holds `step`, the validated token/email/display name, transport
+A single reducer in `features/setup/` holds `step`, the validated email/display name, transport
 material, the display-only recovery string, and the last error. Text inputs and the recovery
 confirmation stay in local component state; the password is never retained after derivation. Steps
-are: token → account → password → recovery → two-factor → submitting, plus `configured` (redirect to
+are: account → password → recovery → two-factor → submitting, plus `configured` (redirect to
 login on 409) and `done` (client navigation).
 
 Once key material exists, `useBlocker` (client-side navigation) and a `beforeunload` listener
@@ -157,6 +157,7 @@ neither action touches the server or browser storage.
 | Module | Responsibility |
 | --- | --- |
 | `app/lib/.server/db.ts` | `getDatabase(env)` returns the `DB` binding, the single D1 handle entry point |
+| `app/lib/.server/setup-guard.ts` | `requireConfigured` and `requireBootstrapAvailable` redirects |
 | `app/lib/.server/bootstrap.ts` | `isBootstrapAvailable(db)`, `createFirstAdmin(db, input)` |
 | `app/lib/.server/auth-hash.ts` | server salt generation and peppered HMAC |
 | `app/lib/.server/audit.ts` | `recordAuditEvent(db, event)` |
@@ -164,17 +165,17 @@ neither action touches the server or browser storage.
 | `app/lib/.server/request-body.ts` | JSON content-type, 256 KiB cap, and JSON parsing |
 | `app/lib/.server/request-origin.ts` | same-origin check against `APP_ORIGIN` |
 | `app/features/setup/.server/setup-input.ts` | Zod schema, base64url decoding, length checks |
-| `app/features/setup/.server/use-cases/complete-bootstrap.ts` | token, pepper, session, atomic insert, audit |
+| `app/features/setup/.server/use-cases/complete-bootstrap.ts` | pepper, session, atomic insert, audit |
 
 The route module stays transport-only: loader resolves availability, action calls these helpers in
-order, and the feature receives data as props. No SQL, hashing, or token logic lives in the route.
+order, and the feature receives data as props. No SQL or hashing logic lives in the route.
 
 ### D11. Audit after successful insert, never on failure
 
 The use-case creates the session before the atomic insert, deletes it if the insert loses the race
 or throws, then writes `bootstrap.created` with `user_id`, `created_at`, and null network identifiers.
 IP/UA hashing belongs to the shared request-fingerprint work in PR #9; the columns are nullable.
-Failed token, validation, origin, or guard paths write nothing.
+Failed validation, origin, or guard paths write nothing.
 
 If the audit insert fails after the user row exists, setup is already consumed. The use-case returns
 success and logs the static `bootstrap.audit_failed` event in server infrastructure (never in the
@@ -215,7 +216,7 @@ per-test random database (the Vite plugin binds one persist path per server).
 
 ### D14. Validation and response shape
 
-Zod validates a strict object: token (1–512 chars), email (trim, lowercase, max 254, format),
+Zod validates a strict object: email (trim, lowercase, max 254, format),
 display name (1–100 after trim), `kdfIterations` (safe integer from the contract minimum up to a
 10,000,000 DoS cap), and the six base64url strings. Unknown keys are rejected. Bodies must be
 `application/json` and at most 256 KiB. Responses are:
@@ -233,7 +234,7 @@ Bodies never echo submitted values. The client maps status codes to catalog mess
 
 `isSameOrigin(request, appOrigin, allowRequestOrigin)` requires an `Origin` header and compares it
 with `APP_ORIGIN`. The request-URL fallback is enabled only when `APP_ENV === 'development'` (local
-development and E2E), never in production. It runs before reading the body or token. React Router also aborts a forwarded action whose
+development and E2E), never in production. It runs before reading the body. React Router also aborts a forwarded action whose
 `Origin` differs from the request URL with 400, so the action-level 403 is defense in depth.
 Alternative rejected: a CSRF token, which adds state for a same-site form that already has
 SameSite=Lax and an origin check.

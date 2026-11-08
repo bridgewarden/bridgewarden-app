@@ -59,8 +59,8 @@ pnpm db:reset:local
 
 The app is served at `http://localhost:5173`. `/health` runs `SELECT 1` against D1.
 
-`pnpm test:e2e` starts its own dev server on port 8787 with an isolated `.wrangler/e2e` state
-directory, so stop any `pnpm dev` already bound to that port first. Before the first run, install
+`pnpm test:e2e` applies migrations to `.wrangler/e2e` before starting its own dev server on port
+8787 with isolated state, so stop any `pnpm dev` already bound to that port first. Before the first run, install
 the browser once:
 
 ```bash

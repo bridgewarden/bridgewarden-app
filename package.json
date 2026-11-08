@@ -23,7 +23,8 @@
     "db:migrate:remote": "wrangler d1 migrations apply bridgewarden-db --remote",
     "db:reset:local": "rm -rf .wrangler/state/v3/d1 && pnpm db:migrate:local",
     "postinstall": "wrangler types",
-    "test:e2e": "playwright test"
+    "test:e2e": "pnpm db:migrate:e2e && playwright test",
+    "db:migrate:e2e": "wrangler d1 migrations apply bridgewarden-db --local --persist-to .wrangler/e2e"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

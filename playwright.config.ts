@@ -23,7 +23,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'E2E=1 pnpm dev --port 8787 --strictPort',
-    url: 'http://localhost:8787/',
+    url: 'http://localhost:8787/health',
     reuseExistingServer: false,
     timeout: 120_000,
   },

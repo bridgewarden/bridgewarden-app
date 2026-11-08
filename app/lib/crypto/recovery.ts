@@ -6,7 +6,7 @@ import { unwrapVaultKey, wrapVaultKey, type WrappedVaultKey } from './vault-key'
 // Crockford base32: excludes I, L, O, and U to avoid ambiguous characters.
 const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
-const normalize = (value: string): string =>
+export const normalizeRecoveryKey = (value: string): string =>
   value.toUpperCase().replace(/[\s-]/g, '').replace(/[IL]/g, '1').replace(/O/g, '0');
 
 const encodeBase32 = (bytes: Uint8Array): string => {
@@ -72,7 +72,7 @@ export const formatRecoveryKey = (secret: Uint8Array): string => {
 };
 
 export const parseRecoveryKey = (value: string): Uint8Array => {
-  const normalized = normalize(value);
+  const normalized = normalizeRecoveryKey(value);
 
   if (normalized.length !== RECOVERY_KEY_LENGTH) {
     throw new InvalidRecoveryKeyError();

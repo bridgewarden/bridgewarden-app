@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+
 import { expect, test } from '@playwright/test';
 
 import { resetE2eDatabase } from './reset-database';
@@ -42,6 +44,13 @@ test('rejects foreign origins, malformed bodies, and invalid input', async ({ ba
 });
 
 test('creates the first admin through the wizard and locks setup', async ({ page }) => {
+  let setupRequestBody = '';
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().includes('/setup.data')) {
+      setupRequestBody = request.postData() ?? '';
+    }
+  });
+
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto('/setup');
   await page.waitForLoadState('networkidle');
@@ -62,12 +71,19 @@ test('creates the first admin through the wizard and locks setup', async ({ page
   const recoveryKey = (await page.locator('#setup-recovery-key').textContent())!.trim();
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.getByRole('button', { name: 'Copy' }).click();
-  await expect(page.getByRole('button', { name: 'Copied' })).toBeVisible();
+  await expect(page.getByText('Copied to clipboard. Clear it when you are done.')).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(recoveryKey);
 
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download recovery key' }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe('bridgewarden-recovery-key.txt');
+  const downloadPath = await download.path();
+  expect(downloadPath).not.toBeNull();
+  expect(await readFile(downloadPath!, 'utf8')).toContain(recoveryKey);
+
+  expect(setupRequestBody).not.toContain(recoveryKey);
+  expect(setupRequestBody).not.toContain('vaultKey');
 
   await page.getByLabel('Type the first 6 characters').fill(recoveryKey.replaceAll('-', '').slice(0, 6).toLowerCase());
   await page.getByRole('button', { name: 'Confirm recovery key' }).click();
@@ -96,6 +112,12 @@ test('creates the first admin through the wizard and locks setup', async ({ page
 
   await page.reload();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Vault');
+
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bridgewarden');
+
+  await page.goto('/app/trash');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Trash');
 
   await page.goto('/setup');
   await expect(page).toHaveURL(/\/login$/);

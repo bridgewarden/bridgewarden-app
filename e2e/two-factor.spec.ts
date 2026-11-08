@@ -44,8 +44,9 @@ test('enrolls TOTP and captures backup codes', async ({ page }) => {
   await expect(page.getByLabel(en['settings.twoFactor.qrLabel'])).toBeVisible({ timeout: 15_000 });
   secret = (await page.locator('#setup-secret').textContent())!.trim();
 
-  await page.getByLabel(en['settings.twoFactor.code']).fill(totpCode(secret));
-  await page.getByRole('button', { name: en['settings.twoFactor.verify'] }).click();
+  const codeInput = page.getByLabel(en['settings.twoFactor.code']);
+  await codeInput.fill(totpCode(secret));
+  await codeInput.press('Enter');
 
   await expect(page.getByRole('heading', { name: en['settings.twoFactor.codesTitle'] })).toBeVisible({
     timeout: 15_000,

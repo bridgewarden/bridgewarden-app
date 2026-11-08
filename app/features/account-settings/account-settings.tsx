@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ShieldCheckIcon } from 'lucide-react';
 import { useFetcher } from 'react-router';
 
@@ -147,6 +147,8 @@ export const AccountSettings = ({ email, displayName, twoFactor }: AccountSettin
     });
   }, [preloginFetcher.data, disableFetcher, enrollmentFetcher, regenerateFetcher]);
 
+  const handleQrError = useCallback(() => setError(t('settings.twoFactor.qrFailed')), []);
+
   const startStepUp = (action: 'enroll' | 'regenerate' | 'disable') => {
     if (!password) {
       if (action === 'enroll') setError(t('settings.twoFactor.passwordRequired'));
@@ -251,7 +253,7 @@ export const AccountSettings = ({ email, displayName, twoFactor }: AccountSettin
                     { method: 'post', action: '/api/account/2fa/verify', encType: 'application/json' },
                   );
                 }}
-                onQrError={() => setError(t('settings.twoFactor.qrFailed'))}
+                onQrError={handleQrError}
               />
             ) : null}
           </div>

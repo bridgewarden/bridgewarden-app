@@ -9,8 +9,7 @@ import { completeBootstrap } from '../.server/use-cases/complete-bootstrap';
 
 const random = (length: number) => encodeBase64(crypto.getRandomValues(new Uint8Array(length)));
 
-const setupInput = (token: string): SetupInput => ({
-  token,
+const setupInput = (): SetupInput => ({
   email: 'admin@example.com',
   displayName: 'Administrator',
   kdfIterations: 600_000,
@@ -22,19 +21,15 @@ const setupInput = (token: string): SetupInput => ({
   recoveryKeyWrapIv: random(12),
 });
 
-const TOKEN = 'test-bootstrap-token';
 const PEPPER = 'test-auth-pepper';
 
 const testEnv = (overrides: Record<string, unknown> = {}) =>
   ({
     DB: env.DB,
     KV_SESSIONS: env.KV_SESSIONS,
-    BOOTSTRAP_TOKEN: TOKEN,
     AUTH_PEPPER: PEPPER,
     ...overrides,
   }) as unknown as Env;
-
-const configuredToken = () => TOKEN;
 
 const clearSessions = async () => {
   const list = await env.KV_SESSIONS.list({ prefix: 'session:' });
@@ -50,7 +45,7 @@ afterEach(clearSessions);
 
 describe('complete bootstrap use-case', () => {
   it('creates the admin, audits it, and issues a session', async () => {
-    const result = await completeBootstrap(testEnv(), setupInput(configuredToken()));
+    const result = await completeBootstrap(testEnv(), setupInput());
 
     expect(result.status).toBe('created');
     expect(result.status === 'created' && result.cookie).toContain('bw_session=');
@@ -67,20 +62,10 @@ describe('complete bootstrap use-case', () => {
     expect(sessions.keys).toHaveLength(1);
   });
 
-  it('rejects a wrong token without creating anything', async () => {
-    const result = await completeBootstrap(testEnv(), setupInput(`${configuredToken()}-wrong`));
-
-    expect(result.status).toBe('forbidden');
-    expect(await env.DB.prepare('SELECT COUNT(*) AS count FROM users').first<{ count: number }>()).toEqual({
-      count: 0,
-    });
-    expect((await env.KV_SESSIONS.list({ prefix: 'session:' })).keys).toHaveLength(0);
-  });
-
   it('returns exists and removes the pre-created session when an admin already exists', async () => {
     await createTestUser();
 
-    const result = await completeBootstrap(testEnv(), setupInput(configuredToken()));
+    const result = await completeBootstrap(testEnv(), setupInput());
 
     expect(result.status).toBe('exists');
     expect(await env.DB.prepare('SELECT COUNT(*) AS count FROM users').first<{ count: number }>()).toEqual({
@@ -90,21 +75,18 @@ describe('complete bootstrap use-case', () => {
   });
 
   it('fails closed without the pepper or KV without creating a user', async () => {
-    const token = configuredToken();
     const withoutPepper = {
       DB: env.DB,
       KV_SESSIONS: env.KV_SESSIONS,
-      BOOTSTRAP_TOKEN: token,
     } as Env;
     const withoutKv = {
       DB: env.DB,
       KV_SESSIONS: { put: async () => Promise.reject(new Error('kv down')), delete: async () => undefined },
-      BOOTSTRAP_TOKEN: token,
       AUTH_PEPPER: PEPPER,
     } as unknown as Env;
 
-    expect((await completeBootstrap(withoutPepper, setupInput(token))).status).toBe('server-error');
-    expect((await completeBootstrap(withoutKv, setupInput(token))).status).toBe('server-error');
+    expect((await completeBootstrap(withoutPepper, setupInput())).status).toBe('server-error');
+    expect((await completeBootstrap(withoutKv, setupInput())).status).toBe('server-error');
     expect(await env.DB.prepare('SELECT COUNT(*) AS count FROM users').first<{ count: number }>()).toEqual({
       count: 0,
     });

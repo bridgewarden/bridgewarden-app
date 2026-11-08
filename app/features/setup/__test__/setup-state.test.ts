@@ -22,7 +22,6 @@ const keys: SetupTransportMaterial = {
 describe('setup state machine', () => {
   it('walks the wizard steps in order', () => {
     let state: SetupState = initialSetupState;
-    state = setupReducer(state, { type: 'token-accepted', token: 'secret' });
     state = setupReducer(state, { type: 'account-accepted', email: 'a@example.com', displayName: 'A' });
     state = setupReducer(state, { type: 'keys-generated', keys, recoveryKey: 'ABCD-EFGH' });
     expect(state.recoveryKey).toBe('ABCD-EFGH');
@@ -33,7 +32,7 @@ describe('setup state machine', () => {
     state = setupReducer(state, { type: 'succeeded' });
 
     expect(state.step).toBe('done');
-    expect(state.token).toBe('secret');
+    expect(state.email).toBe('a@example.com');
     expect(state.keys).toBeNull();
   });
 
@@ -48,7 +47,7 @@ describe('setup state machine', () => {
     expect(network.keys).toEqual(keys);
     expect(invalid.step).toBe('account');
     expect(invalid.keys).toEqual(keys);
-    expect(forbidden.step).toBe('token');
+    expect(forbidden.step).toBe('account');
     expect(forbidden.keys).toBeNull();
     expect(configured.step).toBe('configured');
     expect(configured.keys).toBeNull();

@@ -8,7 +8,6 @@ import { parseSetupInput } from '../.server/setup-input';
 const random = (length: number) => crypto.getRandomValues(new Uint8Array(length));
 
 const validInput = () => ({
-  token: 'bootstrap-token',
   email: '  Admin@Example.COM ',
   displayName: '  Administrator  ',
   kdfIterations: 600_000,
@@ -47,7 +46,6 @@ describe('setup input', () => {
     expect(parseSetupInput({ ...validInput(), kdfIterations: 600_000.5 })).toBeNull();
     expect(parseSetupInput({ ...validInput(), email: 'not-an-email' })).toBeNull();
     expect(parseSetupInput({ ...validInput(), displayName: '   ' })).toBeNull();
-    expect(parseSetupInput({ ...validInput(), token: '' })).toBeNull();
     expect(parseSetupInput({ ...validInput(), extra: 'field' })).toBeNull();
   });
 });

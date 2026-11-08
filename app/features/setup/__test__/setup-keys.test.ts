@@ -44,7 +44,7 @@ describe('setup key generation', () => {
 
   it('never returns the password and keeps the vault key out of the payload', async () => {
     const keys = await generateSetupKeyMaterial('a very long master password');
-    const payload = toSetupPayload(keys, { token: 't', email: 'a@example.com', displayName: 'A' });
+    const payload = toSetupPayload(keys, { email: 'a@example.com', displayName: 'A' });
 
     expect(Object.keys(keys)).not.toContain('password');
     expect(keys.vaultKey).toHaveLength(32);
@@ -55,7 +55,6 @@ describe('setup key generation', () => {
   it('builds a payload without key material', async () => {
     const keys = await generateSetupKeyMaterial('another long password');
     const payload = toSetupPayload(keys, {
-      token: 'token',
       email: 'admin@example.com',
       displayName: 'Admin',
     });

@@ -20,6 +20,9 @@ test('unconfigured app routes redirect to setup', async ({ page }) => {
 
   await page.goto('/app');
   await expect(page).toHaveURL(/\/setup$/);
+
+  await page.goto('/app/trash');
+  await expect(page).toHaveURL(/\/setup$/);
 });
 
 for (const { path, heading } of pages) {

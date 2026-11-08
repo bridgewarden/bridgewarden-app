@@ -1,16 +1,14 @@
-import { Outlet, redirect } from 'react-router';
+import { Outlet } from 'react-router';
 
 import type { Route } from './+types/protected';
-import { isBootstrapAvailable } from '~/lib/.server/bootstrap';
 import { cloudflareContext } from '~/lib/.server/context';
-import { getDatabase } from '~/lib/.server/db';
+import { requireConfigured } from '~/lib/.server/setup-guard';
 
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
 
-  if (await isBootstrapAvailable(getDatabase(env))) {
-    throw redirect('/setup');
-  }
+  // TODO(TASK-8, PR #9): resolve the session and redirect unauthenticated users to /login.
+  await requireConfigured(env);
 
   return null;
 }

@@ -1,14 +1,13 @@
-import { data, redirect } from 'react-router';
+import { data } from 'react-router';
 
 import type { Route } from './+types/setup';
 import Setup, { type SetupActionResponse, type SetupError } from '~/features/setup';
 import { parseSetupInput } from '~/features/setup/.server/setup-input';
 import { completeBootstrap } from '~/features/setup/.server/use-cases/complete-bootstrap';
-import { isBootstrapAvailable } from '~/lib/.server/bootstrap';
 import { cloudflareContext } from '~/lib/.server/context';
-import { getDatabase } from '~/lib/.server/db';
 import { readConfig } from '~/lib/.server/env';
 import { readJsonBody } from '~/lib/.server/request-body';
+import { requireBootstrapAvailable } from '~/lib/.server/setup-guard';
 import { isSameOrigin } from '~/lib/.server/request-origin';
 import { t } from '~/lib/i18n/en';
 
@@ -17,9 +16,7 @@ const failure = (error: SetupError, status: number) => data<SetupActionResponse>
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
 
-  if (!(await isBootstrapAvailable(getDatabase(env)))) {
-    throw redirect('/login');
-  }
+  await requireBootstrapAvailable(env);
 
   return null;
 }

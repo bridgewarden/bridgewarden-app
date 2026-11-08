@@ -13,7 +13,7 @@ describe('audit events', () => {
   it('stores a bootstrap event for a user', async () => {
     const userId = await createTestUser();
 
-    await recordAuditEvent(env.DB, { type: 'bootstrap.created', userId });
+    await recordAuditEvent(env.DB, { type: 'bootstrap.created', userId, createdAt: Date.now() });
 
     const row = await env.DB.prepare('SELECT user_id, type, metadata FROM audit_events WHERE user_id = ?')
       .bind(userId)

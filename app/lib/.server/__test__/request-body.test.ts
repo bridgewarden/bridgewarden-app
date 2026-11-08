@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { readJsonBody } from '../request-body';
+import { MAX_JSON_BODY_BYTES, readJsonBody } from '../request-body';
 
 const jsonRequest = (body: string, headers: Record<string, string> = {}) =>
   new Request('https://app.example/setup', {
@@ -24,6 +24,9 @@ describe('JSON request body limits', () => {
       ok: false,
       reason: 'too-large',
     });
-    await expect(readJsonBody(jsonRequest('12345'), 4)).resolves.toEqual({ ok: false, reason: 'too-large' });
+    await expect(readJsonBody(jsonRequest('x'.repeat(MAX_JSON_BODY_BYTES + 1)))).resolves.toEqual({
+      ok: false,
+      reason: 'too-large',
+    });
   });
 });

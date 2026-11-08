@@ -1,6 +1,6 @@
 import { deriveServerAuthHash, generateServerSalt } from '../../../../lib/.server/auth-hash';
 import { recordAuditEvent } from '../../../../lib/.server/audit';
-import { createFirstAdmin } from '../../../../lib/.server/bootstrap';
+import { createFirstAdmin, isBootstrapAvailable } from '../../../../lib/.server/bootstrap';
 import { getDatabase } from '../../../../lib/.server/db';
 import { requireSecret } from '../../../../lib/.server/env';
 import { createSession, destroySession } from '../../../../lib/.server/session';
@@ -18,6 +18,10 @@ export const completeBootstrap = async (env: Env, input: SetupInput): Promise<Co
   }
 
   const db = getDatabase(env);
+  if (!(await isBootstrapAvailable(db))) {
+    return { status: 'exists' };
+  }
+
   const id = crypto.randomUUID();
   const createdAt = Date.now();
   const serverAuthHash = await deriveServerAuthHash(input.authHashBytes, generateServerSalt(), pepper);

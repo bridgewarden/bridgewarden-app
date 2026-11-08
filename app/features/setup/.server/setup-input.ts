@@ -7,11 +7,7 @@ import { encodeBase64 } from '../../../lib/crypto/encoding';
 const WRAPPED_KEY_BYTES = KEY_BYTES + TAG_BYTES;
 const MAX_KDF_ITERATIONS = 10_000_000;
 
-const base64UrlField = z
-  .string()
-  .min(1)
-  .max(512)
-  .regex(/^[A-Za-z0-9_-]+$/);
+const base64UrlField = z.string().min(1).max(512);
 
 const setupSchema = z.strictObject({
   email: z.string().trim().toLowerCase().pipe(z.email().max(254)),

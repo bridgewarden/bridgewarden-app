@@ -3,13 +3,13 @@ export const MAX_JSON_BODY_BYTES = 256 * 1024;
 export type JsonBodyResult =
   { ok: true; value: unknown } | { ok: false; reason: 'invalid' | 'too-large' | 'unsupported' };
 
-export const readJsonBody = async (request: Request, maxBytes = MAX_JSON_BODY_BYTES): Promise<JsonBodyResult> => {
+export const readJsonBody = async (request: Request): Promise<JsonBodyResult> => {
   if (!(request.headers.get('content-type') ?? '').toLowerCase().startsWith('application/json')) {
     return { ok: false, reason: 'unsupported' };
   }
 
   const declared = Number(request.headers.get('content-length') ?? '0');
-  if (Number.isFinite(declared) && declared > maxBytes) {
+  if (Number.isFinite(declared) && declared > MAX_JSON_BODY_BYTES) {
     return { ok: false, reason: 'too-large' };
   }
 
@@ -26,7 +26,7 @@ export const readJsonBody = async (request: Request, maxBytes = MAX_JSON_BODY_BY
     if (done) break;
 
     total += value.byteLength;
-    if (total > maxBytes) {
+    if (total > MAX_JSON_BODY_BYTES) {
       await reader.cancel();
       return { ok: false, reason: 'too-large' };
     }

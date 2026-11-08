@@ -21,9 +21,9 @@ export const readConfig = (env: Env, name: keyof AppSecrets): string | undefined
 };
 
 export const requireSecret = (env: Env, name: keyof AppSecrets): string => {
-  const value = (env as Env & Partial<AppSecrets>)[name];
+  const value = readConfig(env, name);
 
-  if (typeof value !== 'string' || value.trim() === '') {
+  if (!value?.trim()) {
     throw new ServerConfigError(name);
   }
 

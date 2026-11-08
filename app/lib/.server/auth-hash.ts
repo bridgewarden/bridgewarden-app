@@ -1,8 +1,7 @@
 import { KEY_BYTES, SALT_BYTES } from '../crypto/contract';
-import { encodeBase64, toArrayBuffer } from '../crypto/encoding';
+import { encodeBase64 } from '../crypto/encoding';
 import { InvalidKeyMaterialError } from '../crypto/errors';
-
-const textEncoder = new TextEncoder();
+import { hmacSha256 } from './hmac';
 
 const concat = (left: Uint8Array, right: Uint8Array): Uint8Array => {
   const combined = new Uint8Array(left.length + right.length);
@@ -27,14 +26,7 @@ export const deriveServerAuthHash = async (
     throw new InvalidKeyMaterialError();
   }
 
-  const key = await crypto.subtle.importKey(
-    'raw',
-    textEncoder.encode(pepper),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  const signature = await crypto.subtle.sign('HMAC', key, toArrayBuffer(concat(authHash, serverSalt)));
+  const signature = await hmacSha256(pepper, concat(authHash, serverSalt));
 
-  return { authHash: encodeBase64(new Uint8Array(signature)), serverSalt: encodeBase64(serverSalt) };
+  return { authHash: encodeBase64(signature), serverSalt: encodeBase64(serverSalt) };
 };

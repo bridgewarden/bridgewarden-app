@@ -26,6 +26,19 @@ POST request that loses the creation race SHALL respond with 409 and create no r
 - **WHEN** a POST reaches `/setup` after another request created the first admin
 - **THEN** the response is 409, no additional user row is created, and no session is issued
 
+### Requirement: Unconfigured route guard
+
+While the `users` table is empty, requests to `/` and to `/app/*` SHALL redirect to `/setup` so the
+operator cannot land in a shell that assumes an existing account.
+
+#### Scenario: Home redirects before setup
+- **WHEN** a visitor requests `/` while no user exists
+- **THEN** the response redirects to `/setup`
+
+#### Scenario: Vault routes redirect before setup
+- **WHEN** a visitor requests `/app` or `/app/trash` while no user exists
+- **THEN** the response redirects to `/setup`
+
 ### Requirement: Atomic first-admin creation
 
 The server SHALL create the first administrator with a single
@@ -43,9 +56,10 @@ SHALL have `role = 'admin'` and `status = 'active'`.
 
 ### Requirement: Setup account input
 
-The wizard SHALL collect an email address, a display name, and a master password. The email SHALL be
-trimmed and lowercased before storage and MUST be unique regardless of case. The master password
-MUST be at least 12 characters and is evaluated only in the browser; it MUST NOT be submitted.
+The wizard SHALL collect an email address, a display name, and a master password entered twice. The
+email SHALL be trimmed and lowercased before storage and MUST be unique regardless of case. The
+master password MUST be at least 12 characters, the confirmation MUST match exactly, and both are
+evaluated only in the browser; neither MUST be submitted.
 
 #### Scenario: Valid account details are accepted
 - **WHEN** the user submits a valid email, a non-empty display name, and a 12-character password
@@ -53,6 +67,10 @@ MUST be at least 12 characters and is evaluated only in the browser; it MUST NOT
 
 #### Scenario: Short password blocks progress
 - **WHEN** the master password is shorter than 12 characters
+- **THEN** the wizard shows an inline error and does not generate keys
+
+#### Scenario: Mismatched password confirmation blocks progress
+- **WHEN** the confirmation does not exactly match the master password
 - **THEN** the wizard shows an inline error and does not generate keys
 
 #### Scenario: Invalid email is rejected by the server
@@ -106,13 +124,18 @@ stored in plaintext or logged. Both salts SHALL be stored as standard padded bas
 ### Requirement: Recovery key display and confirmation
 
 The wizard SHALL display the formatted 26-character recovery key exactly once and require the user
-to type back a six-character substring before completion. The recovery key MUST NOT be submitted to
-the server, written to storage, or included in logs, and it SHALL be discarded from memory after
-confirmation.
+to type back a six-character substring before completion. The displayed key SHALL be copyable and
+downloadable as a text file through explicit user actions. The recovery key MUST NOT be submitted to
+the server, written to browser storage, or included in logs, and it SHALL be discarded from memory
+after confirmation.
 
 #### Scenario: Mismatched confirmation blocks completion
 - **WHEN** the typed-back characters do not match the displayed key
 - **THEN** the wizard shows an inline error and does not submit
+
+#### Scenario: User saves the recovery key
+- **WHEN** the user copies or downloads the displayed recovery key
+- **THEN** the clipboard or downloaded file contains the same formatted key and no network request is made
 
 #### Scenario: Confirmed recovery key is never sent
 - **WHEN** the user confirms the recovery key and submits

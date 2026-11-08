@@ -43,7 +43,8 @@ Current constraints found in the repository:
 
 ### D1. Split availability semantics between GET and POST
 
-GET `/setup` computes `isBootstrapAvailable(db)`. When false it throws `redirect('/login')`. The
+GET `/`, `/app`, and `/app/trash` also compute `isBootstrapAvailable(db)` and redirect to `/setup`
+while the table is empty. GET `/setup` computes `isBootstrapAvailable(db)`. When false it throws `redirect('/login')`. The
 loader returns no data; the page renders without an availability prop. POST never relies on the
 pre-check; it attempts the atomic insert and returns 409 when `changes === 0`. React Router sends
 fetch/`.data` POSTs straight to the action, while a document POST still re-runs the loader and
@@ -147,7 +148,9 @@ request keeps the derived values in memory so the user can retry without re-deri
 them and restarts the wizard, creating no partial row because no write happens until the final POST.
 
 Recovery confirmation accepts the first six normalized characters of the displayed key. Comparison
-is case-insensitive and ignores separators, matching `parseRecoveryKey` normalization.
+is case-insensitive and ignores separators, matching `parseRecoveryKey` normalization. Copy uses the
+Clipboard API with a visible failure fallback; download creates a local text Blob and object URL, so
+neither action touches the server or browser storage.
 
 ### D10. Server module layout
 

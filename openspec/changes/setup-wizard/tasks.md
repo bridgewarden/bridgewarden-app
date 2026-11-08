@@ -59,3 +59,12 @@
 - Run `/preflight` and fix every blocker before opening the PR.
 - Open the PR for PR #8 with requirement TASK-18 and the security checklist.
 - Archive the change after merge and verification.
+
+## 9. Setup ergonomics
+
+- [x] 9.1 Require the master password twice and block derivation when the confirmation differs; verify the reducer helper test and the E2E mismatch assertion
+- [x] 9.2 Add copy and text-file download actions for the recovery key; verify the E2E copy state and downloaded filename
+
+## 10. Unconfigured route guard
+
+- [x] 10.1 Redirect `/` and `/app/*` to `/setup` while the users table is empty; verify the smoke E2E covers both redirects

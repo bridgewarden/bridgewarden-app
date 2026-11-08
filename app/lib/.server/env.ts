@@ -15,6 +15,12 @@ export class ServerConfigError extends Error {
   }
 }
 
+export const readConfig = (env: Env, name: keyof AppSecrets): string | undefined => {
+  const value = (env as Env & Partial<AppSecrets>)[name];
+
+  return typeof value === 'string' ? value : undefined;
+};
+
 export const requireSecret = (env: Env, name: keyof AppSecrets): string => {
   const value = (env as Env & Partial<AppSecrets>)[name];
 

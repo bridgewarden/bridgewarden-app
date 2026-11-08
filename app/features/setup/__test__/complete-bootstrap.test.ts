@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createTestUser } from '../../../__test__/fixtures';
 import { resetDatabase } from '../../../__test__/reset-database';
 import { encodeBase64 } from '../../../lib/crypto/encoding';
+import { readConfig } from '../../../lib/.server/env';
 import type { SetupInput } from '../.server/setup-input';
 import { completeBootstrap } from '../.server/use-cases/complete-bootstrap';
 
@@ -23,8 +24,9 @@ const setupInput = (token: string): SetupInput => ({
 });
 
 const configuredToken = () => {
-  expect(env.BOOTSTRAP_TOKEN).toBeTruthy();
-  return env.BOOTSTRAP_TOKEN;
+  const token = readConfig(env, 'BOOTSTRAP_TOKEN');
+  expect(token).toBeTruthy();
+  return token!;
 };
 
 const clearSessions = async () => {
@@ -91,7 +93,7 @@ describe('complete bootstrap use-case', () => {
       DB: env.DB,
       KV_SESSIONS: { put: async () => Promise.reject(new Error('kv down')), delete: async () => undefined },
       BOOTSTRAP_TOKEN: token,
-      AUTH_PEPPER: env.AUTH_PEPPER,
+      AUTH_PEPPER: readConfig(env, 'AUTH_PEPPER'),
     } as unknown as Env;
 
     expect((await completeBootstrap(withoutPepper, setupInput(token))).status).toBe('server-error');

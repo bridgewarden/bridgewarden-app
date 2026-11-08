@@ -7,6 +7,7 @@ import { completeBootstrap } from '~/features/setup/.server/use-cases/complete-b
 import { isBootstrapAvailable } from '~/lib/.server/bootstrap';
 import { cloudflareContext } from '~/lib/.server/context';
 import { getDatabase } from '~/lib/.server/db';
+import { readConfig } from '~/lib/.server/env';
 import { readJsonBody } from '~/lib/.server/request-body';
 import { isSameOrigin } from '~/lib/.server/request-origin';
 import { t } from '~/lib/i18n/en';
@@ -26,7 +27,7 @@ export async function loader({ context }: Route.LoaderArgs) {
 export async function action({ request, context }: Route.ActionArgs) {
   const { env } = context.get(cloudflareContext);
 
-  if (!isSameOrigin(request, env.APP_ORIGIN, env.APP_ENV === 'development')) {
+  if (!isSameOrigin(request, readConfig(env, 'APP_ORIGIN'), readConfig(env, 'APP_ENV') === 'development')) {
     return failure('forbidden', 403);
   }
 

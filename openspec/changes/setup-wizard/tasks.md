@@ -6,7 +6,6 @@
 - [x] 1.2 Add `zod` to `package.json` and install it; verify `pnpm install` and `pnpm typecheck` succeed
 - [x] 1.3 Add `app/lib/base64-url.ts` with canonical `toBase64Url` and `fromBase64Url`; verify `app/lib/__test__/base64-url.test.ts` covers padding, alphabet, round-trip, and rejection of non-canonical input
 - [x] 1.4 Add `app/lib/.server/db.ts`, `request-origin.ts`, and `audit.ts`; verify tests cover the D1 handle, same-origin accept/reject, and the audit insert shape
-- [x] 1.5 Add `app/lib/.server/bootstrap-token.ts` with equal-length constant-time comparison; verify tests cover correct, wrong, missing, and differing-length tokens without revealing configuration state
 - [x] 1.6 Add `app/lib/.server/auth-hash.ts` with 16-byte server salt and `HMAC-SHA256(AUTH_PEPPER, authHash || serverSalt)`; verify a fixed-vector test and a different-salt test both pass
 
 ## 2. Atomic bootstrap guard
@@ -25,7 +24,6 @@
 - [x] 4.2 Implement the `/setup` loader: available data when the table is empty, redirect to `/login` otherwise; verify via the E2E redirect scenario and a direct helper test
 - [x] 4.3 Implement the `/setup` action in order: same-origin check, schema validation, token verification, auth-hash computation, atomic creation, audit event, session issuance; verify the use-case tests cover 403/409/500, missing pepper, KV failure, audit, and success with `Set-Cookie`
 - [x] 4.4 Keep `app/routes/setup.tsx` transport-only and pass loader/action data into the feature entry; verify lint and review confirm no SQL, hashing, or token logic in the route
-- [x] 4.5 Add the PR #11 rate-limit TODO next to token verification; verify the comment names the follow-up task
 
 ## 5. Client key generation and memory store
 
@@ -36,7 +34,7 @@
 
 ## 6. Wizard UI
 
-- [x] 6.1 Build the token, account, and password steps with labelled inputs, inline errors, `aria-invalid`, and a strength meter exposing `role="progressbar"` and `aria-valuenow`; verify keyboard-only completion and the E2E flow
+- [x] 6.1 Build the account and password steps with labelled inputs, inline errors, `aria-invalid`, and a strength meter exposing `role="progressbar"` and `aria-valuenow`; verify keyboard-only completion and the E2E flow
 - [x] 6.2 Build the recovery-key display and six-character confirmation, showing the key once and clearing it after confirmation; verify the state test blanks the recovery key after confirmation and the E2E request body contains no recovery value
 - [x] 6.3 Clear the password field immediately after derivation and block navigation with an in-app alert dialog plus `beforeunload` while key material exists; verify with the Playwright flow and a manual cancel check
 - [x] 6.4 Submit through a fetcher, keep derived keys in memory on network failure, set the vault key and navigate to `/app` on success; verify the E2E landing page and that a reload leaves no key material in storage
@@ -46,16 +44,15 @@
 ## 7. E2E harness and documentation
 
 - [x] 7.1 Add `e2e/global-setup.ts` that applies migrations and deletes users against `--local --persist-to .wrangler/e2e`; verify two consecutive `pnpm test:e2e` runs both start from an empty table
-- [x] 7.2 Add the bootstrap-token test helper reading `E2E_BOOTSTRAP_TOKEN` or `.dev.vars`; verify it errors clearly when absent and never prints the value
 - [x] 7.3 Split Playwright projects into ordered `smoke` then `setup` with trace and screenshots disabled for setup; verify `pnpm test:e2e` runs both in that order
-- [x] 7.4 Add `e2e/setup.spec.ts` covering wrong token, successful wizard completion, `/app` landing, no key material after reload, and a follow-up `/setup` redirect; verify the spec passes twice in a row
-- [x] 7.5 Update CI to generate throwaway `.dev.vars` values and export the same bootstrap token through `$GITHUB_ENV`; verify the workflow never echoes values and `pnpm test:e2e` passes in the job
-- [x] 7.6 Document first-run setup, `BOOTSTRAP_TOKEN`, the local E2E reset, and the fact that setup is available only on an empty user table; verify the documented commands run as written
+- [x] 7.4 Add `e2e/setup.spec.ts` covering successful wizard completion, `/app` landing, no key material after reload, and a follow-up `/setup` redirect; verify the spec passes twice in a row
+- [x] 7.5 Update CI to generate throwaway `.dev.vars` values; verify the workflow never echoes values and `pnpm test:e2e` passes in the job
+- [x] 7.6 Document first-run setup, the no-token first-visitor window, the local E2E reset, and the fact that setup is available only on an empty user table; verify the documented commands run as written
 
 ## 8. Integration verification
 
 - [x] 8.1 Run `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm test:e2e`, and `pnpm build`; verify every command passes with counts recorded
-- [x] 8.2 Grep the new server and client code for logging, storage writes, and token/password echoes; verify no credential, auth hash, recovery value, or key material can reach logs, cookies other than the session token, HTML, or storage
+- [x] 8.2 Grep the new server and client code for logging, storage writes, and password echoes; verify no credential, auth hash, recovery value, or key material can reach logs, cookies other than the session token, HTML, or storage
 
 ## Workflow follow-up
 

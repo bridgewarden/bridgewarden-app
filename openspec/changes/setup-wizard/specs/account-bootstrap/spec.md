@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Defines how a fresh deployment gets its first administrator safely: a one-time availability gate, a
-constant-time bootstrap-token check, atomic creation, browser-side key generation, recovery-key
+Defines how a fresh deployment gets its first administrator safely: a one-time availability gate,
+atomic creation, browser-side key generation, recovery-key
 confirmation, and a session handoff that never exposes vault key material to the server.
 
 ## ADDED Requirements
@@ -25,25 +25,6 @@ POST request that loses the creation race SHALL respond with 409 and create no r
 #### Scenario: Losing a concurrent request returns 409
 - **WHEN** a POST reaches `/setup` after another request created the first admin
 - **THEN** the response is 409, no additional user row is created, and no session is issued
-
-### Requirement: Bootstrap token gate
-
-Every setup POST SHALL include a `token` field that matches the configured `BOOTSTRAP_TOKEN`. The
-server MUST compare equal-length values in constant time and SHALL return 403 for a missing, wrong,
-or unconfigured token without revealing whether the secret exists. The submitted token MUST NOT be
-persisted, logged, or echoed.
-
-#### Scenario: Correct token is accepted
-- **WHEN** a POST submits the configured bootstrap token
-- **THEN** the request proceeds to account validation and creation
-
-#### Scenario: Wrong token is rejected
-- **WHEN** a POST submits a wrong or missing token
-- **THEN** the response is 403 and no user or audit row is created
-
-#### Scenario: Unconfigured token looks like a wrong token
-- **WHEN** `BOOTSTRAP_TOKEN` is absent from the environment
-- **THEN** the response is 403 with the same body as a wrong token
 
 ### Requirement: Atomic first-admin creation
 
@@ -162,7 +143,7 @@ the new user. The event metadata MUST NOT contain credentials, tokens, ciphertex
 - **THEN** exactly one `bootstrap.created` audit event references that user
 
 #### Scenario: Failed attempts are not audited as success
-- **WHEN** a setup request fails the token, validation, or atomic guard
+- **WHEN** a setup request fails validation or the atomic guard
 - **THEN** no `bootstrap.created` event is written
 
 ### Requirement: Optional two-factor handoff
@@ -181,7 +162,7 @@ Until enrollment ships, choosing it MUST NOT block completion and MUST NOT creat
 ### Requirement: Same-origin mutation
 
 Every setup POST MUST validate the request `Origin` against the application origin and SHALL reject a
-foreign or missing origin with a 4xx response before reading the token or writing data. React Router
+foreign or missing origin with a 4xx response before reading the body or writing data. React Router
 may abort with 400 before the route action; the action itself returns 403.
 
 #### Scenario: Foreign origin is rejected

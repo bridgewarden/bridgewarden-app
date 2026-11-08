@@ -3,19 +3,17 @@
 ## Why
 
 A fresh deployment has no accounts, no email infrastructure, and no recovery path, so the very first
-administrator has to be created safely from the browser exactly once. Without an atomic, token-gated
+administrator has to be created safely from the browser exactly once. Without an atomic
 bootstrap, a public Worker could be claimed by the first visitor, or two concurrent requests could
 create two admins.
 
 ## What Changes
 
-- Add `/setup` as a multi-step first-run wizard: bootstrap token, account details, master password
+- Add `/setup` as a multi-step first-run wizard: account details, master password
   with strength meter (minimum 12 characters), recovery-key display and confirmation, optional 2FA
   handoff, completion.
 - Gate the route on an empty `users` table. A non-empty table redirects GET requests to `/login`;
   a raced POST returns 409.
-- Validate `BOOTSTRAP_TOKEN` with a constant-time comparison and return 403 for missing or wrong
-  tokens without revealing whether the secret is configured.
 - Create the first admin with one `INSERT … SELECT … WHERE NOT EXISTS (SELECT 1 FROM users)`
   statement so concurrent requests produce exactly one row; treat `meta.changes === 0` as 409.
 - Generate all key material in the browser using the PR #7 crypto contract: `kdfSalt`, `masterKey`,
@@ -28,16 +26,15 @@ create two admins.
 - Keep the unwrapped vault key only in an in-memory key store so the client-side transition to
   `/app` is unlocked; nothing is written to storage.
 - Record a `bootstrap.created` audit event for the new administrator.
-- Add Zod for request validation, unit tests for guard/token/transport/key generation, an isolated
+- Add Zod for request validation, unit tests for guard/transport/key generation, an isolated
   E2E database reset, and a Playwright setup flow.
-- Add test-only CI preparation for `.dev.vars` so E2E can exercise the token gate without committing
-  a secret.
+- Add test-only CI preparation for `.dev.vars` so E2E can run without committing secrets.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `account-bootstrap`: first-run administrator creation, the single-use availability and token gates,
+- `account-bootstrap`: first-run administrator creation, the single-use availability gate,
   client-side key generation during setup, recovery-key confirmation, session handoff, and the
   bootstrap audit event.
 
@@ -48,7 +45,7 @@ None.
 ## Impact
 
 - New route modules under `app/routes/`, feature UI and server input under `app/features/setup/`, and
-  server infrastructure under `app/lib/.server/` (bootstrap guard, token comparison, audit, minimal
+  server infrastructure under `app/lib/.server/` (bootstrap guard, audit, minimal
   session issuance, origin check).
 - A small client-safe base64url transport helper and an in-memory vault key store under
   `app/lib/vault/`.

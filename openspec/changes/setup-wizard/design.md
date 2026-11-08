@@ -68,18 +68,15 @@ WHERE NOT EXISTS (SELECT 1 FROM users)
 appears in the write path. Alternative rejected: `db.batch` with a count statement, which still has
 a check-then-act gap when the statements are not conditional.
 
-### D3. Token comparison is constant-time over equal-length byte arrays
+### D3. No bootstrap token gate (owner decision)
 
-`verifyBootstrapToken(env, submitted)` reads `BOOTSTRAP_TOKEN` defensively. When it is missing or
-empty, the function returns false with the same outward behavior as a wrong token. It encodes both
-values as UTF-8 and compares with a small XOR loop only after confirming equal length, so mismatched
-lengths are rejected without a data-dependent scan. No Node-only helper is needed.
+The owner removed the bootstrap token after the first implementation: this is a single-operator,
+personal deployment, and a claimed empty deployment can be recovered by resetting D1 and KV. The
+route therefore relies on the empty-table guard and the atomic insert, with no token field or secret.
 
-Alternatives rejected: `===` (timing leak), `node:crypto.timingSafeEqual` (works but pulls a Node
-API into a Worker path for no gain), and hashing both values and comparing digests (still needs a
-constant-time digest comparison).
-
-The route adds a TODO referencing PR #11 for rate limiting and lockout of repeated token attempts.
+Risk accepted: until the first admin exists, anyone who reaches `/setup` can claim it. Keep a fresh
+deployment private until setup completes. The alternative — a server-side token compared in constant
+time — was implemented and removed here because the reset cost was acceptable to the owner.
 
 ### D4. Base64url on the wire, standard base64 in storage
 
@@ -158,7 +155,6 @@ is case-insensitive and ignores separators, matching `parseRecoveryKey` normaliz
 | --- | --- |
 | `app/lib/.server/db.ts` | `getDatabase(env)` returns the `DB` binding, the single D1 handle entry point |
 | `app/lib/.server/bootstrap.ts` | `isBootstrapAvailable(db)`, `createFirstAdmin(db, input)` |
-| `app/lib/.server/bootstrap-token.ts` | constant-time token verification |
 | `app/lib/.server/auth-hash.ts` | server salt generation and peppered HMAC |
 | `app/lib/.server/audit.ts` | `recordAuditEvent(db, event)` |
 | `app/lib/.server/session.ts` | `createSession`, `destroySession`, and cookie serialization |
@@ -203,10 +199,8 @@ helper also clears `session:*` KV keys so stale cookies cannot point at deleted 
 retry starts available. The command is pinned to `--local` and the E2E persist path; no remote
 database is reachable from this script.
 
-The bootstrap token is never committed or hardcoded. A Playwright helper reads
-`process.env.E2E_BOOTSTRAP_TOKEN` first and otherwise parses the `BOOTSTRAP_TOKEN` line from the
-gitignored `.dev.vars`. CI generates throwaway random values for a temporary `.dev.vars` and exports
-the same token through `$GITHUB_ENV`; values are never echoed.
+CI generates throwaway random values for a temporary `.dev.vars`; values are never echoed. No
+setup token is required by the application or the E2E suite.
 
 Projects run in order: `smoke` (existing route checks, including the available `/setup`) then
 `setup` (wizard flow), with the setup project disabling trace and screenshots because it types a
@@ -225,7 +219,7 @@ display name (1–100 after trim), `kdfIterations` (safe integer from the contra
 
 - 400 `{ error: 'invalid-input' }` for schema failures;
 - 413 or 415 `{ error: 'invalid-input' }` for oversized bodies or a non-JSON content type;
-- 403 `{ error: 'forbidden' }` for origin or token failures;
+- 403 `{ error: 'forbidden' }` for a rejected origin;
 - 409 `{ error: 'already-configured' }` for a lost race;
 - 500 `{ error: 'server-error' }` for missing pepper, D1, or KV failure;
 - 200 `{ ok: true }` plus `Set-Cookie` on success.
@@ -245,8 +239,10 @@ SameSite=Lax and an origin check.
 
 - [Audit insert fails after the user exists] → Setup is consumed without an event. The action still
   succeeds, and the failure is logged without request content; a retry cannot create a second admin.
-- [Trusting a client-generated `authHash`] → A holder of the bootstrap token could submit a weak
-  hash. The token is owner-only and single-use; rate limiting and lockout arrive in PR #11.
+- [First visitor can claim setup] → Accepted by the owner for a personal deployment; D1 and KV can
+  be reset before any real vault exists. Keep a fresh deployment private until setup completes.
+- [Trusting a client-generated `authHash`] → The first setup client could submit a weak hash; rate
+  limiting and lockout arrive in PR #11.
 - [In-memory key store is a singleton] → Only one account can be unlocked per browser tab, which is
   the product model; PR #14 owns multi-tab behavior.
 - [Secure cookie on local HTTP] → Chromium treats localhost as trustworthy and stores it, but other

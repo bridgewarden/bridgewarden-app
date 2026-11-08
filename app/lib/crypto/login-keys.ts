@@ -1,6 +1,6 @@
-import { base64UrlToStandard, toBase64Url } from '../../lib/base64-url';
-import { deriveAuthHash, deriveMasterKey, deriveWrapKey } from '../../lib/crypto/kdf';
-import { unwrapVaultKey } from '../../lib/crypto/vault-key';
+import { base64UrlToStandard, toBase64Url } from '../base64-url';
+import { deriveAuthHash, deriveMasterKey, deriveWrapKey } from './kdf';
+import { unwrapVaultKey } from './vault-key';
 
 export type PreparedLogin = {
   authHash: string;

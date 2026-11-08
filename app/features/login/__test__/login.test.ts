@@ -8,8 +8,8 @@ import { encodeBase64 } from '../../../lib/crypto/encoding';
 import { deriveServerAuthHash } from '../../../lib/.server/auth-hash';
 import { generateSetupKeyMaterial } from '../../setup/setup-keys';
 import { loginWithPassword } from '../.server/use-cases/login';
-import { prepareLogin } from '../login-keys';
-import { clearSessions, createAuthUser, testEnv } from './auth-fixtures';
+import { prepareLogin } from '../../../lib/crypto/login-keys';
+import { clearSessions, createAuthUser, testEnv } from '../../../__test__/auth-fixtures';
 
 const request = () =>
   new Request('https://app.example/auth/login', {

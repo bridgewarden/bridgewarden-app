@@ -1,3 +1,4 @@
+import { readConfig } from './env';
 import { hmacSha256, toHex } from './hmac';
 
 export type RequestFingerprints = {
@@ -13,4 +14,9 @@ export const fingerprintRequest = async (request: Request, secret: string): Prom
     uaHash: userAgent ? toHex(await hmacSha256(secret, `ua:${userAgent}`)) : null,
     ipHash: ip ? toHex(await hmacSha256(secret, `ip:${ip}`)) : null,
   };
+};
+
+export const auditFingerprints = async (env: Env, request: Request): Promise<RequestFingerprints> => {
+  const secret = readConfig(env, 'SESSION_SECRET');
+  return secret ? fingerprintRequest(request, secret) : { uaHash: null, ipHash: null };
 };

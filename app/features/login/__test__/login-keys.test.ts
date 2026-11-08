@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { generateSetupKeyMaterial } from '../../setup/setup-keys';
-import { prepareLogin, unwrapLoginVault } from '../login-keys';
+import { prepareLogin, unwrapLoginVault } from '../../../lib/crypto/login-keys';
 
 describe('login key preparation', () => {
   it('derives the same auth hash and unwraps the vault key', async () => {

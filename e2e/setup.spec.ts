@@ -86,7 +86,7 @@ test('creates the first admin through the wizard and locks setup', async ({ page
   await page.getByLabel('Type the first 6 characters').fill(recoveryKey.replaceAll('-', '').slice(0, 6).toLowerCase());
   await page.getByRole('button', { name: 'Confirm recovery key' }).click();
 
-  await expect(page.getByText('Enrollment is not available in this milestone.')).toBeVisible();
+  await expect(page.getByText('Two-factor is optional. We recommend enabling it right after setup;')).toBeVisible();
   await page.getByRole('button', { name: 'Finish setup' }).click();
 
   await expect(page).toHaveURL(/\/app$/);

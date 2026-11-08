@@ -51,7 +51,7 @@ pnpm format:check
 pnpm test
 pnpm test:watch       # Vitest in watch mode
 pnpm test app/__test__/reset-database.test.ts   # single file
-pnpm test:e2e         # Playwright smoke + setup suites (starts its own dev server on 8787)
+pnpm test:e2e         # Playwright smoke + setup + auth suites (starts its own dev server on 8787)
 pnpm db:migrate:local
 pnpm db:migrate:remote
 pnpm db:reset:local
@@ -84,6 +84,21 @@ To reset the E2E database manually:
 ```bash
 pnpm exec wrangler d1 execute bridgewarden-db --local --persist-to .wrangler/e2e --command "DELETE FROM users"
 ```
+
+## Login and sessions
+
+`/login` is a two-step password flow: the browser fetches KDF parameters from
+`POST /auth/prelogin`, derives `authHash` plus the wrap key locally, and posts only the hash to
+`POST /auth/login`. Unknown emails receive synthetic KDF parameters with the same shape, and unknown
+email or wrong password both return a generic 401.
+
+A successful login sets the `bw_session` cookie (HttpOnly, Secure, SameSite=Lax, Path=/, 30 days
+absolute) and stores only the token hash in `KV_SESSIONS`. Activity refreshes `lastSeenAt` at most
+once per hour but never extends expiry. `users.session_version` is the authoritative revocation
+state; incrementing it invalidates every existing session.
+
+`POST /auth/logout` deletes the session, clears the cookie, and records an audit event. `/` and `/app/*` redirect unauthenticated visitors to `/login?next=<same-origin path>`; unsafe return paths
+fall back to `/app`. The header shows the signed-in user with a **Sign out** action.
 
 ## Cloudflare resources
 

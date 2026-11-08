@@ -3,6 +3,8 @@ export const en = {
   'app.tagline': 'Zero-knowledge password manager for personal and family use, deployed on Cloudflare.',
 
   'common.signIn': 'Sign in',
+  'common.signOut': 'Sign out',
+  'common.signOutFailed': 'Sign out failed. Try again.',
   'common.lock': 'Lock vault',
   'common.theme': 'Theme',
   'common.theme.light': 'Light',
@@ -14,6 +16,17 @@ export const en = {
 
   'login.title': 'Sign in',
   'login.description': 'Unlock your vault with your master password.',
+  'login.email': 'Email',
+  'login.emailPlaceholder': 'you@example.com',
+  'login.password': 'Master password',
+  'login.passwordPlaceholder': 'Your master password',
+  'login.missingFields': 'Enter your email and master password.',
+  'login.submit': 'Sign in',
+  'login.signingIn': 'Signing in…',
+  'login.invalidCredentials': 'Email or master password is incorrect.',
+  'login.lookupFailed': 'Sign in could not start. Try again.',
+  'login.serverError': 'Sign in is temporarily unavailable. Try again.',
+  'login.unlockFailed': 'Signed in, but the vault could not be unlocked. Try again.',
 
   'setup.title': 'Set up Bridgewarden',
   'setup.description': 'Create the first administrator account and your vault keys.',

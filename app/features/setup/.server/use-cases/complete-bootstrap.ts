@@ -1,15 +1,21 @@
 import { deriveServerAuthHash, generateServerSalt } from '../../../../lib/.server/auth-hash';
-import { recordAuditEvent } from '../../../../lib/.server/audit';
+import { recordAuditEventSafe } from '../../../../lib/.server/audit';
 import { createFirstAdmin, isBootstrapAvailable } from '../../../../lib/.server/bootstrap';
 import { getDatabase } from '../../../../lib/.server/db';
+import { readConfig } from '../../../../lib/.server/env';
 import { requireSecret } from '../../../../lib/.server/env';
-import { createSession, destroySession } from '../../../../lib/.server/session';
+import { fingerprintRequest } from '../../../../lib/.server/request-fingerprint';
+import { createSession, destroySessionToken } from '../../../../lib/.server/session';
 import type { SetupInput } from '../setup-input';
 
 export type CompleteBootstrapResult =
   { status: 'created'; cookie: string } | { status: 'exists' } | { status: 'server-error' };
 
-export const completeBootstrap = async (env: Env, input: SetupInput): Promise<CompleteBootstrapResult> => {
+export const completeBootstrap = async (
+  env: Env,
+  input: SetupInput,
+  request?: Request,
+): Promise<CompleteBootstrapResult> => {
   let pepper: string;
   try {
     pepper = requireSecret(env, 'AUTH_PEPPER');
@@ -26,9 +32,13 @@ export const completeBootstrap = async (env: Env, input: SetupInput): Promise<Co
   const createdAt = Date.now();
   const serverAuthHash = await deriveServerAuthHash(input.authHashBytes, generateServerSalt(), pepper);
 
+  const sessionSecret = readConfig(env, 'SESSION_SECRET');
+  const fingerprints =
+    request && sessionSecret ? await fingerprintRequest(request, sessionSecret) : { uaHash: null, ipHash: null };
+
   let session: Awaited<ReturnType<typeof createSession>>;
   try {
-    session = await createSession(env, id);
+    session = await createSession(env, { userId: id, ver: 0, ...fingerprints });
   } catch {
     return { status: 'server-error' };
   }
@@ -50,20 +60,16 @@ export const completeBootstrap = async (env: Env, input: SetupInput): Promise<Co
       createdAt,
     });
   } catch {
-    await destroySession(env, session.token).catch(() => undefined);
+    await destroySessionToken(env, session.token).catch(() => undefined);
     return { status: 'server-error' };
   }
 
   if (created === 'exists') {
-    await destroySession(env, session.token).catch(() => undefined);
+    await destroySessionToken(env, session.token).catch(() => undefined);
     return { status: 'exists' };
   }
 
-  try {
-    await recordAuditEvent(db, { type: 'bootstrap.created', userId: id, createdAt });
-  } catch {
-    console.warn('bootstrap.audit_failed');
-  }
+  await recordAuditEventSafe(db, { type: 'bootstrap.created', userId: id, createdAt });
 
   return { status: 'created', cookie: session.cookie };
 };

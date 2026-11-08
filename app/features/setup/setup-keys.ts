@@ -1,6 +1,6 @@
-import { toBase64Url } from '../../lib/base64-url';
+import { standardToBase64Url, toBase64Url } from '../../lib/base64-url';
 import { DEFAULT_KDF_ITERATIONS, SALT_BYTES } from '../../lib/crypto/contract';
-import { decodeBase64, encodeBase64 } from '../../lib/crypto/encoding';
+import { encodeBase64 } from '../../lib/crypto/encoding';
 import { deriveAuthHash, deriveMasterKey, deriveWrapKey } from '../../lib/crypto/kdf';
 import { formatRecoveryKey, generateRecoverySecret, wrapVaultKeyWithRecovery } from '../../lib/crypto/recovery';
 import { generateVaultKey, wrapVaultKey } from '../../lib/crypto/vault-key';
@@ -20,8 +20,6 @@ export type SetupKeyMaterial = SetupTransportMaterial & {
   recoveryKey: string;
 };
 
-const toTransport = (standardBase64: string): string => toBase64Url(decodeBase64(standardBase64));
-
 export const generateSetupKeyMaterial = async (password: string): Promise<SetupKeyMaterial> => {
   const kdfSaltBytes = crypto.getRandomValues(new Uint8Array(SALT_BYTES));
   const kdfSalt = encodeBase64(kdfSaltBytes);
@@ -37,10 +35,10 @@ export const generateSetupKeyMaterial = async (password: string): Promise<SetupK
     kdfSalt: toBase64Url(kdfSaltBytes),
     kdfIterations: DEFAULT_KDF_ITERATIONS,
     authHash: toBase64Url(authHash),
-    vaultKeyWrapped: toTransport(wrappedVaultKey.ciphertext),
-    vaultKeyWrapIv: toTransport(wrappedVaultKey.iv),
-    recoveryKeyWrapped: toTransport(wrappedWithRecovery.ciphertext),
-    recoveryKeyWrapIv: toTransport(wrappedWithRecovery.iv),
+    vaultKeyWrapped: standardToBase64Url(wrappedVaultKey.ciphertext),
+    vaultKeyWrapIv: standardToBase64Url(wrappedVaultKey.iv),
+    recoveryKeyWrapped: standardToBase64Url(wrappedWithRecovery.ciphertext),
+    recoveryKeyWrapIv: standardToBase64Url(wrappedWithRecovery.iv),
     vaultKey,
     recoveryKey: formatRecoveryKey(recoverySecret),
   };

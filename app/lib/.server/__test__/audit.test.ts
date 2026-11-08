@@ -21,4 +21,17 @@ describe('audit events', () => {
 
     expect(row).toEqual({ user_id: userId, type: 'bootstrap.created', metadata: null });
   });
+
+  it('stores failed events without a user and with fingerprints', async () => {
+    await recordAuditEvent(env.DB, {
+      type: 'login.failed',
+      userId: null,
+      createdAt: Date.now(),
+      uaHash: 'ua-hash',
+      ipHash: 'ip-hash',
+    });
+
+    const row = await env.DB.prepare('SELECT user_id, type, ua_hash, ip_hash FROM audit_events').first();
+    expect(row).toEqual({ user_id: null, type: 'login.failed', ua_hash: 'ua-hash', ip_hash: 'ip-hash' });
+  });
 });

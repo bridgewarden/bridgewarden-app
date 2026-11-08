@@ -7,6 +7,7 @@ type TestUserOverrides = {
   role?: 'admin' | 'member';
   status?: 'active' | 'disabled';
   vaultRev?: number;
+  sessionVersion?: number;
 };
 
 export const createTestUser = async (overrides: TestUserOverrides = {}) => {
@@ -17,8 +18,8 @@ export const createTestUser = async (overrides: TestUserOverrides = {}) => {
   await env.DB.prepare(
     `INSERT INTO users (
       id, email, display_name, auth_hash, server_salt, kdf_alg, kdf_iterations, kdf_salt,
-      vault_key_wrapped, vault_key_wrap_iv, role, status, vault_rev, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      vault_key_wrapped, vault_key_wrap_iv, role, status, vault_rev, session_version, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       id,
@@ -34,6 +35,7 @@ export const createTestUser = async (overrides: TestUserOverrides = {}) => {
       overrides.role ?? 'member',
       overrides.status ?? 'active',
       overrides.vaultRev ?? 0,
+      overrides.sessionVersion ?? 0,
       now,
       now,
     )

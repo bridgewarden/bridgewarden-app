@@ -38,7 +38,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     return failure('invalid-input', 400);
   }
 
-  const result = await completeBootstrap(env, input);
+  const result = await completeBootstrap(env, input, request);
 
   switch (result.status) {
     case 'exists':

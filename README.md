@@ -25,7 +25,6 @@ Create `.dev.vars` (Wrangler local secrets) and `.env.local` (tooling) with the 
 SESSION_SECRET=...
 AUTH_PEPPER=...
 TOTP_ENC_KEY=...
-BOOTSTRAP_TOKEN=...
 APP_ORIGIN=http://localhost:5173
 TOTP_ISSUER=Bridgewarden
 APP_ENV=development
@@ -70,19 +69,16 @@ pnpm exec playwright install chromium
 
 ## First-run setup
 
-Open `/setup` on a deployment whose `users` table is empty. The wizard asks for the
-`BOOTSTRAP_TOKEN` from `.dev.vars` / Worker secrets, creates the first administrator, and shows the
-recovery key once. `/setup` redirects to `/login` as soon as an account exists; the server also
-enforces the one-admin rule atomically, so a concurrent second request gets 409.
+Open `/setup` on a deployment whose `users` table is empty. The wizard creates the first
+administrator and shows the recovery key once. `/setup` redirects to `/login` as soon as an account
+exists; the server also enforces the one-admin rule atomically, so a concurrent second request gets 409.
 
-The bootstrap token is never stored, logged, or returned. If it is missing, setup fails closed with
-the same 403 as a wrong token. Configure the production value with
-`wrangler secret put BOOTSTRAP_TOKEN`.
+There is no bootstrap token: the first visitor to an empty deployment can create the admin. Keep the
+deployment private until you have completed setup, and reset the local D1 state if you need to retry.
 
 E2E uses an isolated `.wrangler/e2e` database. `pnpm test:e2e` applies migrations and clears the
-`users` and `audit_events` tables before starting, then reads `BOOTSTRAP_TOKEN` from
-`E2E_BOOTSTRAP_TOKEN` or the gitignored `.dev.vars`. CI generates throwaway values for both. To reset
-the E2E database manually:
+`users`, `audit_events`, and session keys before starting. CI generates throwaway `.dev.vars` values.
+To reset the E2E database manually:
 
 ```bash
 pnpm exec wrangler d1 execute bridgewarden-db --local --persist-to .wrangler/e2e --command "DELETE FROM users"

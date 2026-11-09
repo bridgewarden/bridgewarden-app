@@ -2,6 +2,9 @@ import { base64UrlToStandard, toBase64Url } from '../base64-url';
 import { deriveAuthHash, deriveMasterKey, deriveWrapKey } from './kdf';
 import { unwrapVaultKey } from './vault-key';
 
+export type PreloginResponse =
+  { ok: true; kdfAlg: string; kdfSalt: string; kdfIterations: number } | { ok: false; error: string };
+
 export type PreparedLogin = {
   authHash: string;
   wrapKey: Uint8Array;

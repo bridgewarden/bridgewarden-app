@@ -7,37 +7,23 @@ import { t } from '~/lib/i18n/en';
 import { TOTP_CODE_PATTERN } from '~/lib/totp-code';
 
 type EnrollmentPanelProps = {
-  secret: string;
-  uri: string;
-  code: string;
-  error: string | null;
-  busy: boolean;
-  onCodeChange: (value: string) => void;
-  onInvalidCode: () => void;
+  enrollment: { secret: string; uri: string };
+  code: { value: string; onChange: (value: string) => void; onInvalid: () => void };
+  status: { error: string | null; busy: boolean };
   onVerify: () => void;
   onQrError: () => void;
 };
 
-export const EnrollmentPanel = ({
-  secret,
-  uri,
-  code,
-  error,
-  busy,
-  onCodeChange,
-  onInvalidCode,
-  onVerify,
-  onQrError,
-}: EnrollmentPanelProps) => {
+export const EnrollmentPanel = ({ enrollment, code, status, onVerify, onQrError }: EnrollmentPanelProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
     void import('qrcode/lib/browser')
-      .then(({ default: QRCode }) => QRCode.toCanvas(canvasRef.current!, uri, { width: 192, margin: 1 }))
+      .then(({ default: QRCode }) => QRCode.toCanvas(canvasRef.current!, enrollment.uri, { width: 192, margin: 1 }))
       .catch(onQrError);
-  }, [uri, onQrError]);
+  }, [enrollment.uri, onQrError]);
 
   return (
     <div className="space-y-4 border-t pt-4">
@@ -57,7 +43,7 @@ export const EnrollmentPanel = ({
           aria-labelledby="setup-secret-label"
           className="block rounded-md border bg-muted px-3 py-2 font-mono text-sm break-all select-all"
         >
-          {secret}
+          {enrollment.secret}
         </code>
         <p className="text-sm text-muted-foreground">{t('settings.twoFactor.secretNote')}</p>
       </div>
@@ -65,8 +51,8 @@ export const EnrollmentPanel = ({
         className="space-y-2"
         onSubmit={(event) => {
           event.preventDefault();
-          if (!TOTP_CODE_PATTERN.test(code)) {
-            onInvalidCode();
+          if (!TOTP_CODE_PATTERN.test(code.value)) {
+            code.onInvalid();
             return;
           }
           onVerify();
@@ -79,13 +65,13 @@ export const EnrollmentPanel = ({
           autoComplete="one-time-code"
           maxLength={6}
           placeholder="000000"
-          value={code}
-          disabled={busy}
-          aria-invalid={error !== null}
-          aria-describedby={error ? 'settings-2fa-error' : undefined}
-          onChange={(event) => onCodeChange(event.target.value.replace(/\D/g, ''))}
+          value={code.value}
+          disabled={status.busy}
+          aria-invalid={status.error !== null}
+          aria-describedby={status.error ? 'settings-2fa-error' : undefined}
+          onChange={(event) => code.onChange(event.target.value.replace(/\D/g, ''))}
         />
-        <Button type="submit" className="min-h-11" disabled={busy}>
+        <Button type="submit" className="min-h-11" disabled={status.busy}>
           {t('settings.twoFactor.verify')}
         </Button>
       </form>

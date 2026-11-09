@@ -70,7 +70,7 @@ app/
 ├── routes.ts                # the only route registry
 ├── app.css                  # Tailwind entry
 ├── routes/                  # transport only: meta, loader, action, headers, middleware
-├── features/<feature>/      # one page per top-level feature
+├── features/<feature>/      # page entry, components/, and feature-suffixed UI modules
 ├── server/<domain>/         # shared domain server code, created on first extraction
 ├── components/              # global UI; components/ui/ is generated shadcn source
 ├── hooks/                   # global hooks
@@ -150,13 +150,41 @@ Features planned for the MVP: `setup`, `login`, `two-factor`, `recover`,
 ## File naming
 
 - kebab-case for every file: `vault-item.tsx`, not `VaultItem.tsx`.
-- Suffixes: `*.hooks.ts`, `*.types.ts`, `*.constants.ts`, `*.schema.ts`, `*.test.ts(x)`, and
-  `*.spec.ts` for Playwright specs in `e2e/` only.
+- Suffixes: `*.hooks.ts`, `*.types.ts`, `*.constants.ts`, `*.lib.ts`, `*.state.ts`,
+  `*.schema.ts`, `*.test.ts(x)`, and `*.spec.ts` for Playwright specs in `e2e/` only.
 - Server-only: `.server.ts` or a `.server/` directory (files inside need no suffix).
 - A component with one file is `components/<name>.tsx`; a directory with `index.ts` only when
   two or more public files are exported.
 - Names carry their own context: `backup-codes.ts`, not `codes.ts`.
 - Avoid `data.ts`, `helpers.ts`, `utils.ts`, `constants.ts` when a domain word exists.
+- Feature UI code uses `<feature>.<suffix>.ts` while a file stays small; see "Feature UI structure".
+
+## Feature UI structure
+
+- `features/<feature>/<feature>.tsx` is a thin entry: it renders the feature's public container
+  and contains no response types, fetcher/effect flow, constants, or pure helpers.
+- The public container component owns the feature hook and page layout; the page does not call
+  the hook. Leaf components receive grouped data and callbacks through props.
+- Feature-owned components live in `features/<feature>/components/<component>.tsx`. The
+  `components/index.ts` barrel exports only the public container; leaf components are imported
+  concretely by the container.
+- Non-component UI code uses feature-suffixed files: `<feature>.hooks.ts`,
+  `<feature>.constants.ts`, `<feature>.lib.ts`, `<feature>.types.ts`, and `<feature>.state.ts`.
+- Keep a suffixed file while it exports at most ten functions/hooks. Above ten, split it by
+  concern into `hooks/` or `lib/` and add a barrel there. Exported types and constants do not
+  count toward the threshold.
+- A file over roughly 200 lines must be split by concern even if it exports only one function.
+- Import through a barrel from outside the directory; import concrete files inside it to avoid
+  cycles. Never barrel page entries or server code.
+- Related props may be grouped into `values`, `errors`, `actions`, `status`, or a domain object;
+  keep the names explicit and use one shape for the same concept across siblings.
+- Components receive data and callbacks through props and never import the page; the public
+  container is the only component allowed to call the feature hook directly.
+- UI shared by two or more features moves to `app/components/`. Features never import another
+  feature.
+- Domain-named modules stay descriptive when the name is the context, such as `setup-keys.ts`
+  or `.server/use-cases/<use-case>.ts`.
+- This section covers UI only; server layout and `.server/` rules stay unchanged.
 
 ## Code style
 

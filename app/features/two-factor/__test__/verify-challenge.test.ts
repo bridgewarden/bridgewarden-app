@@ -45,7 +45,7 @@ describe('2FA challenge verification', () => {
 
   it('accepts a backup code once and consumes it', async () => {
     const user = await createTwoFactorUser(1);
-    const codes = await generateAndStoreBackupCodes(env.DB, user.userId, TEST_PEPPER);
+    const codes = await generateAndStoreBackupCodes(twoFactorEnv(), user.userId, TEST_PEPPER);
     const firstToken = await createChallenge(twoFactorEnv(), user.userId);
 
     const first = await verifyChallenge(twoFactorEnv(), request(), {

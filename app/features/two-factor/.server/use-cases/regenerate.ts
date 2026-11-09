@@ -1,7 +1,8 @@
 import { recordAuditEventSafe } from '../../../../lib/.server/audit';
-import { getDatabase } from '../../../../lib/.server/db';
 import { requireSecret } from '../../../../lib/.server/env';
 import { auditFingerprints } from '../../../../lib/.server/request-fingerprint';
+import { createUserTwoFactorQueries } from '../../../../lib/.server/queries/user-two-factor';
+import { createUsersQueries } from '../../../../lib/.server/queries/users';
 import { verifyServerAuthHash } from '../../../../lib/.server/verify-auth';
 import { generateAndStoreBackupCodes } from '../backup-codes';
 import type { DisableInput } from '../two-factor-input';
@@ -25,28 +26,18 @@ export const regenerateBackupCodes = async (
     return { status: 'server-error' };
   }
 
-  const db = getDatabase(env);
-  const user = await db
-    .prepare('SELECT auth_hash, server_salt, status FROM users WHERE id = ?')
-    .bind(userId)
-    .first<{ auth_hash: string; server_salt: string; status: 'active' | 'disabled' }>();
-
+  const user = await createUsersQueries(env).findAuthById(userId);
   if (!user || user.status !== 'active') return { status: 'server-error' };
   if (!(await verifyServerAuthHash(input.authHashBytes, user.server_salt, pepper, user.auth_hash))) {
     return { status: 'invalid-password' };
   }
 
-  const row = await db
-    .prepare('SELECT enabled FROM user_2fa WHERE user_id = ?')
-    .bind(userId)
-    .first<{ enabled: number }>();
+  if (!(await createUserTwoFactorQueries(env).isEnabled(userId))) return { status: 'not-enabled' };
 
-  if (row?.enabled !== 1) return { status: 'not-enabled' };
-
-  const backupCodes = await generateAndStoreBackupCodes(db, userId, pepper);
+  const backupCodes = await generateAndStoreBackupCodes(env, userId, pepper);
   const fingerprints = await auditFingerprints(env, request);
 
-  await recordAuditEventSafe(db, {
+  await recordAuditEventSafe(env, {
     type: '2fa.backup_codes_regenerated',
     userId,
     createdAt: Date.now(),

@@ -1,10 +1,11 @@
 import { recordAuditEventSafe } from '../../../../lib/.server/audit';
-import { getDatabase } from '../../../../lib/.server/db';
 import { requireSecret } from '../../../../lib/.server/env';
 import { auditFingerprints } from '../../../../lib/.server/request-fingerprint';
+import { createUserTwoFactorQueries } from '../../../../lib/.server/queries/user-two-factor';
 import { decryptTotpSecret } from '../../../../lib/.server/totp-crypto';
 import { verifyCode } from '../../../../lib/.server/totp';
-import { generateAndStoreBackupCodes } from '../backup-codes';
+import { prepareBackupCodes } from '../backup-codes';
+import { createTwoFactorQueries } from '../queries/two-factor';
 
 export type VerifyEnrollmentResult =
   | { status: 'ok'; backupCodes: string[] }
@@ -25,21 +26,13 @@ export const verifyEnrollment = async (
     return { status: 'server-error' };
   }
 
-  const db = getDatabase(env);
-  const row = await db
-    .prepare('SELECT enabled, totp_secret_ct, totp_secret_iv, last_totp_step FROM user_2fa WHERE user_id = ?')
-    .bind(userId)
-    .first<{ enabled: number; totp_secret_ct: string; totp_secret_iv: string; last_totp_step: number }>();
-
-  if (!row) return { status: 'not-pending' };
-  if (row.enabled === 1) return { status: 'not-pending' };
+  const twoFactor = createUserTwoFactorQueries(env);
+  const row = await twoFactor.findEnrollment(userId);
+  if (!row || row.enabled === 1) return { status: 'not-pending' };
 
   let verification;
   try {
-    const secret = await decryptTotpSecret(env, userId, {
-      ciphertext: row.totp_secret_ct,
-      iv: row.totp_secret_iv,
-    });
+    const secret = await decryptTotpSecret(env, userId, { ciphertext: row.totp_secret_ct, iv: row.totp_secret_iv });
     verification = await verifyCode(secret, code, row.last_totp_step);
   } catch {
     return { status: 'server-error' };
@@ -47,7 +40,7 @@ export const verifyEnrollment = async (
   const fingerprints = await auditFingerprints(env, request);
 
   if (!verification.valid) {
-    await recordAuditEventSafe(db, {
+    await recordAuditEventSafe(env, {
       type: '2fa.enrollment_failed',
       userId,
       createdAt: Date.now(),
@@ -56,30 +49,21 @@ export const verifyEnrollment = async (
     return { status: 'invalid-code' };
   }
 
-  const update = await db
-    .prepare('UPDATE user_2fa SET enabled = 1, last_totp_step = ?, updated_at = ? WHERE user_id = ? AND enabled = 0')
-    .bind(verification.step, Date.now(), userId)
-    .run();
-
-  if (update.meta.changes !== 1) return { status: 'not-pending' };
-
   let backupCodes: string[];
+  let hashes: string[];
   try {
-    backupCodes = await generateAndStoreBackupCodes(db, userId, pepper);
+    ({ codes: backupCodes, hashes } = await prepareBackupCodes(pepper));
   } catch {
-    await db
-      .prepare('UPDATE user_2fa SET enabled = 0, updated_at = ? WHERE user_id = ?')
-      .bind(Date.now(), userId)
-      .run();
     return { status: 'server-error' };
   }
 
-  await recordAuditEventSafe(db, {
-    type: '2fa.enrolled',
-    userId,
-    createdAt: Date.now(),
-    ...fingerprints,
-  });
+  try {
+    const enabled = await createTwoFactorQueries(env).completeEnrollment(userId, verification.step, Date.now(), hashes);
+    if (!enabled) return { status: 'not-pending' };
+  } catch {
+    return { status: 'server-error' };
+  }
 
+  await recordAuditEventSafe(env, { type: '2fa.enrolled', userId, createdAt: Date.now(), ...fingerprints });
   return { status: 'ok', backupCodes };
 };

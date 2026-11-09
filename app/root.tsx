@@ -13,7 +13,7 @@ import { AppShell } from './components/app-shell';
 import type { Route } from './+types/root';
 import { t } from './lib/i18n/en';
 import { cloudflareContext } from './lib/.server/context';
-import { getDatabase } from './lib/.server/db';
+import { createUserTwoFactorQueries } from './lib/.server/queries/user-two-factor';
 import { getSessionCached } from './lib/.server/session-cache';
 import { DEFAULT_THEME, readThemeCookie, themeClassName } from './lib/theme';
 import './app.css';
@@ -32,11 +32,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   let twoFactorEnabled = false;
   if (session) {
-    const row = await getDatabase(env)
-      .prepare('SELECT enabled FROM user_2fa WHERE user_id = ?')
-      .bind(session.user.id)
-      .first<{ enabled: number }>();
-    twoFactorEnabled = row?.enabled === 1;
+    twoFactorEnabled = await createUserTwoFactorQueries(env).isEnabled(session.user.id);
   }
 
   return { theme: readThemeCookie(request.headers.get('cookie')), user, twoFactorEnabled };

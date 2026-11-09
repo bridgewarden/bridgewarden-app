@@ -1,16 +1,15 @@
 import { redirect } from 'react-router';
 
-import { isBootstrapAvailable } from './bootstrap';
-import { getDatabase } from './db';
+import { createUsersQueries } from './queries/users';
 
 export const requireConfigured = async (env: Env): Promise<void> => {
-  if (await isBootstrapAvailable(getDatabase(env))) {
+  if ((await createUsersQueries(env).count()) === 0) {
     throw redirect('/setup');
   }
 };
 
 export const requireBootstrapAvailable = async (env: Env): Promise<void> => {
-  if (!(await isBootstrapAvailable(getDatabase(env)))) {
+  if ((await createUsersQueries(env).count()) !== 0) {
     throw redirect('/login');
   }
 };

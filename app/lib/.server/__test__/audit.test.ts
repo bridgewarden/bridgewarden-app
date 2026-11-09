@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { createTestUser } from '../../../__test__/fixtures';
 import { resetDatabase } from '../../../__test__/reset-database';
-import { recordAuditEvent } from '../audit';
+import { recordAuditEventSafe } from '../audit';
+
+const testEnv = env as unknown as Env;
 
 beforeEach(async () => {
   await resetDatabase();
@@ -13,7 +15,7 @@ describe('audit events', () => {
   it('stores a bootstrap event for a user', async () => {
     const userId = await createTestUser();
 
-    await recordAuditEvent(env.DB, { type: 'bootstrap.created', userId, createdAt: Date.now() });
+    await recordAuditEventSafe(testEnv, { type: 'bootstrap.created', userId, createdAt: Date.now() });
 
     const row = await env.DB.prepare('SELECT user_id, type, metadata FROM audit_events WHERE user_id = ?')
       .bind(userId)
@@ -23,7 +25,7 @@ describe('audit events', () => {
   });
 
   it('stores failed events without a user and with fingerprints', async () => {
-    await recordAuditEvent(env.DB, {
+    await recordAuditEventSafe(testEnv, {
       type: 'login.failed',
       userId: null,
       createdAt: Date.now(),

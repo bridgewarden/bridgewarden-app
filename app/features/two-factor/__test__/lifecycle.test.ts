@@ -20,7 +20,7 @@ beforeEach(async () => {
 describe('2FA lifecycle', () => {
   it('disables only with the matching auth hash and removes seed and backup codes', async () => {
     const user = await createTwoFactorUser(1);
-    await generateAndStoreBackupCodes(env.DB, user.userId, TEST_PEPPER);
+    await generateAndStoreBackupCodes(twoFactorEnv(), user.userId, TEST_PEPPER);
 
     await expect(
       disableTwoFactor(twoFactorEnv(), request(), user.userId, {
@@ -49,7 +49,7 @@ describe('2FA lifecycle', () => {
 
   it('regenerates only while enabled and invalidates old codes', async () => {
     const user = await createTwoFactorUser(1);
-    const oldCodes = await generateAndStoreBackupCodes(env.DB, user.userId, TEST_PEPPER);
+    const oldCodes = await generateAndStoreBackupCodes(twoFactorEnv(), user.userId, TEST_PEPPER);
 
     const result = await regenerateBackupCodes(twoFactorEnv(), request(), user.userId, {
       authHashBytes: user.authHash,
@@ -58,8 +58,10 @@ describe('2FA lifecycle', () => {
     if (result.status !== 'ok') return;
     expect(result.backupCodes).toHaveLength(10);
 
-    await expect(consumeBackupCode(env.DB, user.userId, oldCodes[0], TEST_PEPPER)).resolves.toBe(false);
-    await expect(consumeBackupCode(env.DB, user.userId, result.backupCodes[0], TEST_PEPPER)).resolves.toBe(true);
+    await expect(consumeBackupCode(twoFactorEnv(), user.userId, oldCodes[0], TEST_PEPPER)).resolves.toBe(false);
+    await expect(consumeBackupCode(twoFactorEnv(), user.userId, result.backupCodes[0], TEST_PEPPER)).resolves.toBe(
+      true,
+    );
 
     const disabled = await createTwoFactorUser(0);
     await expect(

@@ -133,7 +133,10 @@ Features planned for the MVP: `setup`, `login`, `two-factor`, `recover`,
 | Domain logic used by 2+ features                                                      | `app/server/<domain>/`                               |
 | Everything specific to one feature                                                    | `features/<feature>/.server/`                        |
 | One route-facing operation                                                            | `features/<feature>/.server/use-cases/<use-case>.ts` |
-| Raw SQL for one table                                                                 | `features/<feature>/.server/queries/<table>.ts`      |
+| Raw SQL for one table, used by one feature                                            | `features/<feature>/.server/queries/<table>.ts`      |
+| Raw SQL for a table used by `app/lib` or 2+ features                                  | `app/lib/.server/queries/<table>.ts`                 |
+| Raw SQL used only by `app/lib` infrastructure or a non-table probe                    | `app/lib/.server/queries/<concern>.ts`               |
+| Feature-owned batch across two tables                                                 | `features/<feature>/.server/queries/<domain>.ts`     |
 | Fixed policy values                                                                   | `features/<feature>/.server/constants/<domain>.ts`   |
 
 - Server-only code lives in a `.server.ts` file or a `.server/` directory. React Router keeps
@@ -143,8 +146,21 @@ Features planned for the MVP: `setup`, `login`, `two-factor`, `recover`,
 - Dependencies point one way: `routes -> features -> app/server -> app/lib -> db`.
 - Features never import another feature. Shared domain logic is extracted to `app/server/`.
 - A route module contains no SQL, no business rules, and no logging.
-- `app/lib/.server/db.ts` owns the D1 handle. Query modules take the handle as a parameter
-  with a default; do not construct clients elsewhere.
+- SQL lives only in `queries/` modules in production code. Tests may call `prepare()` directly.
+  Use-cases and server libraries call a query factory (for example `createUsersQueries(env)`),
+  never `prepare()` or `bind()` directly.
+- Query modules own row types, column aliases, and `db.batch()` operations. The factory
+  acquires the D1 handle; low-level functions still accept `D1Database` for tests.
+- Multi-statement writes on D1 must use `db.batch()` inside one query module. A use-case must
+  never sequence independent writes when the operation requires all-or-nothing behavior.
+- D1 has no interactive transaction. If a later statement depends on an earlier result, express
+  the condition in guarded SQL inside the batch or document the compensating action; do not
+  pretend a sequence of awaited statements is atomic.
+- D1 + KV cannot share a transaction. Cross-system writes need an explicit compensating action
+  (for example, delete a created session when the D1 insert fails).
+- `app/lib/.server/db.ts` owns the D1 handle. Low-level query functions take `D1Database` as
+  their first parameter; factories acquire it with `getDatabase(env)`. Do not construct clients
+  elsewhere.
 - Migrations stay in `migrations/` and are applied with Wrangler, never at request time.
 
 ## File naming

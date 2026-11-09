@@ -21,6 +21,7 @@ export type LoginUserRow = {
   server_salt: string;
   status: 'active' | 'disabled';
   two_factor_enabled: number;
+  locked_until: number | null;
 };
 
 export type KdfUserRow = {
@@ -59,12 +60,56 @@ export const findLoginUserByEmail = (db: D1Database, email: string): Promise<Log
   db
     .prepare(
       `SELECT u.id, u.auth_hash, u.server_salt, u.status,
-        COALESCE(t.enabled, 0) AS two_factor_enabled
+        COALESCE(t.enabled, 0) AS two_factor_enabled,
+        u.locked_until
        FROM users u LEFT JOIN user_2fa t ON t.user_id = u.id
        WHERE u.email = ?`,
     )
     .bind(email)
     .first<LoginUserRow>();
+
+export type LoginFailureState = {
+  failed_login_count: number;
+  locked_until: number | null;
+};
+
+export const recordFailedLogin = async (
+  db: D1Database,
+  userId: string,
+  now: number,
+  threshold: number,
+  lockMs: number,
+): Promise<LoginFailureState | null> => {
+  await db
+    .prepare(
+      `UPDATE users
+       SET failed_login_count = CASE
+             WHEN locked_until IS NOT NULL AND locked_until <= ? THEN 1
+             ELSE failed_login_count + 1
+           END,
+           locked_until = CASE
+             WHEN (CASE WHEN locked_until IS NOT NULL AND locked_until <= ? THEN 1 ELSE failed_login_count + 1 END) >= ?
+               THEN ?
+             WHEN locked_until IS NOT NULL AND locked_until <= ? THEN NULL
+             ELSE locked_until
+           END,
+           updated_at = ?
+       WHERE id = ? AND status = 'active'`,
+    )
+    .bind(now, now, threshold, now + lockMs, now, now, userId)
+    .run();
+
+  return db
+    .prepare('SELECT failed_login_count, locked_until FROM users WHERE id = ?')
+    .bind(userId)
+    .first<LoginFailureState>();
+};
+
+export const resetLoginFailures = (db: D1Database, userId: string, now: number): Promise<D1Result> =>
+  db
+    .prepare('UPDATE users SET failed_login_count = 0, locked_until = NULL, updated_at = ? WHERE id = ?')
+    .bind(now, userId)
+    .run();
 
 export const findKdfParametersByEmail = (db: D1Database, email: string): Promise<KdfUserRow | null> =>
   db.prepare('SELECT kdf_alg, kdf_salt, kdf_iterations FROM users WHERE email = ?').bind(email).first<KdfUserRow>();
@@ -134,6 +179,9 @@ export const createUsersQueries = (env: Env) => {
   const db = getDatabase(env);
   return {
     findLoginByEmail: (email: string) => findLoginUserByEmail(db, email),
+    recordFailedLogin: (userId: string, now: number, threshold: number, lockMs: number) =>
+      recordFailedLogin(db, userId, now, threshold, lockMs),
+    resetLoginFailures: (userId: string, now: number) => resetLoginFailures(db, userId, now),
     findKdfByEmail: (email: string) => findKdfParametersByEmail(db, email),
     findSessionUser: (id: string) => findSessionUserById(db, id),
     findLoginCompletion: (id: string) => findLoginCompletionById(db, id),

@@ -33,6 +33,13 @@ export default defineConfig({
       retries: 0,
       use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
     },
+    {
+      name: 'abuse',
+      testMatch: /abuse\.spec\.ts/,
+      dependencies: ['two-factor'],
+      retries: 0,
+      use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
+    },
   ],
   webServer: {
     command: 'E2E=1 pnpm dev --port 8787 --strictPort',

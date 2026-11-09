@@ -52,7 +52,15 @@ export const useLoginSuccessEffects = (options: LoginSuccessEffectsOptions) => {
       clearVaultKey();
       queueMicrotask(() => {
         setFlowActive(false);
-        setFormError(data.ok ? t('login.serverError') : t('login.invalidCredentials'));
+        setFormError(
+          data.ok
+            ? t('login.serverError')
+            : data.error === 'locked'
+              ? t('login.locked')
+              : data.error === 'rate-limited'
+                ? t('login.rateLimited')
+                : t('login.invalidCredentials'),
+        );
       });
       return;
     }

@@ -100,6 +100,12 @@ state; incrementing it invalidates every existing session.
 `POST /auth/logout` deletes the session, clears the cookie, and records an audit event. `/` and `/app/*` redirect unauthenticated visitors to `/login?next=<same-origin path>`; unsafe return paths
 fall back to `/app`. The header shows the signed-in user with a **Sign out** action.
 
+Auth abuse controls use the Workers Rate Limiting binding with HMAC-derived keys: 60 requests/minute
+per IP hash and 20 requests/minute per account identity. Rejected requests return 429
+with `Retry-After`. Ten consecutive password failures lock the account for 15 minutes; a locked
+login returns 423 with `Retry-After`, and a successful login clears both counters. Rate limiting for
+`/auth/recover` will be wired when that route lands with account security.
+
 ## Two-factor authentication
 
 Enable TOTP from `/app/settings` by confirming your master password. The page shows an `otpauth://`
@@ -122,11 +128,12 @@ to verify codes before the vault key exists. It is stored with AES-256-GCM under
 
 ## Cloudflare resources
 
-| Binding        | Resource                                          |
-| -------------- | ------------------------------------------------- |
-| `DB`           | D1 database `bridgewarden-db`                     |
-| `KV_SESSIONS`  | KV namespace `KV_SESSIONS`                        |
-| `RATE_LIMITER` | Workers Rate Limiting binding (60 requests / 60s) |
+| Binding                 | Resource                                                     |
+| ----------------------- | ------------------------------------------------------------ |
+| `DB`                    | D1 database `bridgewarden-db`                                |
+| `KV_SESSIONS`           | KV namespace `KV_SESSIONS`                                   |
+| `RATE_LIMITER_IP`       | Workers Rate Limiting binding, 60 requests / 60s per IP hash |
+| `RATE_LIMITER_IDENTITY` | Workers Rate Limiting binding, 20 requests / 60s per account |
 
 R2 is reserved for phase 2 and is not bound yet.
 

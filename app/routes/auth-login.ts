@@ -5,9 +5,14 @@ import { parseLoginInput } from '~/features/login/.server/login-input';
 import { loginWithPassword } from '~/features/login/.server/use-cases/login';
 import { cloudflareContext } from '~/lib/.server/context';
 import { readMutationJson } from '~/lib/.server/json-action';
+import { limitIdentity, limitIp, rateLimited } from '~/lib/.server/rate-limit';
 
 export async function action({ request, context }: Route.ActionArgs) {
   const { env } = context.get(cloudflareContext);
+
+  const ipLimit = await limitIp(env, 'login', request);
+  if (!ipLimit.allowed) return rateLimited(ipLimit.retryAfter);
+
   const mutation = await readMutationJson(request, env);
 
   if (!mutation.ok) {
@@ -19,11 +24,23 @@ export async function action({ request, context }: Route.ActionArgs) {
     return data({ ok: false, error: 'invalid-input' }, { status: 400 });
   }
 
-  // TODO(TASK-10, PR #11): rate-limit and lock out repeated login attempts.
+  const identityLimit = await limitIdentity(env, 'login', input.email);
+  if (!identityLimit.allowed) return rateLimited(identityLimit.retryAfter);
+
   const result = await loginWithPassword(env, request, input);
 
   if (result.status === 'invalid-credentials') {
     return data({ ok: false, error: 'invalid-credentials' }, { status: 401 });
+  }
+
+  if (result.status === 'locked') {
+    return data(
+      { ok: false, error: 'locked' },
+      {
+        status: 423,
+        headers: { 'Retry-After': String(result.retryAfter), 'Cache-Control': 'no-store' },
+      },
+    );
   }
 
   if (result.status === 'server-error') {

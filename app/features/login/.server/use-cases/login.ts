@@ -8,11 +8,13 @@ import { verifyServerAuthHash } from '../../../../lib/.server/verify-auth';
 import { createChallenge } from '../../../../lib/.server/challenge';
 import { completeLogin, type LoginSuccessBody } from '../../../../lib/.server/complete-login';
 import { createUsersQueries } from '../../../../lib/.server/queries/users';
+import { LOCKOUT_DURATION_MS, MAX_FAILED_LOGIN_ATTEMPTS } from '../constants/auth';
 import type { LoginInput } from '../login-input';
 
 export type LoginResult =
   | { status: 'ok'; body: LoginSuccessBody; cookie: string }
   | { status: 'challenge'; challengeToken: string }
+  | { status: 'locked'; retryAfter: number }
   | { status: 'invalid-credentials' }
   | { status: 'server-error' };
 
@@ -37,7 +39,12 @@ export const loginWithPassword = async (env: Env, request: Request, input: Login
     return { status: 'server-error' };
   }
 
-  const row = await createUsersQueries(env).findLoginByEmail(input.email);
+  const users = createUsersQueries(env);
+  const row = await users.findLoginByEmail(input.email);
+
+  if (row?.locked_until && row.locked_until > Date.now()) {
+    return { status: 'locked', retryAfter: Math.ceil((row.locked_until - Date.now()) / 1000) };
+  }
 
   const syntheticSalt = encodeBase64((await hmacSha256(pepper, `server:${input.email}`)).slice(0, SALT_BYTES));
   const syntheticHash = encodeBase64((await hmacSha256(pepper, `hash:${input.email}`)).slice(0, KEY_BYTES));
@@ -47,9 +54,17 @@ export const loginWithPassword = async (env: Env, request: Request, input: Login
   const verified = await verifyServerAuthHash(input.authHashBytes, serverSalt, pepper, expectedHash);
 
   if (!row || !verified || row.status !== 'active') {
+    if (row && row.status === 'active' && !verified) {
+      const state = await users.recordFailedLogin(row.id, Date.now(), MAX_FAILED_LOGIN_ATTEMPTS, LOCKOUT_DURATION_MS);
+      if (state?.failed_login_count === MAX_FAILED_LOGIN_ATTEMPTS && state.locked_until) {
+        await recordAuditEventSafe(env, { type: 'login.locked', userId: row.id, createdAt: Date.now() });
+      }
+    }
     await auditFailure(env, request, row?.id ?? null, sessionSecret);
     return { status: 'invalid-credentials' };
   }
+
+  await users.resetLoginFailures(row.id, Date.now());
 
   if (row.two_factor_enabled === 1) {
     const challengeToken = await createChallenge(env, row.id);

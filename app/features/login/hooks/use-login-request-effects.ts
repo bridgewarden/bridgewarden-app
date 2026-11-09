@@ -44,7 +44,7 @@ export const useLoginRequestEffects = (options: LoginRequestEffectsOptions) => {
       passwordRef.current = '';
       queueMicrotask(() => {
         setFlowActive(false);
-        setFormError(t('login.lookupFailed'));
+        setFormError(data.error === 'rate-limited' ? t('login.rateLimited') : t('login.lookupFailed'));
       });
       return;
     }

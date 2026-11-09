@@ -1,0 +1,2 @@
+export const MAX_FAILED_LOGIN_ATTEMPTS = 10;
+export const LOCKOUT_DURATION_MS = 15 * 60 * 1000;

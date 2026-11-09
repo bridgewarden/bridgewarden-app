@@ -1,8 +1,8 @@
 import { standardToBase64Url, toBase64Url } from '../../../../lib/base64-url';
 import { DEFAULT_KDF_ITERATIONS, KDF_ALGORITHM, SALT_BYTES } from '../../../../lib/crypto/contract';
-import { getDatabase } from '../../../../lib/.server/db';
 import { requireSecret } from '../../../../lib/.server/env';
 import { hmacSha256 } from '../../../../lib/.server/hmac';
+import { createUsersQueries } from '../../../../lib/.server/queries/users';
 
 export type KdfParameters = {
   kdfAlg: typeof KDF_ALGORITHM;
@@ -20,10 +20,7 @@ export const lookupKdfParameters = async (env: Env, email: string): Promise<KdfL
     return { status: 'server-error' };
   }
 
-  const row = await getDatabase(env)
-    .prepare('SELECT kdf_alg, kdf_salt, kdf_iterations FROM users WHERE email = ?')
-    .bind(email)
-    .first<{ kdf_alg: 'pbkdf2-sha256'; kdf_salt: string; kdf_iterations: number }>();
+  const row = await createUsersQueries(env).findKdfByEmail(email);
 
   if (row) {
     try {

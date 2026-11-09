@@ -2,7 +2,7 @@ import { env } from 'cloudflare:workers';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { resetDatabase } from '../../../__test__/reset-database';
-import { CREATE_FIRST_ADMIN_SQL, createFirstAdmin, isBootstrapAvailable, type NewAdminInput } from '../bootstrap';
+import { CREATE_FIRST_ADMIN_SQL, countUsers, createFirstAdmin, type NewAdminInput } from '../queries/users';
 
 const adminInput = (overrides: Partial<NewAdminInput> = {}): NewAdminInput => ({
   id: crypto.randomUUID(),
@@ -26,10 +26,10 @@ beforeEach(async () => {
 
 describe('bootstrap guard', () => {
   it('is available only while the users table is empty', async () => {
-    expect(await isBootstrapAvailable(env.DB)).toBe(true);
+    expect((await countUsers(env.DB)) === 0).toBe(true);
 
     expect(await createFirstAdmin(env.DB, adminInput())).toBe('created');
-    expect(await isBootstrapAvailable(env.DB)).toBe(false);
+    expect((await countUsers(env.DB)) === 0).toBe(false);
   });
 
   it('stores the admin with constrained defaults and supplied key fields', async () => {

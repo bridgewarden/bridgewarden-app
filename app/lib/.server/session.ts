@@ -1,5 +1,5 @@
 import { toBase64Url } from '../base64-url';
-import { getDatabase } from './db';
+import { createUsersQueries, type SessionUserRow } from './queries/users';
 import { toHex } from './hmac';
 
 export const SESSION_COOKIE_NAME = 'bw_session';
@@ -30,14 +30,7 @@ export type SessionRecord = {
   ver: number;
 };
 
-export type SessionUser = {
-  id: string;
-  email: string;
-  displayName: string | null;
-  role: 'admin' | 'member';
-  status: 'active' | 'disabled';
-  sessionVersion: number;
-};
+export type SessionUser = SessionUserRow;
 
 export type SessionContext = {
   session: SessionRecord;
@@ -128,19 +121,9 @@ export const getSession = async (env: Env, request: Request): Promise<SessionCon
   const now = Date.now();
   if (session.createdAt + SESSION_TTL_MS <= now) return null;
 
-  const row = await getDatabase(env)
-    .prepare('SELECT id, email, display_name, role, status, session_version FROM users WHERE id = ?')
-    .bind(session.userId)
-    .first<{
-      id: string;
-      email: string;
-      display_name: string | null;
-      role: 'admin' | 'member';
-      status: 'active' | 'disabled';
-      session_version: number;
-    }>();
+  const row = await createUsersQueries(env).findSessionUser(session.userId);
 
-  if (!row || row.status !== 'active' || row.session_version !== session.ver) {
+  if (!row || row.status !== 'active' || row.sessionVersion !== session.ver) {
     await env.KV_SESSIONS.delete(key).catch(() => undefined);
     return null;
   }
@@ -157,17 +140,7 @@ export const getSession = async (env: Env, request: Request): Promise<SessionCon
     }
   }
 
-  return {
-    session,
-    user: {
-      id: row.id,
-      email: row.email,
-      displayName: row.display_name,
-      role: row.role,
-      status: row.status,
-      sessionVersion: row.session_version,
-    },
-  };
+  return { session, user: row };
 };
 
 export const destroySessionToken = async (env: Env, token: string): Promise<void> => {
@@ -180,8 +153,5 @@ export const destroySession = async (env: Env, request: Request): Promise<void> 
 };
 
 export const revokeUserSessions = async (env: Env, userId: string): Promise<void> => {
-  await getDatabase(env)
-    .prepare('UPDATE users SET session_version = session_version + 1, updated_at = ? WHERE id = ?')
-    .bind(Date.now(), userId)
-    .run();
+  await createUsersQueries(env).incrementSessionVersion(userId, Date.now());
 };

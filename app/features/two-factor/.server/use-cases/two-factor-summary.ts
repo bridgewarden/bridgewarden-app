@@ -1,18 +1,9 @@
+import { createUserTwoFactorQueries } from '../../../../lib/.server/queries/user-two-factor';
 import { countRemainingBackupCodes } from '../backup-codes';
-import { getDatabase } from '../../../../lib/.server/db';
 
-export type TwoFactorSummary = {
-  enabled: boolean;
-  remaining: number;
-};
+export type TwoFactorSummary = { enabled: boolean; remaining: number };
 
 export const getTwoFactorSummary = async (env: Env, userId: string): Promise<TwoFactorSummary> => {
-  const db = getDatabase(env);
-  const row = await db
-    .prepare('SELECT enabled FROM user_2fa WHERE user_id = ?')
-    .bind(userId)
-    .first<{ enabled: number }>();
-  const enabled = row?.enabled === 1;
-
-  return { enabled, remaining: enabled ? await countRemainingBackupCodes(db, userId) : 0 };
+  const enabled = await createUserTwoFactorQueries(env).isEnabled(userId);
+  return { enabled, remaining: enabled ? await countRemainingBackupCodes(env, userId) : 0 };
 };

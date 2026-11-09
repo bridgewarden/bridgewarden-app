@@ -1,6 +1,6 @@
 import { standardToBase64Url } from '../base64-url';
 import { recordAuditEventSafe } from './audit';
-import { getDatabase } from './db';
+import { createUsersQueries } from './queries/users';
 import { requireSecret } from './env';
 import { fingerprintRequest } from './request-fingerprint';
 import { createSession, type CreatedSession } from './session';
@@ -32,24 +32,8 @@ export const completeLogin = async (
     return { status: 'server-error' };
   }
 
-  const db = getDatabase(env);
-  const row = await db
-    .prepare(
-      `SELECT id, kdf_alg, kdf_salt, kdf_iterations, vault_key_wrapped, vault_key_wrap_iv,
-        status, session_version
-       FROM users WHERE id = ?`,
-    )
-    .bind(userId)
-    .first<{
-      id: string;
-      kdf_alg: 'pbkdf2-sha256';
-      kdf_salt: string;
-      kdf_iterations: number;
-      vault_key_wrapped: string;
-      vault_key_wrap_iv: string;
-      status: 'active' | 'disabled';
-      session_version: number;
-    }>();
+  const users = createUsersQueries(env);
+  const row = await users.findLoginCompletion(userId);
 
   if (!row || row.status !== 'active') return { status: 'server-error' };
 
@@ -79,7 +63,7 @@ export const completeLogin = async (
     return { status: 'server-error' };
   }
 
-  await recordAuditEventSafe(db, {
+  await recordAuditEventSafe(env, {
     type: 'login.succeeded',
     userId: row.id,
     createdAt: Date.now(),

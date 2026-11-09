@@ -1,5 +1,4 @@
 import { recordAuditEventSafe } from '../../../../lib/.server/audit';
-import { getDatabase } from '../../../../lib/.server/db';
 import { readConfig } from '../../../../lib/.server/env';
 import { fingerprintRequest } from '../../../../lib/.server/request-fingerprint';
 import { clearSessionCookie, destroySession, getSession } from '../../../../lib/.server/session';
@@ -14,7 +13,7 @@ export const logoutCurrentSession = async (env: Env, request: Request): Promise<
     const secret = readConfig(env, 'SESSION_SECRET');
     const fingerprints = secret ? await fingerprintRequest(request, secret) : { uaHash: null, ipHash: null };
 
-    await recordAuditEventSafe(getDatabase(env), {
+    await recordAuditEventSafe(env, {
       type: 'logout',
       userId: session.user.id,
       createdAt: Date.now(),

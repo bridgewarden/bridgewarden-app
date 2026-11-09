@@ -1,7 +1,6 @@
 import { deriveServerAuthHash, generateServerSalt } from '../../../../lib/.server/auth-hash';
 import { recordAuditEventSafe } from '../../../../lib/.server/audit';
-import { createFirstAdmin, isBootstrapAvailable } from '../../../../lib/.server/bootstrap';
-import { getDatabase } from '../../../../lib/.server/db';
+import { createUsersQueries } from '../../../../lib/.server/queries/users';
 import { readConfig } from '../../../../lib/.server/env';
 import { requireSecret } from '../../../../lib/.server/env';
 import { fingerprintRequest } from '../../../../lib/.server/request-fingerprint';
@@ -23,8 +22,8 @@ export const completeBootstrap = async (
     return { status: 'server-error' };
   }
 
-  const db = getDatabase(env);
-  if (!(await isBootstrapAvailable(db))) {
+  const users = createUsersQueries(env);
+  if ((await users.count()) !== 0) {
     return { status: 'exists' };
   }
 
@@ -43,9 +42,9 @@ export const completeBootstrap = async (
     return { status: 'server-error' };
   }
 
-  let created: Awaited<ReturnType<typeof createFirstAdmin>>;
+  let created: 'created' | 'exists';
   try {
-    created = await createFirstAdmin(db, {
+    created = await users.createFirstAdmin({
       id,
       email: input.email,
       displayName: input.displayName,
@@ -69,7 +68,7 @@ export const completeBootstrap = async (
     return { status: 'exists' };
   }
 
-  await recordAuditEventSafe(db, { type: 'bootstrap.created', userId: id, createdAt });
+  await recordAuditEventSafe(env, { type: 'bootstrap.created', userId: id, createdAt });
 
   return { status: 'created', cookie: session.cookie };
 };

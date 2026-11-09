@@ -5,9 +5,14 @@ import { parsePreloginInput } from '~/features/login/.server/login-input';
 import { lookupKdfParameters } from '~/features/login/.server/use-cases/prelogin';
 import { cloudflareContext } from '~/lib/.server/context';
 import { readMutationJson } from '~/lib/.server/json-action';
+import { limitIp, rateLimited } from '~/lib/.server/rate-limit';
 
 export async function action({ request, context }: Route.ActionArgs) {
   const { env } = context.get(cloudflareContext);
+
+  const ipLimit = await limitIp(env, 'prelogin', request);
+  if (!ipLimit.allowed) return rateLimited(ipLimit.retryAfter);
+
   const mutation = await readMutationJson(request, env);
 
   if (!mutation.ok) {

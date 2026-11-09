@@ -1,6 +1,7 @@
 import type { SetupTransportMaterial } from './setup-keys';
 
-export type SetupError = 'forbidden' | 'invalid-input' | 'already-configured' | 'server-error' | 'network';
+export type SetupError =
+  'forbidden' | 'invalid-input' | 'already-configured' | 'server-error' | 'rate-limited' | 'network';
 export type SetupActionResponse = { ok: true } | { ok: false; error: SetupError };
 
 export type SetupState = {

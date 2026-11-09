@@ -8,11 +8,13 @@ import { completeBootstrap } from '~/features/setup/.server/use-cases/complete-b
 import { cloudflareContext } from '~/lib/.server/context';
 import { readConfig } from '~/lib/.server/env';
 import { readJsonBody } from '~/lib/.server/request-body';
+import { limitIp } from '~/lib/.server/rate-limit';
 import { requireBootstrapAvailable } from '~/lib/.server/setup-guard';
 import { isSameOrigin } from '~/lib/.server/request-origin';
 import { t } from '~/lib/i18n/en';
 
-const failure = (error: SetupError, status: number) => data<SetupActionResponse>({ ok: false, error }, { status });
+const failure = (error: SetupError, status: number, headers?: HeadersInit) =>
+  data<SetupActionResponse>({ ok: false, error }, { status, headers });
 
 export async function loader({ context }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
@@ -27,6 +29,11 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   if (!isSameOrigin(request, readConfig(env, 'APP_ORIGIN'), readConfig(env, 'APP_ENV') === 'development')) {
     return failure('forbidden', 403);
+  }
+
+  const ipLimit = await limitIp(env, 'setup', request);
+  if (!ipLimit.allowed) {
+    return failure('rate-limited', 429, { 'Retry-After': String(ipLimit.retryAfter) });
   }
 
   const body = await readJsonBody(request);

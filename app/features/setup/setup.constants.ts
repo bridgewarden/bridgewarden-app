@@ -22,5 +22,6 @@ export const ERROR_KEY: Record<SetupError, MessageKey> = {
   'invalid-input': 'setup.error.invalidInput',
   'already-configured': 'setup.error.alreadyConfigured',
   'server-error': 'setup.error.serverError',
+  'rate-limited': 'setup.error.rateLimited',
   network: 'setup.error.network',
 };

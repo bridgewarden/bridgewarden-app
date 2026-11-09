@@ -10,7 +10,12 @@ import { action as loginAction } from '../auth-login';
 
 const context = new RouterContextProvider();
 context.set(cloudflareContext, {
-  env: { ...env, APP_ORIGIN: 'https://app.example', APP_ENV: 'production' } as Env,
+  env: {
+    ...env,
+    APP_ORIGIN: 'https://app.example',
+    APP_ENV: 'production',
+    AUTH_PEPPER: 'test-auth-pepper',
+  } as Env,
   ctx: {} as ExecutionContext,
 });
 

@@ -150,8 +150,8 @@ Features planned for the MVP: `setup`, `login`, `two-factor`, `recover`,
 ## File naming
 
 - kebab-case for every file: `vault-item.tsx`, not `VaultItem.tsx`.
-- Suffixes: `*.hooks.ts`, `*.types.ts`, `*.constants.ts`, `*.schema.ts`, `*.test.ts(x)`, and
-  `*.spec.ts` for Playwright specs in `e2e/` only.
+- Suffixes: `*.hooks.ts`, `*.types.ts`, `*.constants.ts`, `*.lib.ts`, `*.state.ts`,
+  `*.schema.ts`, `*.test.ts(x)`, and `*.spec.ts` for Playwright specs in `e2e/` only.
 - Server-only: `.server.ts` or a `.server/` directory (files inside need no suffix).
 - A component with one file is `components/<name>.tsx`; a directory with `index.ts` only when
   two or more public files are exported.
@@ -161,10 +161,13 @@ Features planned for the MVP: `setup`, `login`, `two-factor`, `recover`,
 
 ## Feature UI structure
 
-- `features/<feature>/<feature>.tsx` is page composition only: no response types, fetcher/effect
-  flow, constants, or pure helpers.
-- Feature-owned components live in `features/<feature>/components/<component>.tsx`. A
-  `components/index.ts` barrel is allowed when two or more components are public.
+- `features/<feature>/<feature>.tsx` is a thin entry: it renders the feature's public container
+  and contains no response types, fetcher/effect flow, constants, or pure helpers.
+- The public container component owns the feature hook and page layout; the page does not call
+  the hook. Leaf components receive grouped data and callbacks through props.
+- Feature-owned components live in `features/<feature>/components/<component>.tsx`. The
+  `components/index.ts` barrel exports only the public container; leaf components are imported
+  concretely by the container.
 - Non-component UI code uses feature-suffixed files: `<feature>.hooks.ts`,
   `<feature>.constants.ts`, `<feature>.lib.ts`, `<feature>.types.ts`, and `<feature>.state.ts`.
 - Keep a suffixed file while it exports at most ten functions/hooks. Above ten, split it by
@@ -173,7 +176,10 @@ Features planned for the MVP: `setup`, `login`, `two-factor`, `recover`,
 - A file over roughly 200 lines must be split by concern even if it exports only one function.
 - Import through a barrel from outside the directory; import concrete files inside it to avoid
   cycles. Never barrel page entries or server code.
-- Components receive data and callbacks through props and never import the page.
+- Related props may be grouped into `values`, `errors`, `actions`, `status`, or a domain object;
+  keep the names explicit and use one shape for the same concept across siblings.
+- Components receive data and callbacks through props and never import the page; the public
+  container is the only component allowed to call the feature hook directly.
 - UI shared by two or more features moves to `app/components/`. Features never import another
   feature.
 - Domain-named modules stay descriptive when the name is the context, such as `setup-keys.ts`

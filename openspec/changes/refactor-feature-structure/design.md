@@ -37,7 +37,7 @@ Existing constraints that shape the approach:
 
 ### D1. Page files become composition only
 
-`features/<feature>/<feature>.tsx` renders the page shell and composes feature components. It may read route props, call one feature hook, and choose which top-level component to render. It does not declare API response types, fetchers, effects, constants, or pure helpers.
+`features/<feature>/<feature>.tsx` is a thin entry that renders the feature's public container. The container owns the feature hook and page layout, so the page does not call the hook. The page does not declare API response types, fetchers, effects, constants, or pure helpers.
 
 Alternative considered: keep state in the page and only extract JSX. Rejected because the folio logic would still be untestable without rendering the page and the file would keep growing.
 
@@ -50,8 +50,8 @@ features/<feature>/components/
 └── <component>.tsx
 ```
 
-- The page imports from `./components`.
-- A barrel exists when two or more components are public.
+- The page imports the public container from `./components`.
+- The barrel exports only the public container; leaf components remain internal.
 - Files inside `components/` import concrete siblings, not the barrel, to avoid cycles.
 - Tests may import concrete component files when they need one unit.
 - Barrels never export the page or server code.
@@ -70,7 +70,7 @@ Non-component code uses feature-suffixed files:
 <feature>.state.ts
 ```
 
-A suffixed file may stay flat while it exports at most ten functions/hooks. Exported types, constants, and internal helpers do not count toward the threshold. Above ten, split by concern into `hooks/` or `lib/`, add a barrel for that folder, and keep each file below the threshold.
+A suffixed file may stay flat while it exports at most ten functions/hooks. Exported types, constants, and internal helpers do not count toward the threshold. Above ten, or when the file exceeds the line guard, split by concern into `hooks/` or `lib/`, add a barrel for that folder, and keep each file below the threshold.
 
 A soft 200-line guard applies independently: a file over roughly 200 lines must be split by concern even if it exports one function. This catches a single oversized hook that the function count would miss.
 

@@ -1,23 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFetcher } from 'react-router';
 
-import { prepareLogin } from '~/lib/crypto/login-keys';
+import { prepareLogin, type PreloginResponse } from '~/lib/crypto/login-keys';
 import { t } from '~/lib/i18n/en';
 
-import type {
-  CodesResponse,
-  DisableResponse,
-  EnrollResponse,
-  PreloginResponse,
-  TwoFactorState,
-} from './account-settings.types';
+import type { CodesResponse, DisableResponse, EnrollResponse } from './account-settings.types';
 
 type UseAccountSettingsOptions = {
   email: string;
-  twoFactor: TwoFactorState;
 };
 
-export const useAccountSettings = ({ email, twoFactor }: UseAccountSettingsOptions) => {
+export const useAccountSettings = ({ email }: UseAccountSettingsOptions) => {
   const [enrollment, setEnrollment] = useState<{ secret: string; uri: string } | null>(null);
   const [codes, setCodes] = useState<string[] | null>(null);
   const [code, setCode] = useState('');
@@ -28,6 +21,7 @@ export const useAccountSettings = ({ email, twoFactor }: UseAccountSettingsOptio
   const passwordRef = useRef('');
   const handledPrelogin = useRef<PreloginResponse | null>(null);
   const pendingAction = useRef<'enroll' | 'regenerate' | 'disable' | null>(null);
+  const preloginWasSubmitting = useRef(false);
   const enrollmentFetcher = useFetcher<EnrollResponse>();
   const verifyFetcher = useFetcher<CodesResponse>();
   const regenerateFetcher = useFetcher<CodesResponse>();
@@ -91,6 +85,23 @@ export const useAccountSettings = ({ email, twoFactor }: UseAccountSettingsOptio
   }, [disableFetcher.data]);
 
   useEffect(() => {
+    if (preloginFetcher.state !== 'idle') {
+      preloginWasSubmitting.current = true;
+      return;
+    }
+
+    if (preloginWasSubmitting.current && !preloginFetcher.data) {
+      const action = pendingAction.current;
+      pendingAction.current = null;
+      passwordRef.current = '';
+      if (action === 'enroll') setError(t('settings.twoFactor.loadFailed'));
+      else setDisableError(t('settings.twoFactor.disableFailed'));
+    }
+
+    preloginWasSubmitting.current = false;
+  }, [preloginFetcher.state, preloginFetcher.data]);
+
+  useEffect(() => {
     const data = preloginFetcher.data;
     if (!data || handledPrelogin.current === data) return;
     handledPrelogin.current = data;
@@ -99,7 +110,7 @@ export const useAccountSettings = ({ email, twoFactor }: UseAccountSettingsOptio
 
     queueMicrotask(() => {
       if (!data.ok) {
-        if (action === 'enroll') setError(t('settings.twoFactor.disableFailed'));
+        if (action === 'enroll') setError(t('settings.twoFactor.loadFailed'));
         else setDisableError(t('settings.twoFactor.disableFailed'));
         return;
       }
@@ -126,7 +137,7 @@ export const useAccountSettings = ({ email, twoFactor }: UseAccountSettingsOptio
           );
           setPassword('');
         } catch {
-          if (action === 'enroll') setError(t('settings.twoFactor.disableFailed'));
+          if (action === 'enroll') setError(t('settings.twoFactor.loadFailed'));
           else setDisableError(t('settings.twoFactor.disableFailed'));
         } finally {
           setDeriving(false);
@@ -143,8 +154,8 @@ export const useAccountSettings = ({ email, twoFactor }: UseAccountSettingsOptio
       else setDisableError(t('settings.twoFactor.passwordRequired'));
       return;
     }
-    if (action === 'enroll') setError(null);
-    else setDisableError(null);
+    setError(null);
+    setDisableError(null);
     passwordRef.current = password;
     pendingAction.current = action;
     preloginFetcher.submit({ email }, { method: 'post', action: '/auth/prelogin', encType: 'application/json' });
@@ -159,8 +170,6 @@ export const useAccountSettings = ({ email, twoFactor }: UseAccountSettingsOptio
     deriving;
 
   return {
-    enabled: twoFactor.enabled,
-    remaining: twoFactor.remaining,
     enrollment,
     codes,
     code,

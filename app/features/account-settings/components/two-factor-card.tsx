@@ -17,7 +17,7 @@ type TwoFactorCardProps = {
 };
 
 export const TwoFactorCard = ({ email, twoFactor }: TwoFactorCardProps) => {
-  const flow = useAccountSettings({ email, twoFactor });
+  const flow = useAccountSettings({ email });
 
   return (
     <>
@@ -28,10 +28,10 @@ export const TwoFactorCard = ({ email, twoFactor }: TwoFactorCardProps) => {
         </div>
         <p className="text-sm text-muted-foreground">{t('settings.twoFactor.description')}</p>
 
-        {flow.enabled ? (
+        {twoFactor.enabled ? (
           <div className="space-y-4">
             <p className="text-sm">
-              {t('settings.twoFactor.enabled')} · {t('settings.twoFactor.remaining', { count: flow.remaining })}
+              {t('settings.twoFactor.enabled')} · {t('settings.twoFactor.remaining', { count: twoFactor.remaining })}
             </p>
             <EnabledActions
               password={flow.password}

@@ -22,6 +22,7 @@ export const EnabledActions = ({
 }: EnabledActionsProps) => (
   <>
     <p className="text-sm text-muted-foreground">{t('settings.twoFactor.regenerateWarning')}</p>
+    <p className="text-sm text-muted-foreground">{t('settings.twoFactor.disableDescription')}</p>
     <div className="space-y-2 border-t pt-4">
       <Label htmlFor="enable-password">{t('settings.twoFactor.password')}</Label>
       <Input
@@ -32,7 +33,7 @@ export const EnabledActions = ({
         value={password}
         disabled={busy}
         aria-invalid={error !== null}
-        aria-describedby={error ? 'settings-2fa-error' : undefined}
+        aria-describedby={error ? 'settings-2fa-disable-error' : undefined}
         onChange={(event) => onPasswordChange(event.target.value)}
       />
       <div className="flex flex-wrap gap-2">
@@ -44,7 +45,7 @@ export const EnabledActions = ({
         </Button>
       </div>
       {error ? (
-        <p id="settings-2fa-error" role="alert" className="text-sm text-destructive">
+        <p id="settings-2fa-disable-error" role="alert" className="text-sm text-destructive">
           {error}
         </p>
       ) : null}

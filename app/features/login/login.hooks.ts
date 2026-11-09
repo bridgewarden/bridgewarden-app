@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFetcher, useNavigate, useSearchParams } from 'react-router';
 
-import { prepareLogin } from '~/lib/crypto/login-keys';
 import { t } from '~/lib/i18n/en';
 import { safeNextPath } from '~/lib/next-path';
+import { TOTP_CODE_PATTERN } from '~/lib/totp-code';
 import { clearVaultKey } from '~/lib/vault/key-store';
 
-import { useLoginActions } from './hooks/use-login-actions';
-import { useLoginSuccessEffects } from './hooks/use-login-success-effects';
+import { useLoginRequestEffects, useLoginSuccessEffects } from './hooks';
 import type { ChallengeResponse, LoginResponse, PreloginResponse } from './login.types';
 
 export const useLoginFlow = () => {
@@ -31,149 +30,106 @@ export const useLoginFlow = () => {
   const emailRef = useRef('');
   const wrapKeyRef = useRef<Uint8Array | null>(null);
   const challengeInputRef = useRef<HTMLInputElement>(null);
-  const handledPrelogin = useRef<PreloginResponse | null>(null);
-  const preloginWasSubmitting = useRef(false);
-  const loginWasSubmitting = useRef(false);
-  const challengeWasSubmitting = useRef(false);
 
-  useEffect(() => {
-    const data = prelogin.data;
-    if (!data || handledPrelogin.current === data) return;
-    handledPrelogin.current = data;
+  useLoginSuccessEffects({
+    login: { data: login.data, state: login.state },
+    challenge: { data: challenge.data, state: challenge.state },
+    navigation: { navigate, next },
+    refs: { wrapKeyRef },
+    set: { setFlowActive, setFormError, setChallengeToken, setChallengeCode, setChallengeError },
+  });
 
-    if (!data.ok) {
-      passwordRef.current = '';
-      queueMicrotask(() => {
-        setFlowActive(false);
-        setFormError(t('login.lookupFailed'));
-      });
-      return;
-    }
-
-    void Promise.resolve().then(async () => {
-      setDeriving(true);
-      const submittedPassword = passwordRef.current;
-      passwordRef.current = '';
-
-      try {
-        const prepared = await prepareLogin(submittedPassword, data.kdfSalt, data.kdfIterations);
-        wrapKeyRef.current?.fill(0);
-        wrapKeyRef.current = prepared.wrapKey;
-        setPassword('');
-        login.submit(
-          { email: emailRef.current, authHash: prepared.authHash },
-          { method: 'post', action: '/auth/login', encType: 'application/json' },
-        );
-      } catch {
-        clearVaultKey();
-        setFlowActive(false);
-        setFormError(t('login.lookupFailed'));
-      } finally {
-        setDeriving(false);
-      }
-    });
-  }, [prelogin.data, login]);
-
-  useEffect(() => {
-    if (prelogin.state !== 'idle') {
-      preloginWasSubmitting.current = true;
-      return;
-    }
-
-    if (preloginWasSubmitting.current && !prelogin.data) {
-      passwordRef.current = '';
-      queueMicrotask(() => {
-        setFlowActive(false);
-        setFormError(t('login.lookupFailed'));
-      });
-    }
-
-    preloginWasSubmitting.current = false;
-  }, [prelogin.state, prelogin.data]);
-
-  useEffect(() => {
-    if (login.state !== 'idle') {
-      loginWasSubmitting.current = true;
-      return;
-    }
-
-    if (loginWasSubmitting.current && !login.data) {
-      wrapKeyRef.current?.fill(0);
-      wrapKeyRef.current = null;
-      clearVaultKey();
-      queueMicrotask(() => {
-        setFlowActive(false);
-        setFormError(t('login.serverError'));
-      });
-    }
-
-    loginWasSubmitting.current = false;
-  }, [login.state, login.data]);
-
-  useEffect(() => {
-    if (challenge.state !== 'idle') {
-      challengeWasSubmitting.current = true;
-      return;
-    }
-
-    if (challengeWasSubmitting.current && !challenge.data) {
-      wrapKeyRef.current?.fill(0);
-      wrapKeyRef.current = null;
-      clearVaultKey();
-      queueMicrotask(() => {
-        setFlowActive(false);
-        setChallengeError(t('login.serverError'));
-      });
-    }
-
-    challengeWasSubmitting.current = false;
-  }, [challenge.state, challenge.data]);
+  useLoginRequestEffects({
+    prelogin: { data: prelogin.data, state: prelogin.state },
+    login: { data: login.data, state: login.state },
+    challenge: { data: challenge.data, state: challenge.state },
+    submitLogin: (authHash) =>
+      login.submit(
+        { email: emailRef.current, authHash },
+        { method: 'post', action: '/auth/login', encType: 'application/json' },
+      ),
+    refs: { passwordRef, wrapKeyRef },
+    set: { setDeriving, setPassword, setFlowActive, setFormError, setChallengeError },
+  });
 
   useEffect(() => {
     if (challengeToken) challengeInputRef.current?.focus();
   }, [challengeToken]);
 
-  useLoginSuccessEffects({
-    loginData: login.data,
-    loginState: login.state,
-    challengeData: challenge.data,
-    challengeState: challenge.state,
-    navigate,
-    next,
-    wrapKeyRef,
-    setFlowActive,
-    setFormError,
-    setChallengeToken,
-    setChallengeCode,
-    setChallengeError,
-  });
-
   const busy =
     flowActive || prelogin.state !== 'idle' || login.state !== 'idle' || challenge.state !== 'idle' || deriving;
 
-  const actions = useLoginActions({
-    email,
-    password,
-    backupMode,
-    challengeToken,
-    challengeCode,
-    emailRef,
-    passwordRef,
-    wrapKeyRef,
-    setEmail,
-    setPassword,
-    setFieldError,
-    setFormError,
-    setFlowActive,
-    setChallengeCode,
-    setChallengeError,
-    setChallengeToken,
-    setBackupMode,
-    submitPrelogin: (value) =>
-      prelogin.submit({ email: value }, { method: 'post', action: '/auth/prelogin', encType: 'application/json' }),
-    submitChallengeRequest: (input) =>
-      challenge.submit(input, { method: 'post', action: '/auth/2fa', encType: 'application/json' }),
-  });
+  const changeEmail = (value: string) => {
+    setEmail(value);
+    setFieldError(null);
+  };
+
+  const changePassword = (value: string) => {
+    setPassword(value);
+    setFieldError(null);
+  };
+
+  const changeChallengeCode = (value: string) => {
+    setChallengeCode(backupMode ? value : value.replace(/\D/g, ''));
+    setChallengeError(null);
+  };
+
+  const submitCredentials = () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !password) {
+      setFieldError(t('login.missingFields'));
+      setFormError(null);
+      return;
+    }
+
+    setFieldError(null);
+    setFormError(null);
+    setFlowActive(true);
+    clearVaultKey();
+    emailRef.current = normalizedEmail;
+    passwordRef.current = password;
+    prelogin.submit(
+      { email: normalizedEmail },
+      { method: 'post', action: '/auth/prelogin', encType: 'application/json' },
+    );
+  };
+
+  const submitChallenge = () => {
+    if (!challengeToken) return;
+    if (!challengeCode.trim()) {
+      setChallengeError(t('login.challengeCodeRequired'));
+      return;
+    }
+    if (!backupMode && !TOTP_CODE_PATTERN.test(challengeCode)) {
+      setChallengeError(t('login.invalidChallengeCode'));
+      return;
+    }
+
+    setChallengeError(null);
+    setFlowActive(true);
+    challenge.submit(
+      { challengeToken, ...(backupMode ? { backupCode: challengeCode } : { code: challengeCode }) },
+      { method: 'post', action: '/auth/2fa', encType: 'application/json' },
+    );
+  };
+
+  const toggleBackupMode = () => {
+    setBackupMode((value) => !value);
+    setChallengeCode('');
+    setChallengeError(null);
+  };
+
+  const backToCredentials = () => {
+    wrapKeyRef.current?.fill(0);
+    wrapKeyRef.current = null;
+    clearVaultKey();
+    setChallengeToken(null);
+    setChallengeCode('');
+    setChallengeError(null);
+    setBackupMode(false);
+    setFormError(null);
+    setFlowActive(false);
+  };
 
   return {
     email,
@@ -186,6 +142,12 @@ export const useLoginFlow = () => {
     challengeError,
     busy,
     challengeInputRef,
-    ...actions,
+    changeEmail,
+    changePassword,
+    changeChallengeCode,
+    submitCredentials,
+    submitChallenge,
+    toggleBackupMode,
+    backToCredentials,
   };
 };

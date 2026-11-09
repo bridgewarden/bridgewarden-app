@@ -8,41 +8,30 @@ import { clearVaultKey, setVaultKey } from '~/lib/vault/key-store';
 import type { ChallengeResponse, LoginResponse } from '../login.types';
 
 type LoginSuccessEffectsOptions = {
-  loginData: LoginResponse | undefined;
-  loginState: string;
-  challengeData: ChallengeResponse | undefined;
-  challengeState: string;
-  navigate: NavigateFunction;
-  next: string;
-  wrapKeyRef: MutableRefObject<Uint8Array | null>;
-  setFlowActive: Dispatch<SetStateAction<boolean>>;
-  setFormError: Dispatch<SetStateAction<string | null>>;
-  setChallengeToken: Dispatch<SetStateAction<string | null>>;
-  setChallengeCode: Dispatch<SetStateAction<string>>;
-  setChallengeError: Dispatch<SetStateAction<string | null>>;
+  login: { data: LoginResponse | undefined; state: string };
+  challenge: { data: ChallengeResponse | undefined; state: string };
+  navigation: { navigate: NavigateFunction; next: string };
+  refs: { wrapKeyRef: MutableRefObject<Uint8Array | null> };
+  set: {
+    setFlowActive: Dispatch<SetStateAction<boolean>>;
+    setFormError: Dispatch<SetStateAction<string | null>>;
+    setChallengeToken: Dispatch<SetStateAction<string | null>>;
+    setChallengeCode: Dispatch<SetStateAction<string>>;
+    setChallengeError: Dispatch<SetStateAction<string | null>>;
+  };
 };
 
 export const useLoginSuccessEffects = (options: LoginSuccessEffectsOptions) => {
-  const {
-    loginData,
-    loginState,
-    challengeData,
-    challengeState,
-    navigate,
-    next,
-    wrapKeyRef,
-    setFlowActive,
-    setFormError,
-    setChallengeToken,
-    setChallengeCode,
-    setChallengeError,
-  } = options;
+  const { login, challenge, navigation, refs, set } = options;
+  const { navigate, next } = navigation;
+  const { wrapKeyRef } = refs;
+  const { setFlowActive, setFormError, setChallengeToken, setChallengeCode, setChallengeError } = set;
   const handledLogin = useRef<LoginResponse | null>(null);
   const handledChallenge = useRef<ChallengeResponse | null>(null);
 
   useEffect(() => {
-    const data = loginData;
-    if (!data || loginState !== 'idle' || handledLogin.current === data) return;
+    const data = login.data;
+    if (!data || login.state !== 'idle' || handledLogin.current === data) return;
     handledLogin.current = data;
 
     if (data.ok && data.requires2fa) {
@@ -83,8 +72,8 @@ export const useLoginSuccessEffects = (options: LoginSuccessEffectsOptions) => {
       }
     })();
   }, [
-    loginData,
-    loginState,
+    login.data,
+    login.state,
     navigate,
     next,
     wrapKeyRef,
@@ -96,8 +85,8 @@ export const useLoginSuccessEffects = (options: LoginSuccessEffectsOptions) => {
   ]);
 
   useEffect(() => {
-    const data = challengeData;
-    if (!data || challengeState !== 'idle' || handledChallenge.current === data) return;
+    const data = challenge.data;
+    if (!data || challenge.state !== 'idle' || handledChallenge.current === data) return;
     handledChallenge.current = data;
 
     if (!data.ok) {
@@ -144,8 +133,8 @@ export const useLoginSuccessEffects = (options: LoginSuccessEffectsOptions) => {
       }
     })();
   }, [
-    challengeData,
-    challengeState,
+    challenge.data,
+    challenge.state,
     navigate,
     next,
     wrapKeyRef,

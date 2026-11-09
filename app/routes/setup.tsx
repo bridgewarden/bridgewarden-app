@@ -1,7 +1,8 @@
 import { data } from 'react-router';
 
 import type { Route } from './+types/setup';
-import Setup, { type SetupActionResponse, type SetupError } from '~/features/setup';
+import Setup from '~/features/setup';
+import type { SetupActionResponse, SetupError } from '~/features/setup/setup.types';
 import { parseSetupInput } from '~/features/setup/.server/setup-input';
 import { completeBootstrap } from '~/features/setup/.server/use-cases/complete-bootstrap';
 import { cloudflareContext } from '~/lib/.server/context';

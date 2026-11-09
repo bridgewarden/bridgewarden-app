@@ -17,39 +17,23 @@ import { SetupAccountStep } from './setup-account-step';
 import { SetupPasswordStep } from './setup-password-step';
 import { SetupRecoveryStep } from './setup-recovery-step';
 import { SetupTwoFactorStep } from './setup-two-factor-step';
-import { SETUP_STEPS } from '../setup.types';
+import { SETUP_STEPS } from '../setup.constants';
 import { useSetupFlow } from '../setup.hooks';
 
 export const SetupWizard = () => {
   const {
-    state,
+    view,
     blocker,
     headingRef,
-    password,
-    confirmPassword,
-    confirmation,
-    fieldError,
-    copyStatus,
-    downloadStatus,
-    deriving,
     currentStep,
     busy,
     errorMessage,
-    score,
-    changeEmail,
-    changeDisplayName,
-    changePassword,
-    changeConfirmPassword,
-    changeConfirmation,
-    submitAccount,
-    submitPassword,
-    submitRecovery,
-    copyRecoveryKey,
-    downloadRecoveryKey,
-    continueTwoFactor,
-    retry,
+    fieldError,
     leave,
-    dispatch,
+    account,
+    password: passwordFlow,
+    recovery,
+    twoFactor,
   } = useSetupFlow();
 
   return (
@@ -66,68 +50,64 @@ export const SetupWizard = () => {
         ) : null}
       </div>
 
-      {state.step === 'submitting' ? (
+      {view.step === 'submitting' ? (
         <p role="status" className="text-sm text-muted-foreground">
           {t('setup.submitting')}
         </p>
       ) : null}
 
-      {state.step === 'account' ? (
+      {view.step === 'account' ? (
         <SetupAccountStep
-          account={{ email: state.email, displayName: state.displayName }}
-          errors={{ field: fieldError, message: state.error === 'invalid-input' ? errorMessage : null }}
+          account={{ email: view.email, displayName: view.displayName }}
+          errors={{ field: fieldError, message: view.error === 'invalid-input' ? errorMessage : null }}
           actions={{
-            onEmailChange: changeEmail,
-            onDisplayNameChange: changeDisplayName,
-            onSubmit: submitAccount,
+            onEmailChange: account.changeEmail,
+            onDisplayNameChange: account.changeDisplayName,
+            onSubmit: account.submitAccount,
           }}
         />
       ) : null}
 
-      {state.step === 'password' ? (
+      {view.step === 'password' ? (
         <SetupPasswordStep
-          values={{ password, confirmPassword }}
+          values={{ password: passwordFlow.password, confirmPassword: passwordFlow.confirmPassword }}
           fieldError={fieldError}
-          deriving={deriving}
-          score={score}
+          deriving={passwordFlow.deriving}
+          score={passwordFlow.score}
           actions={{
-            onPasswordChange: changePassword,
-            onConfirmPasswordChange: changeConfirmPassword,
-            onBack: () => {
-              dispatch({ type: 'back-to-account' });
-              changePassword('');
-              changeConfirmPassword('');
-            },
-            onSubmit: submitPassword,
+            onPasswordChange: passwordFlow.changePassword,
+            onConfirmPasswordChange: passwordFlow.changeConfirmPassword,
+            onBack: passwordFlow.backToAccount,
+            onSubmit: passwordFlow.submitPassword,
           }}
         />
       ) : null}
 
-      {state.step === 'recovery' && state.keys ? (
+      {view.step === 'recovery' && view.keys ? (
         <SetupRecoveryStep
-          recovery={{ key: state.recoveryKey, confirmation }}
+          recovery={{ key: view.recoveryKey, confirmation: recovery.confirmation }}
           fieldError={fieldError}
-          status={{ copy: copyStatus, download: downloadStatus }}
+          status={{ copy: recovery.copyStatus, download: recovery.downloadStatus }}
           actions={{
-            onConfirmationChange: changeConfirmation,
-            onCopy: copyRecoveryKey,
-            onDownload: downloadRecoveryKey,
-            onSubmit: submitRecovery,
+            onConfirmationChange: recovery.changeConfirmation,
+            onCopy: recovery.copyRecoveryKey,
+            onDownload: recovery.downloadRecoveryKey,
+            onSubmit: recovery.submitRecovery,
           }}
         />
       ) : null}
 
-      {state.step === 'two-factor' || state.step === 'submitting' ? (
+      {view.step === 'two-factor' || view.step === 'submitting' ? (
         <SetupTwoFactorStep
           errorMessage={errorMessage}
-          canRetry={Boolean(state.error && state.keys)}
+          canRetry={twoFactor.canRetry}
           busy={busy}
-          onRetry={retry}
-          onContinue={continueTwoFactor}
+          onRetry={twoFactor.retry}
+          onContinue={twoFactor.continueTwoFactor}
         />
       ) : null}
 
-      {state.step === 'configured' ? (
+      {view.step === 'configured' ? (
         <div className="space-y-4">
           <p role="alert" className="text-sm text-destructive">
             {t('setup.error.alreadyConfigured')}
@@ -138,7 +118,7 @@ export const SetupWizard = () => {
         </div>
       ) : null}
 
-      {state.step === 'done' ? (
+      {view.step === 'done' ? (
         <div className="space-y-2">
           <h2 className="text-lg font-medium">{t('setup.done.heading')}</h2>
           <p className="text-muted-foreground">{t('setup.done.description')}</p>

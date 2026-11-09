@@ -29,6 +29,6 @@ export type AccountInput = {
   displayName: string;
 };
 
-export const SETUP_STEPS = ['account', 'password', 'recovery', 'two-factor'] as const;
-export type SetupFormStep = (typeof SETUP_STEPS)[number];
-export type SetupStep = SetupFormStep | 'submitting' | 'configured' | 'done';
+import type { SetupStep } from './setup.constants';
+
+export type { SetupFormStep, SetupStep } from './setup.constants';

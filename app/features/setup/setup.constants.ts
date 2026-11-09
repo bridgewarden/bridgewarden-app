@@ -2,6 +2,10 @@ import type { MessageKey } from '~/lib/i18n/en';
 
 import type { SetupError } from './setup.types';
 
+export const SETUP_STEPS = ['account', 'password', 'recovery', 'two-factor'] as const;
+export type SetupFormStep = (typeof SETUP_STEPS)[number];
+export type SetupStep = SetupFormStep | 'submitting' | 'configured' | 'done';
+
 export const MIN_MASTER_PASSWORD_LENGTH = 12;
 
 export const STRENGTH_WIDTH = ['w-0', 'w-1/4', 'w-1/2', 'w-3/4', 'w-full'] as const;

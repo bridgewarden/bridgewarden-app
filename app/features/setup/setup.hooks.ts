@@ -15,8 +15,7 @@ import {
   validateAccount,
 } from './setup.lib';
 import { initialSetupState, setupReducer } from './setup.state';
-import { useRecoveryActions } from './hooks/use-recovery-actions';
-import { useSetupBeforeUnload } from './hooks/use-setup-before-unload';
+import { useRecoveryActions } from './hooks';
 import type { SetupActionResponse } from './setup.types';
 
 export const useSetupFlow = () => {
@@ -39,7 +38,17 @@ export const useSetupFlow = () => {
     headingRef.current?.focus();
   }, [state.step]);
 
-  useSetupBeforeUnload(state.keys !== null);
+  useEffect(() => {
+    if (state.keys === null) return;
+
+    const handler = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [state.keys]);
 
   useEffect(() => {
     if (!fetcher.data) return;
@@ -156,43 +165,65 @@ export const useSetupFlow = () => {
     if (blocker.state === 'blocked') blocker.reset();
   };
 
+  const backToAccount = () => {
+    dispatch({ type: 'back-to-account' });
+    setPassword('');
+    setConfirmPassword('');
+    setFieldError(null);
+  };
+
   return {
-    state,
-    dispatch,
+    view: state,
     blocker,
     headingRef,
-    password,
-    confirmPassword,
-    confirmation,
-    fieldError,
-    copyStatus,
-    downloadStatus,
-    deriving,
     currentStep: stepNumber(state.step),
     busy: fetcher.state !== 'idle' || state.step === 'submitting',
     errorMessage: state.error ? t(ERROR_KEY[state.error]) : null,
-    score: passwordScore(password),
-    changeEmail: (value: string) => dispatch({ type: 'account-changed', email: value, displayName: state.displayName }),
-    changeDisplayName: (value: string) => dispatch({ type: 'account-changed', email: state.email, displayName: value }),
-    changePassword: (value: string) => {
-      setPassword(value);
-      setFieldError(null);
-    },
-    changeConfirmPassword: (value: string) => {
-      setConfirmPassword(value);
-      setFieldError(null);
-    },
-    changeConfirmation: (value: string) => {
-      setConfirmation(value);
-      setFieldError(null);
-    },
-    submitAccount,
-    submitPassword,
-    submitRecovery,
-    copyRecoveryKey,
-    downloadRecoveryKey,
-    continueTwoFactor,
-    retry,
+    fieldError,
     leave,
+    account: {
+      changeEmail: (value: string) => {
+        setFieldError(null);
+        dispatch({ type: 'account-changed', email: value, displayName: state.displayName });
+      },
+      changeDisplayName: (value: string) => {
+        setFieldError(null);
+        dispatch({ type: 'account-changed', email: state.email, displayName: value });
+      },
+      submitAccount,
+    },
+    password: {
+      password,
+      confirmPassword,
+      deriving,
+      score: passwordScore(password),
+      changePassword: (value: string) => {
+        setPassword(value);
+        setFieldError(null);
+      },
+      changeConfirmPassword: (value: string) => {
+        setConfirmPassword(value);
+        setFieldError(null);
+      },
+      backToAccount,
+      submitPassword,
+    },
+    recovery: {
+      confirmation,
+      copyStatus,
+      downloadStatus,
+      changeConfirmation: (value: string) => {
+        setConfirmation(value);
+        setFieldError(null);
+      },
+      copyRecoveryKey,
+      downloadRecoveryKey,
+      submitRecovery,
+    },
+    twoFactor: {
+      canRetry: Boolean(state.error && state.keys),
+      retry,
+      continueTwoFactor,
+    },
   };
 };

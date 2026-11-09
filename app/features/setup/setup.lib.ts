@@ -1,7 +1,7 @@
 import { normalizeRecoveryKey } from '../../lib/crypto/recovery';
 
-import { MIN_MASTER_PASSWORD_LENGTH, STRENGTH_KEYS } from './setup.constants';
-import { SETUP_STEPS, type AccountInput, type SetupStep } from './setup.types';
+import { MIN_MASTER_PASSWORD_LENGTH, SETUP_STEPS } from './setup.constants';
+import type { AccountInput, SetupStep } from './setup.types';
 
 export const isMasterPasswordValid = (password: string): boolean => password.length >= MIN_MASTER_PASSWORD_LENGTH;
 
@@ -40,5 +40,3 @@ export const stepNumber = (step: SetupStep): number | null => {
 
   return index >= 0 ? index + 1 : null;
 };
-
-export const strengthKey = (score: number) => STRENGTH_KEYS[score];

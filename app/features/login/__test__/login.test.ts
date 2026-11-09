@@ -79,6 +79,38 @@ describe('password login', () => {
     expect((await env.KV_SESSIONS.list({ prefix: 'session:' })).keys).toHaveLength(0);
   });
 
+  it('locks after ten failures, rejects further attempts, and resets on success', async () => {
+    const { userId, authHash, email } = await createAuthUser({ email: 'locked@example.com' });
+    const wrongHash = crypto.getRandomValues(new Uint8Array(32));
+
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      await expect(loginWithPassword(testEnv(), request(), { email, authHashBytes: wrongHash })).resolves.toEqual({
+        status: 'invalid-credentials',
+      });
+    }
+
+    const lockedRow = await env.DB.prepare('SELECT locked_until FROM users WHERE id = ?')
+      .bind(userId)
+      .first<{ locked_until: number | null }>();
+    expect(lockedRow?.locked_until).toBeGreaterThan(Date.now());
+
+    const locked = await loginWithPassword(testEnv(), request(), { email, authHashBytes: authHash });
+    expect(locked.status).toBe('locked');
+    if (locked.status !== 'locked') return;
+    expect(locked.retryAfter).toBeGreaterThan(0);
+
+    await env.DB.prepare('UPDATE users SET locked_until = ? WHERE id = ?')
+      .bind(Date.now() - 1, userId)
+      .run();
+    await expect(loginWithPassword(testEnv(), request(), { email, authHashBytes: authHash })).resolves.toMatchObject({
+      status: 'ok',
+    });
+    const reset = await env.DB.prepare('SELECT failed_login_count, locked_until FROM users WHERE id = ?')
+      .bind(userId)
+      .first<{ failed_login_count: number; locked_until: number | null }>();
+    expect(reset).toEqual({ failed_login_count: 0, locked_until: null });
+  });
+
   it('accepts credentials produced from the setup key material', async () => {
     const password = 'correct horse battery staple';
     const setup = await generateSetupKeyMaterial(password);

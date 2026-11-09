@@ -5,7 +5,13 @@ import { createTestUser } from '../../../__test__/fixtures';
 import { resetDatabase } from '../../../__test__/reset-database';
 import { completeEnrollment } from '../../../features/two-factor/.server/queries/two-factor';
 import { findChallenge, insertChallenge, consumeChallengeRow } from '../queries/two-factor-challenges';
-import { findSessionUserById, incrementSessionVersion, findLoginUserByEmail } from '../queries/users';
+import {
+  findSessionUserById,
+  incrementSessionVersion,
+  findLoginUserByEmail,
+  recordFailedLogin,
+  resetLoginFailures,
+} from '../queries/users';
 import {
   findEnrollment,
   createUserTwoFactorQueries,
@@ -32,6 +38,53 @@ describe('user queries', () => {
 
     await incrementSessionVersion(db, userId, Date.now());
     expect((await findSessionUserById(db, userId))?.sessionVersion).toBe(1);
+  });
+
+  it('records failures atomically, locks at the threshold, and resets', async () => {
+    const userId = await createTestUser({ email: 'lockout-query@example.com' });
+    const now = Date.now();
+
+    for (let attempt = 1; attempt < 10; attempt += 1) {
+      const state = await recordFailedLogin(db, userId, now, 10, 900_000);
+      expect(state?.failed_login_count).toBe(attempt);
+      expect(state?.locked_until).toBeNull();
+    }
+
+    const locked = await recordFailedLogin(db, userId, now, 10, 900_000);
+    expect(locked?.failed_login_count).toBe(10);
+    expect(locked?.locked_until).toBe(now + 900_000);
+
+    await resetLoginFailures(db, userId, now);
+    const reset = await env.DB.prepare('SELECT failed_login_count, locked_until FROM users WHERE id = ?')
+      .bind(userId)
+      .first<{ failed_login_count: number; locked_until: number | null }>();
+    expect(reset).toEqual({ failed_login_count: 0, locked_until: null });
+  });
+
+  it('cannot bypass the threshold with concurrent failures', async () => {
+    const userId = await createTestUser({ email: 'lockout-concurrent@example.com' });
+    const now = Date.now();
+
+    await Promise.all(Array.from({ length: 20 }, () => recordFailedLogin(db, userId, now, 10, 900_000)));
+
+    const state = await env.DB.prepare('SELECT failed_login_count, locked_until FROM users WHERE id = ?')
+      .bind(userId)
+      .first<{ failed_login_count: number; locked_until: number | null }>();
+    expect(state?.failed_login_count).toBe(20);
+    expect(state?.locked_until).toBe(now + 900_000);
+  });
+
+  it('starts a new consecutive window after an expired lock', async () => {
+    const userId = await createTestUser({ email: 'lockout-expired@example.com' });
+    const now = Date.now();
+
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      await recordFailedLogin(db, userId, now, 10, 900_000);
+    }
+
+    const afterExpiry = await recordFailedLogin(db, userId, now + 900_001, 10, 900_000);
+    expect(afterExpiry?.failed_login_count).toBe(1);
+    expect(afterExpiry?.locked_until).toBeNull();
   });
 });
 

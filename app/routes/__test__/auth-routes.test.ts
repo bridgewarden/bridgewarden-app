@@ -20,6 +20,7 @@ context.set(cloudflareContext, {
     APP_ORIGIN: 'https://app.example',
     APP_ENV: 'production',
     AUTH_PEPPER: 'test-auth-pepper',
+    SESSION_SECRET: 'test-session-secret',
   } as Env,
   ctx: {} as ExecutionContext,
 });

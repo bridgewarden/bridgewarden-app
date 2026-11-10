@@ -19,6 +19,9 @@ export default [
   route('api/account/2fa/backup-codes/regenerate', 'routes/api-account-2fa-regenerate.ts'),
   route('api/account/password', 'routes/api-account-password.ts'),
   route('api/account/password/prepare', 'routes/api-account-password-prepare.ts'),
+  route('api/vault', 'routes/api.vault.ts'),
+  route('api/vault/items', 'routes/api.vault.items.ts'),
+  route('api/vault/items/:id', 'routes/api.vault.items.$id.ts'),
   layout('routes/protected.tsx', [
     route('app', 'routes/vault-list.tsx'),
     route('app/trash', 'routes/vault-trash.tsx'),

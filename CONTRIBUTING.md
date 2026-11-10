@@ -25,29 +25,9 @@ Keep commits focused. Do not mix a refactor with a behavior change.
 
 Title: `type(scope): summary` — same rules as commits.
 
-Body template:
-
-```markdown
-## What changed
-
-One paragraph, no diff restatement.
-
-## Requirement IDs
-
-TASK-13, TASK-14 (from .agent/prd/PRD.md)
-
-## How verified
-
-Commands run and their result, plus manual checks.
-
-## Risk and rollback
-
-What breaks if this is wrong, and how to revert safely.
-
-## Screenshots
-
-Required for UI changes.
-```
+Use the repository PR template: [`.github/pull_request_template.md`](.github/pull_request_template.md).
+Keep every section, remove only the HTML guidance comments, and mark a check only when the
+command or review actually ran.
 
 Rules:
 

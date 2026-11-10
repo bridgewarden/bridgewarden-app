@@ -1,4 +1,6 @@
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+
+import { en } from '../app/lib/i18n/en';
 
 export const E2E_ADMIN = {
   email: 'admin@example.com',
@@ -11,4 +13,12 @@ export const waitForHydration = async (page: Page) => {
   await page.waitForFunction(() =>
     Boolean((window as unknown as { __reactRouterContext?: unknown }).__reactRouterContext),
   );
+};
+
+export const unlockVault = async (page: Page, password = E2E_ADMIN.password) => {
+  await waitForHydration(page);
+  await expect(page.getByRole('heading', { name: en['lock.title'] })).toBeVisible();
+  await page.getByLabel(en['lock.password']).fill(password);
+  await page.getByRole('button', { name: en['lock.submit'] }).click();
+  await expect(page.getByRole('heading', { name: en['lock.title'] })).toBeHidden();
 };

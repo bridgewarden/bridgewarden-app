@@ -6,14 +6,25 @@ export const en = {
   'common.signOut': 'Sign out',
   'common.signOutFailed': 'Sign out failed. Try again.',
   'common.settings': 'Settings',
-  'twoFactor.banner': 'Two-factor authentication is not enabled. Protect your account with a second factor.',
-  'twoFactor.enableNow': 'Enable now',
   'common.lock': 'Lock vault',
   'common.theme': 'Theme',
   'common.theme.light': 'Light',
   'common.theme.dark': 'Dark',
   'common.theme.system': 'System',
   'common.close': 'Close',
+
+  'lock.title': 'Vault locked',
+  'lock.description': 'Enter your master password to unlock this device. Your cached vault stays on this device.',
+  'lock.password': 'Master password',
+  'lock.submit': 'Unlock vault',
+  'lock.unlocking': 'Unlocking…',
+  'lock.invalid': 'Incorrect master password.',
+  'lock.unavailable': 'Local unlock is unavailable. Sign out and sign in again.',
+  'lock.tooManyAttempts': 'Too many failed attempts. Signing out.',
+  'lock.signOut': 'Sign out of this device',
+
+  'twoFactor.banner': 'Two-factor authentication is not enabled. Protect your account with a second factor.',
+  'twoFactor.enableNow': 'Enable now',
 
   'home.notice': 'Setup and vault features arrive in the next milestones.',
 

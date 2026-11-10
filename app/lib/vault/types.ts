@@ -59,3 +59,6 @@ export type OutboxEntry = {
   optimistic: CachedItem | CachedFolder | null;
   queuedAt: number;
 };
+
+export type UnlockResult =
+  { status: 'ok' } | { status: 'invalid' } | { status: 'unavailable' } | { status: 'locked-out' };

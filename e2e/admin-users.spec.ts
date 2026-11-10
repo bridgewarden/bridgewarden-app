@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { en } from '../app/lib/i18n/en';
-import { E2E_ADMIN, waitForHydration } from './fixtures';
+import { E2E_ADMIN, unlockVault, waitForHydration } from './fixtures';
 
 const MEMBER_EMAIL = 'member@example.com';
 const MEMBER_PASSWORD = 'member master password 123';
@@ -16,6 +16,7 @@ test('admin invites a member, member sets up, admin disables them', async ({ bro
 
   await page.goto('/admin/users');
   await waitForHydration(page);
+  await unlockVault(page);
   await page.getByLabel(en['adminUsers.email']).fill(MEMBER_EMAIL);
   await page.getByLabel(en['adminUsers.displayName']).fill('Member');
   await page.getByRole('button', { name: en['adminUsers.createInvitation'] }).click();
@@ -39,6 +40,7 @@ test('admin invites a member, member sets up, admin disables them', async ({ bro
   await expect(member).toHaveURL(/\/app$/);
 
   await page.reload();
+  await unlockVault(page);
   const memberRow = page.getByRole('row', { name: new RegExp(MEMBER_EMAIL) });
   await expect(memberRow).toBeVisible();
   await memberRow.getByRole('button', { name: en['adminUsers.disable'] }).click();

@@ -104,7 +104,7 @@ Auth abuse controls use the Workers Rate Limiting binding with HMAC-derived keys
 per IP hash and 20 requests/minute per account identity. Rejected requests return 429
 with `Retry-After`. Ten consecutive password failures lock the account for 15 minutes; a locked
 login returns 423 with `Retry-After`, and a successful login clears both counters. Rate limiting for
-`/auth/recover` will be wired when that route lands with account security.
+`/auth/recover/lookup` and `/auth/recover/reset` use the same IP/identity limits and a separate recovery proof; recovery failures do not lock the account, because the proof is 128-bit and lockout would let anyone deny recovery.
 
 ## Master password rotation
 
@@ -113,6 +113,19 @@ unwraps the existing vault key and re-wraps the same key under a new master key;
 ciphertext is not re-encrypted. The server replaces the auth hash, KDF parameters, and vault-key
 wrapper in one update, increments the session version, and reissues the current cookie. Other
 sessions are signed out. The recovery key remains valid because its wrapper is unchanged.
+
+## Vault recovery
+
+`/recover` resets a lost master password using the recovery key saved at setup. The browser unwraps
+the vault key with the recovery key, forces a new master password, and re-wraps the same vault key.
+The server verifies a separate `bw-recovery-auth` proof, replaces the password, KDF, vault wrapper,
+recovery wrapper, and recovery proof in one guarded update, increments the session version, and
+issues a new session. If session issuance fails after the update commits, the new recovery key is
+still shown once and the user is sent to sign in with the new password. The recovery key is a
+break-glass credential: a successful reset bypasses a TOTP challenge, and the server records a
+separate audit marker when that happens. The old recovery key is burned: it no longer unwraps the vault or satisfies
+the proof. Accounts created before recovery verifiers were added cannot use this flow until their
+recovery key is regenerated; there is no email or escrow fallback.
 
 ## User management
 

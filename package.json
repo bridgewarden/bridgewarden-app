@@ -29,6 +29,7 @@
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "idb": "^8.0.4",
     "isbot": "^5.1.36",
     "lucide-react": "^1.68.0",
     "qrcode": "1.5.4",
@@ -54,6 +55,7 @@
     "@types/react-dom": "^19.2.7",
     "eslint": "^10.14.0",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "fake-indexeddb": "^6.2.8",
     "globals": "^17.14.0",
     "prettier": "^3.9.10",
     "tailwindcss": "^4.2.2",

@@ -62,7 +62,24 @@ describe('user queries', () => {
       'old-salt',
     );
 
+    const stale = await rotatePassword(
+      db,
+      userId,
+      {
+        authHash: 'other-auth',
+        serverSalt: 'other-server-salt',
+        kdfSalt: 'other-kdf-salt',
+        kdfIterations: 600_000,
+        vaultKeyWrapped: 'other-wrapped',
+        vaultKeyWrapIv: 'other-iv',
+      },
+      Date.now(),
+      'old-auth',
+      'old-salt',
+    );
+
     expect(result.meta.changes).toBe(1);
+    expect(stale.meta.changes).toBe(0);
     const row = await env.DB.prepare(
       'SELECT auth_hash, kdf_salt, vault_key_wrapped, session_version FROM users WHERE id = ?',
     )
@@ -74,6 +91,27 @@ describe('user queries', () => {
       vault_key_wrapped: 'new-wrapped',
       session_version: 1,
     });
+  });
+
+  it('rejects password rotation for a disabled account', async () => {
+    const userId = await createTestUser({ email: 'disabled-rotate@example.com', status: 'disabled' });
+    const result = await rotatePassword(
+      db,
+      userId,
+      {
+        authHash: 'new-auth',
+        serverSalt: 'new-server-salt',
+        kdfSalt: 'new-kdf-salt',
+        kdfIterations: 600_000,
+        vaultKeyWrapped: 'new-wrapped',
+        vaultKeyWrapIv: 'new-iv',
+      },
+      Date.now(),
+      'auth-hash',
+      'server-salt',
+    );
+
+    expect(result.meta.changes).toBe(0);
   });
 
   it('records failures atomically, locks at the threshold, and resets', async () => {

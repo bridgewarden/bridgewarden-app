@@ -155,8 +155,11 @@ tombstones; the watermark advances only after the last page succeeds. Wrapped ke
 in a module-scoped variable and is never persisted. Logout and account switch wipe every store.
 When IndexedDB is unavailable the app runs online-only and reports degraded mode.
 
-Outbox/offline mutations and offline reload are separate changes; offline reload also requires the
-PWA/service worker work.
+Pending mutations are stored in a durable IndexedDB outbox. Item creates carry a client-generated
+UUID so a retry after an ambiguous failure returns the existing row instead of duplicating it. The
+outbox flushes in order, stops on the first network/5xx failure, rolls back optimistic rows on 409,
+and emits conflict/error events for the UI. Offline reload still requires the PWA/service worker
+work.
 
 ## User management
 

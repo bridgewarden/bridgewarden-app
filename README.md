@@ -106,6 +106,14 @@ with `Retry-After`. Ten consecutive password failures lock the account for 15 mi
 login returns 423 with `Retry-After`, and a successful login clears both counters. Rate limiting for
 `/auth/recover` will be wired when that route lands with account security.
 
+## Master password rotation
+
+`/app/settings` can change the master password after confirming the current one. The browser
+unwraps the existing vault key and re-wraps the same key under a new master key; vault item
+ciphertext is not re-encrypted. The server replaces the auth hash, KDF parameters, and vault-key
+wrapper in one update, increments the session version, and reissues the current cookie. Other
+sessions are signed out. The recovery key remains valid because its wrapper is unchanged.
+
 ## User management
 
 Administrators can open `/admin/users` to list accounts, create setup invitations, change roles,

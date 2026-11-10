@@ -9,6 +9,7 @@ import {
   findSessionUserById,
   incrementSessionVersion,
   findLoginUserByEmail,
+  rotatePassword,
   recordFailedLogin,
   resetLoginFailures,
 } from '../queries/users';
@@ -38,6 +39,41 @@ describe('user queries', () => {
 
     await incrementSessionVersion(db, userId, Date.now());
     expect((await findSessionUserById(db, userId))?.sessionVersion).toBe(1);
+  });
+
+  it('rotates password material and increments the session version atomically', async () => {
+    const userId = await createTestUser({ email: 'rotate@example.com' });
+    await env.DB.prepare('UPDATE users SET auth_hash = ?, server_salt = ? WHERE id = ?')
+      .bind('old-auth', 'old-salt', userId)
+      .run();
+    const result = await rotatePassword(
+      db,
+      userId,
+      {
+        authHash: 'new-auth',
+        serverSalt: 'new-server-salt',
+        kdfSalt: 'new-kdf-salt',
+        kdfIterations: 600_000,
+        vaultKeyWrapped: 'new-wrapped',
+        vaultKeyWrapIv: 'new-iv',
+      },
+      Date.now(),
+      'old-auth',
+      'old-salt',
+    );
+
+    expect(result.meta.changes).toBe(1);
+    const row = await env.DB.prepare(
+      'SELECT auth_hash, kdf_salt, vault_key_wrapped, session_version FROM users WHERE id = ?',
+    )
+      .bind(userId)
+      .first<{ auth_hash: string; kdf_salt: string; vault_key_wrapped: string; session_version: number }>();
+    expect(row).toMatchObject({
+      auth_hash: 'new-auth',
+      kdf_salt: 'new-kdf-salt',
+      vault_key_wrapped: 'new-wrapped',
+      session_version: 1,
+    });
   });
 
   it('records failures atomically, locks at the threshold, and resets', async () => {

@@ -2,7 +2,7 @@ import { standardToBase64Url, toBase64Url } from '../base64-url';
 import { DEFAULT_KDF_ITERATIONS, SALT_BYTES } from './contract';
 import { encodeBase64 } from './encoding';
 import { deriveAuthHash, deriveMasterKey, deriveWrapKey } from './kdf';
-import { formatRecoveryKey, generateRecoverySecret, wrapVaultKeyWithRecovery } from './recovery';
+import { deriveRecoveryAuthKey, formatRecoveryKey, generateRecoverySecret, wrapVaultKeyWithRecovery } from './recovery';
 import { generateVaultKey, wrapVaultKey } from './vault-key';
 
 export type SetupTransportMaterial = {
@@ -13,6 +13,7 @@ export type SetupTransportMaterial = {
   vaultKeyWrapIv: string;
   recoveryKeyWrapped: string;
   recoveryKeyWrapIv: string;
+  recoveryAuthKey: string;
 };
 
 export type SetupKeyMaterial = SetupTransportMaterial & {
@@ -27,21 +28,35 @@ export const generateSetupKeyMaterial = async (password: string): Promise<SetupK
   const authHash = await deriveAuthHash(masterKey);
   const wrapKey = await deriveWrapKey(masterKey, kdfSalt);
   const vaultKey = generateVaultKey();
-  const wrappedVaultKey = await wrapVaultKey(vaultKey, wrapKey);
   const recoverySecret = generateRecoverySecret();
-  const wrappedWithRecovery = await wrapVaultKeyWithRecovery(vaultKey, recoverySecret);
 
-  return {
-    kdfSalt: toBase64Url(kdfSaltBytes),
-    kdfIterations: DEFAULT_KDF_ITERATIONS,
-    authHash: toBase64Url(authHash),
-    vaultKeyWrapped: standardToBase64Url(wrappedVaultKey.ciphertext),
-    vaultKeyWrapIv: standardToBase64Url(wrappedVaultKey.iv),
-    recoveryKeyWrapped: standardToBase64Url(wrappedWithRecovery.ciphertext),
-    recoveryKeyWrapIv: standardToBase64Url(wrappedWithRecovery.iv),
-    vaultKey,
-    recoveryKey: formatRecoveryKey(recoverySecret),
-  };
+  try {
+    const wrappedVaultKey = await wrapVaultKey(vaultKey, wrapKey);
+    const wrappedWithRecovery = await wrapVaultKeyWithRecovery(vaultKey, recoverySecret);
+    const recoveryAuthKey = await deriveRecoveryAuthKey(recoverySecret);
+
+    try {
+      return {
+        kdfSalt: toBase64Url(kdfSaltBytes),
+        kdfIterations: DEFAULT_KDF_ITERATIONS,
+        authHash: toBase64Url(authHash),
+        vaultKeyWrapped: standardToBase64Url(wrappedVaultKey.ciphertext),
+        vaultKeyWrapIv: standardToBase64Url(wrappedVaultKey.iv),
+        recoveryKeyWrapped: standardToBase64Url(wrappedWithRecovery.ciphertext),
+        recoveryKeyWrapIv: standardToBase64Url(wrappedWithRecovery.iv),
+        recoveryAuthKey: toBase64Url(recoveryAuthKey),
+        vaultKey,
+        recoveryKey: formatRecoveryKey(recoverySecret),
+      };
+    } finally {
+      recoveryAuthKey.fill(0);
+    }
+  } finally {
+    masterKey.fill(0);
+    authHash.fill(0);
+    wrapKey.fill(0);
+    recoverySecret.fill(0);
+  }
 };
 
 export type SetupPayload = SetupTransportMaterial & {
@@ -62,4 +77,5 @@ export const toSetupPayload = (
   vaultKeyWrapIv: keys.vaultKeyWrapIv,
   recoveryKeyWrapped: keys.recoveryKeyWrapped,
   recoveryKeyWrapIv: keys.recoveryKeyWrapIv,
+  recoveryAuthKey: keys.recoveryAuthKey,
 });

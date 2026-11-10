@@ -24,6 +24,7 @@ export const completeMemberSetup = async (env: Env, input: MemberSetupInput): Pr
   if (!invitation) return { status: 'invalid' };
 
   const serverAuthHash = await deriveServerAuthHash(input.authHashBytes, generateServerSalt(), pepper);
+  const recoveryAuthHash = await deriveServerAuthHash(input.recoveryAuthKeyBytes, generateServerSalt(), pepper);
   const userId = crypto.randomUUID();
 
   let session: Awaited<ReturnType<typeof createSession>>;
@@ -48,6 +49,8 @@ export const completeMemberSetup = async (env: Env, input: MemberSetupInput): Pr
       vaultKeyWrapIv: input.vaultKeyWrapIv,
       recoveryKeyWrapped: input.recoveryKeyWrapped,
       recoveryKeyWrapIv: input.recoveryKeyWrapIv,
+      recoveryAuthHash: recoveryAuthHash.authHash,
+      recoveryServerSalt: recoveryAuthHash.serverSalt,
       now,
     });
   } catch {

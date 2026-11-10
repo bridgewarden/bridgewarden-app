@@ -1,4 +1,7 @@
 import { env } from 'cloudflare:workers';
+
+import { standardToBase64Url } from '../../../lib/base64-url';
+import { encodeBase64 } from '../../../lib/crypto/encoding';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { resetDatabase } from '../../../__test__/reset-database';
@@ -35,6 +38,8 @@ const invitation = async (email: string, inviterId: string) => {
   return { token, tokenHash };
 };
 
+const encoded = (length: number) => encodeBase64(crypto.getRandomValues(new Uint8Array(length)));
+
 const userMaterial = (email: string, now: number) => ({
   id: crypto.randomUUID(),
   email,
@@ -43,11 +48,13 @@ const userMaterial = (email: string, now: number) => ({
   authHash: 'hash',
   serverSalt: 'salt',
   kdfIterations: 600_000,
-  kdfSalt: 'kdf',
-  vaultKeyWrapped: 'wrapped',
-  vaultKeyWrapIv: 'iv',
-  recoveryKeyWrapped: 'recovery',
-  recoveryKeyWrapIv: 'recovery-iv',
+  kdfSalt: encoded(16),
+  vaultKeyWrapped: encoded(48),
+  vaultKeyWrapIv: encoded(12),
+  recoveryKeyWrapped: encoded(48),
+  recoveryKeyWrapIv: encoded(12),
+  recoveryAuthHash: 'recovery-hash',
+  recoveryServerSalt: 'recovery-salt',
   now,
 });
 
@@ -66,6 +73,14 @@ describe('setup invitations', () => {
       .bind('member@example.com')
       .first<{ count: number }>();
     expect(count?.count).toBe(1);
+
+    const row = await db
+      .prepare('SELECT kdf_salt, recovery_auth_hash, recovery_server_salt FROM users WHERE email = ?')
+      .bind('member@example.com')
+      .first<{ kdf_salt: string; recovery_auth_hash: string | null; recovery_server_salt: string | null }>();
+    expect(row?.recovery_auth_hash).toBe('recovery-hash');
+    expect(row?.recovery_server_salt).toBe('recovery-salt');
+    expect(() => standardToBase64Url(row!.kdf_salt)).not.toThrow();
   });
 
   it('rolls back consumption when the user email conflicts', async () => {

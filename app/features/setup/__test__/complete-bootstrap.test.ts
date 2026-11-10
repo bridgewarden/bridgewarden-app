@@ -19,6 +19,7 @@ const setupInput = (): SetupInput => ({
   vaultKeyWrapIv: random(12),
   recoveryKeyWrapped: random(48),
   recoveryKeyWrapIv: random(12),
+  recoveryAuthKeyBytes: crypto.getRandomValues(new Uint8Array(32)),
 });
 
 const PEPPER = 'test-auth-pepper';

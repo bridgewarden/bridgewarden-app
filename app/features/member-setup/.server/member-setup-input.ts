@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { fromBase64Url } from '../../../lib/base64-url';
+import { encodeBase64 } from '../../../lib/crypto/encoding';
 import { IV_BYTES, KEY_BYTES, MIN_KDF_ITERATIONS, SALT_BYTES, TAG_BYTES } from '../../../lib/crypto/contract';
 
 const WRAPPED_KEY_BYTES = KEY_BYTES + TAG_BYTES;
@@ -13,6 +14,7 @@ const schema = z.strictObject({
   vaultKeyWrapIv: z.string().min(1).max(512),
   recoveryKeyWrapped: z.string().min(1).max(512),
   recoveryKeyWrapIv: z.string().min(1).max(512),
+  recoveryAuthKey: z.string().min(1).max(512),
 });
 
 const decode = (value: string, length: number): Uint8Array | null => {
@@ -33,6 +35,7 @@ export type MemberSetupInput = {
   vaultKeyWrapIv: string;
   recoveryKeyWrapped: string;
   recoveryKeyWrapIv: string;
+  recoveryAuthKeyBytes: Uint8Array;
 };
 
 export const parseMemberSetupInput = (value: unknown): MemberSetupInput | null => {
@@ -45,16 +48,18 @@ export const parseMemberSetupInput = (value: unknown): MemberSetupInput | null =
   const wrapIv = decode(parsed.data.vaultKeyWrapIv, IV_BYTES);
   const recovery = decode(parsed.data.recoveryKeyWrapped, WRAPPED_KEY_BYTES);
   const recoveryIv = decode(parsed.data.recoveryKeyWrapIv, IV_BYTES);
-  if (!authHash || !salt || !wrapped || !wrapIv || !recovery || !recoveryIv) return null;
+  const recoveryAuth = decode(parsed.data.recoveryAuthKey, KEY_BYTES);
+  if (!authHash || !salt || !wrapped || !wrapIv || !recovery || !recoveryIv || !recoveryAuth) return null;
 
   return {
     token: parsed.data.token,
     kdfIterations: parsed.data.kdfIterations,
-    kdfSalt: parsed.data.kdfSalt,
+    kdfSalt: encodeBase64(salt),
     authHashBytes: authHash,
-    vaultKeyWrapped: parsed.data.vaultKeyWrapped,
-    vaultKeyWrapIv: parsed.data.vaultKeyWrapIv,
-    recoveryKeyWrapped: parsed.data.recoveryKeyWrapped,
-    recoveryKeyWrapIv: parsed.data.recoveryKeyWrapIv,
+    vaultKeyWrapped: encodeBase64(wrapped),
+    vaultKeyWrapIv: encodeBase64(wrapIv),
+    recoveryKeyWrapped: encodeBase64(recovery),
+    recoveryKeyWrapIv: encodeBase64(recoveryIv),
+    recoveryAuthKeyBytes: recoveryAuth,
   };
 };

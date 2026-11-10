@@ -16,6 +16,8 @@ const adminInput = (overrides: Partial<NewAdminInput> = {}): NewAdminInput => ({
   vaultKeyWrapIv: 'vault-key-iv',
   recoveryKeyWrapped: 'recovery-key-wrapped',
   recoveryKeyWrapIv: 'recovery-key-iv',
+  recoveryAuthHash: 'recovery-auth-hash',
+  recoveryServerSalt: 'recovery-server-salt',
   createdAt: 1_700_000_000_000,
   ...overrides,
 });
@@ -40,7 +42,7 @@ describe('bootstrap guard', () => {
     const row = await env.DB.prepare(
       `SELECT email, display_name, auth_hash, server_salt, kdf_alg, kdf_iterations, kdf_salt,
         vault_key_wrapped, vault_key_wrap_iv, recovery_key_wrapped, recovery_key_wrap_iv,
-        role, status, vault_rev, failed_login_count, locked_until, created_at, updated_at
+        recovery_auth_hash, recovery_server_salt, role, status, vault_rev, failed_login_count, locked_until, created_at, updated_at
        FROM users WHERE id = ?`,
     )
       .bind(admin.id)
@@ -58,6 +60,8 @@ describe('bootstrap guard', () => {
       vault_key_wrap_iv: admin.vaultKeyWrapIv,
       recovery_key_wrapped: admin.recoveryKeyWrapped,
       recovery_key_wrap_iv: admin.recoveryKeyWrapIv,
+      recovery_auth_hash: admin.recoveryAuthHash,
+      recovery_server_salt: admin.recoveryServerSalt,
       role: 'admin',
       status: 'active',
       vault_rev: 0,

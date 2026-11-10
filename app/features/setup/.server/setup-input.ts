@@ -19,6 +19,7 @@ const setupSchema = z.strictObject({
   vaultKeyWrapIv: base64UrlField,
   recoveryKeyWrapped: base64UrlField,
   recoveryKeyWrapIv: base64UrlField,
+  recoveryAuthKey: base64UrlField,
 });
 
 export type SetupInput = {
@@ -31,6 +32,7 @@ export type SetupInput = {
   vaultKeyWrapIv: string;
   recoveryKeyWrapped: string;
   recoveryKeyWrapIv: string;
+  recoveryAuthKeyBytes: Uint8Array;
 };
 
 const decodeField = (value: string, expectedLength: number): Uint8Array | null => {
@@ -54,8 +56,17 @@ export const parseSetupInput = (value: unknown): SetupInput | null => {
   const vaultKeyWrapIv = decodeField(parsed.data.vaultKeyWrapIv, IV_BYTES);
   const recoveryKeyWrapped = decodeField(parsed.data.recoveryKeyWrapped, WRAPPED_KEY_BYTES);
   const recoveryKeyWrapIv = decodeField(parsed.data.recoveryKeyWrapIv, IV_BYTES);
+  const recoveryAuthKey = decodeField(parsed.data.recoveryAuthKey, KEY_BYTES);
 
-  if (!kdfSalt || !authHash || !vaultKeyWrapped || !vaultKeyWrapIv || !recoveryKeyWrapped || !recoveryKeyWrapIv) {
+  if (
+    !kdfSalt ||
+    !authHash ||
+    !vaultKeyWrapped ||
+    !vaultKeyWrapIv ||
+    !recoveryKeyWrapped ||
+    !recoveryKeyWrapIv ||
+    !recoveryAuthKey
+  ) {
     return null;
   }
 
@@ -69,5 +80,6 @@ export const parseSetupInput = (value: unknown): SetupInput | null => {
     vaultKeyWrapIv: encodeBase64(vaultKeyWrapIv),
     recoveryKeyWrapped: encodeBase64(recoveryKeyWrapped),
     recoveryKeyWrapIv: encodeBase64(recoveryKeyWrapIv),
+    recoveryAuthKeyBytes: recoveryAuthKey,
   };
 };

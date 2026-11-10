@@ -45,6 +45,8 @@ export type InvitedUser = {
   vaultKeyWrapIv: string;
   recoveryKeyWrapped: string;
   recoveryKeyWrapIv: string;
+  recoveryAuthHash: string;
+  recoveryServerSalt: string;
   now: number;
 };
 
@@ -117,9 +119,10 @@ export const acceptInvitation = async (
         `INSERT INTO users (
           id, email, display_name, auth_hash, server_salt, kdf_alg, kdf_iterations, kdf_salt,
           vault_key_wrapped, vault_key_wrap_iv, recovery_key_wrapped, recovery_key_wrap_iv,
+          recovery_auth_hash, recovery_server_salt,
           role, status, vault_rev, failed_login_count, locked_until, created_at, updated_at
         )
-        SELECT ?, ?, ?, ?, ?, 'pbkdf2-sha256', ?, ?, ?, ?, ?, ?, ?, 'active', 0, 0, NULL, ?, ?
+        SELECT ?, ?, ?, ?, ?, 'pbkdf2-sha256', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 0, 0, NULL, ?, ?
         WHERE EXISTS (
           SELECT 1 FROM setup_invitations WHERE token_hash = ? AND consumed_at = ? AND expires_at > ?
         )`,
@@ -136,6 +139,8 @@ export const acceptInvitation = async (
         user.vaultKeyWrapIv,
         user.recoveryKeyWrapped,
         user.recoveryKeyWrapIv,
+        user.recoveryAuthHash,
+        user.recoveryServerSalt,
         user.role,
         user.now,
         user.now,

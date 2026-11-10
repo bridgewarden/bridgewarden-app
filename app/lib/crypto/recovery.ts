@@ -44,7 +44,13 @@ export const parseRecoveryKey = (value: string): Uint8Array => {
   return secret;
 };
 
-const deriveRecoveryWrapKey = (secret: Uint8Array): Promise<Uint8Array> => deriveHkdfBits(secret, HKDF_INFO.recovery);
+export const deriveRecoveryWrapKey = (secret: Uint8Array): Promise<Uint8Array> =>
+  deriveHkdfBits(secret, HKDF_INFO.recovery);
+
+export const deriveRecoveryAuthKey = (secret: Uint8Array): Promise<Uint8Array> => {
+  assertSecretLength(secret);
+  return deriveHkdfBits(secret, HKDF_INFO.recoveryAuth);
+};
 
 export const wrapVaultKeyWithRecovery = async (vaultKey: Uint8Array, secret: Uint8Array): Promise<WrappedVaultKey> => {
   if (vaultKey.length !== KEY_BYTES) throw new InvalidKeyMaterialError();

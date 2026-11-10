@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 
 import { expect, test } from '@playwright/test';
 
@@ -22,6 +22,7 @@ const validPayload = () => ({
   vaultKeyWrapIv: zeros(12),
   recoveryKeyWrapped: zeros(48),
   recoveryKeyWrapIv: zeros(12),
+  recoveryAuthKey: zeros(32),
 });
 
 test('rejects foreign origins, malformed bodies, and invalid input', async ({ baseURL, request }) => {
@@ -67,6 +68,7 @@ test('creates the first admin through the wizard and locks setup', async ({ page
   await page.getByRole('button', { name: 'Create keys' }).click();
 
   const recoveryKey = (await page.locator('#setup-recovery-key').textContent())!.trim();
+  await writeFile('.wrangler/e2e/recovery-key.txt', recoveryKey);
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.getByRole('button', { name: 'Copy' }).click();
   await expect(page.getByText('Copied to clipboard. Clear it when you are done.')).toBeVisible();

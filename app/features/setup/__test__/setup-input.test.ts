@@ -17,6 +17,7 @@ const validInput = () => ({
   vaultKeyWrapIv: toBase64Url(random(12)),
   recoveryKeyWrapped: toBase64Url(random(48)),
   recoveryKeyWrapIv: toBase64Url(random(12)),
+  recoveryAuthKey: toBase64Url(random(32)),
 });
 
 describe('setup input', () => {

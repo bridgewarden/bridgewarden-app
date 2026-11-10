@@ -13,6 +13,7 @@ export const HKDF_INFO = {
   auth: 'bw-auth',
   wrap: 'bw-wrap',
   recovery: 'bw-recovery',
+  recoveryAuth: 'bw-recovery-auth',
 } as const;
 
 export const SALT_BYTES = 16;

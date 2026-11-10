@@ -30,6 +30,7 @@ export const completeBootstrap = async (
   const id = crypto.randomUUID();
   const createdAt = Date.now();
   const serverAuthHash = await deriveServerAuthHash(input.authHashBytes, generateServerSalt(), pepper);
+  const recoveryAuthHash = await deriveServerAuthHash(input.recoveryAuthKeyBytes, generateServerSalt(), pepper);
 
   const sessionSecret = readConfig(env, 'SESSION_SECRET');
   const fingerprints =
@@ -56,6 +57,8 @@ export const completeBootstrap = async (
       vaultKeyWrapIv: input.vaultKeyWrapIv,
       recoveryKeyWrapped: input.recoveryKeyWrapped,
       recoveryKeyWrapIv: input.recoveryKeyWrapIv,
+      recoveryAuthHash: recoveryAuthHash.authHash,
+      recoveryServerSalt: recoveryAuthHash.serverSalt,
       createdAt,
     });
   } catch {

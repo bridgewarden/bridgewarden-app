@@ -12,6 +12,8 @@ export type NewAdminInput = {
   vaultKeyWrapIv: string;
   recoveryKeyWrapped: string;
   recoveryKeyWrapIv: string;
+  recoveryAuthHash: string;
+  recoveryServerSalt: string;
   createdAt: number;
 };
 
@@ -262,6 +264,83 @@ export const rotatePassword = (
     )
     .run();
 
+export type RecoveryLookupRow = {
+  id: string;
+  status: 'active' | 'disabled';
+  recovery_key_wrapped: string | null;
+  recovery_key_wrap_iv: string | null;
+};
+
+export const findRecoveryLookupByEmail = (db: D1Database, email: string): Promise<RecoveryLookupRow | null> =>
+  db
+    .prepare('SELECT id, status, recovery_key_wrapped, recovery_key_wrap_iv FROM users WHERE email = ?')
+    .bind(email)
+    .first<RecoveryLookupRow>();
+
+export type RecoveryStateRow = {
+  id: string;
+  status: 'active' | 'disabled';
+  recovery_auth_hash: string | null;
+  recovery_server_salt: string | null;
+};
+
+export const findRecoveryStateByEmail = (db: D1Database, email: string): Promise<RecoveryStateRow | null> =>
+  db
+    .prepare('SELECT id, status, recovery_auth_hash, recovery_server_salt FROM users WHERE email = ?')
+    .bind(email)
+    .first<RecoveryStateRow>();
+
+export type ResetRecoveryInput = {
+  authHash: string;
+  serverSalt: string;
+  kdfSalt: string;
+  kdfIterations: number;
+  vaultKeyWrapped: string;
+  vaultKeyWrapIv: string;
+  recoveryKeyWrapped: string;
+  recoveryKeyWrapIv: string;
+  recoveryAuthHash: string;
+  recoveryServerSalt: string;
+};
+
+export const resetRecovery = (
+  db: D1Database,
+  id: string,
+  input: ResetRecoveryInput,
+  now: number,
+  expectedRecoveryAuthHash: string,
+  expectedRecoveryServerSalt: string,
+): Promise<D1Result> =>
+  db
+    .prepare(
+      `UPDATE users
+       SET auth_hash = ?, server_salt = ?, kdf_alg = 'pbkdf2-sha256',
+           kdf_salt = ?, kdf_iterations = ?, vault_key_wrapped = ?, vault_key_wrap_iv = ?,
+           recovery_key_wrapped = ?, recovery_key_wrap_iv = ?,
+           recovery_auth_hash = ?, recovery_server_salt = ?,
+           session_version = session_version + 1,
+           failed_login_count = 0, locked_until = NULL, updated_at = ?
+       WHERE id = ? AND status = 'active'
+         AND recovery_auth_hash = ? AND recovery_server_salt = ?`,
+    )
+    .bind(
+      input.authHash,
+      input.serverSalt,
+      input.kdfSalt,
+      input.kdfIterations,
+      input.vaultKeyWrapped,
+      input.vaultKeyWrapIv,
+      input.recoveryKeyWrapped,
+      input.recoveryKeyWrapIv,
+      input.recoveryAuthHash,
+      input.recoveryServerSalt,
+      now,
+      id,
+      expectedRecoveryAuthHash,
+      expectedRecoveryServerSalt,
+    )
+    .run();
+
 export const incrementSessionVersion = (db: D1Database, id: string, now: number): Promise<D1Result> =>
   db.prepare('UPDATE users SET session_version = session_version + 1, updated_at = ? WHERE id = ?').bind(now, id).run();
 
@@ -274,9 +353,10 @@ export const countUsers = async (db: D1Database): Promise<number> => {
 export const CREATE_FIRST_ADMIN_SQL = `INSERT INTO users (
   id, email, display_name, auth_hash, server_salt, kdf_alg, kdf_iterations, kdf_salt,
   vault_key_wrapped, vault_key_wrap_iv, recovery_key_wrapped, recovery_key_wrap_iv,
+  recovery_auth_hash, recovery_server_salt,
   role, status, vault_rev, failed_login_count, created_at, updated_at
 )
-SELECT ?, ?, ?, ?, ?, 'pbkdf2-sha256', ?, ?, ?, ?, ?, ?, 'admin', 'active', 0, 0, ?, ?
+SELECT ?, ?, ?, ?, ?, 'pbkdf2-sha256', ?, ?, ?, ?, ?, ?, ?, ?, 'admin', 'active', 0, 0, ?, ?
 WHERE NOT EXISTS (SELECT 1 FROM users)`;
 
 export const createFirstAdmin = async (db: D1Database, admin: NewAdminInput): Promise<'created' | 'exists'> => {
@@ -294,6 +374,8 @@ export const createFirstAdmin = async (db: D1Database, admin: NewAdminInput): Pr
       admin.vaultKeyWrapIv,
       admin.recoveryKeyWrapped,
       admin.recoveryKeyWrapIv,
+      admin.recoveryAuthHash,
+      admin.recoveryServerSalt,
       admin.createdAt,
       admin.createdAt,
     )
@@ -328,6 +410,15 @@ export const createUsersQueries = (env: Env) => {
       expectedServerSalt: string,
     ) => rotatePassword(db, id, input, now, expectedAuthHash, expectedServerSalt),
     findPasswordKdf: (id: string) => findPasswordKdfById(db, id),
+    findRecoveryLookup: (email: string) => findRecoveryLookupByEmail(db, email),
+    findRecoveryState: (email: string) => findRecoveryStateByEmail(db, email),
+    resetRecovery: (
+      id: string,
+      input: ResetRecoveryInput,
+      now: number,
+      expectedRecoveryAuthHash: string,
+      expectedRecoveryServerSalt: string,
+    ) => resetRecovery(db, id, input, now, expectedRecoveryAuthHash, expectedRecoveryServerSalt),
     incrementSessionVersion: (id: string, now: number) => incrementSessionVersion(db, id, now),
     count: () => countUsers(db),
     createFirstAdmin: (admin: NewAdminInput) => createFirstAdmin(db, admin),

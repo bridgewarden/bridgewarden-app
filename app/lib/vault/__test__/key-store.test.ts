@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { InvalidKeyMaterialError } from '../../crypto/errors';
-import { clearVaultKey, getVaultKey, setVaultKey } from '../key-store';
+import { clearVaultKey, getVaultKey, isUnlocked, setVaultKey, subscribeKeyState } from '../key-store';
 
 afterEach(() => {
   clearVaultKey();
@@ -29,6 +29,21 @@ describe('in-memory vault key store', () => {
     read.fill(0);
     expect(getVaultKey()?.some((byte) => byte !== 0)).toBe(true);
     expect(() => setVaultKey(new Uint8Array(16))).toThrow(InvalidKeyMaterialError);
+  });
+
+  it('notifies subscribers on set and clear, but not on a redundant clear', () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeKeyState(listener);
+
+    setVaultKey(new Uint8Array(32));
+    expect(isUnlocked()).toBe(true);
+    clearVaultKey();
+    clearVaultKey();
+    unsubscribe();
+    setVaultKey(new Uint8Array(32));
+
+    expect(listener).toHaveBeenCalledTimes(2);
+    expect(isUnlocked()).toBe(true);
   });
 
   it('never touches browser storage', () => {

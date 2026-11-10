@@ -13,8 +13,7 @@ export type VaultDeltaResult =
       folders: VaultFolderResponse[];
       nextCursor?: string;
     }
-  | { status: 'not-found' }
-  | { status: 'invalid-cursor' };
+  | { status: 'not-found' };
 
 export const readVaultDelta = async (
   env: Env,
@@ -23,7 +22,8 @@ export const readVaultDelta = async (
   cursor: VaultCursor | null,
 ): Promise<VaultDeltaResult> => {
   const vault = createVaultQueries(env);
-  if (cursor && cursor.rev < since) return { status: 'invalid-cursor' };
+  const rev = await vault.findVaultRev(userId);
+  if (!rev) return { status: 'not-found' };
 
   const rows = await vault.listVaultDelta(userId, since, cursor, VAULT_PAGE_SIZE);
   const page: VaultDeltaRow[] = [];
@@ -41,18 +41,11 @@ export const readVaultDelta = async (
   const truncated = page.length < rows.length;
   const { items, folders } = splitDelta(page);
 
-  if (truncated && last) {
-    return {
-      status: 'ok',
-      serverRev: last.rev,
-      items,
-      folders,
-      nextCursor: encodeVaultCursor({ rev: last.rev, id: last.id }),
-    };
-  }
-
-  const rev = await vault.findVaultRev(userId);
-  if (!rev) return { status: 'not-found' };
-
-  return { status: 'ok', serverRev: rev.vault_rev, items, folders };
+  return {
+    status: 'ok',
+    serverRev: rev.vault_rev,
+    items,
+    folders,
+    ...(truncated && last ? { nextCursor: encodeVaultCursor({ rev: last.rev, id: last.id }) } : {}),
+  };
 };

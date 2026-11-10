@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { fromBase64Url } from '../../lib/base64-url';
 import { IV_BYTES } from '../../lib/crypto/contract';
 import { encodeBase64 } from '../../lib/crypto/encoding';
-import type { VaultItemInput } from './types';
+import { MAX_FOLDER_CIPHERTEXT_BYTES, type VaultFolderInput, type VaultItemInput } from './types';
 
 const MAX_CIPHERTEXT_BYTES = 64 * 1024;
 
@@ -74,5 +74,41 @@ const purgeSchema = z.strictObject({ confirm: z.literal(true) });
 export const parseRestoreInput = (value: unknown): boolean => restoreSchema.safeParse(value).success;
 
 export const parsePurgeInput = (value: unknown): boolean => purgeSchema.safeParse(value).success;
+
+const folderSchema = z.strictObject({
+  nameCt: base64UrlField,
+  nameIv: base64UrlField,
+  dataVersion: z.number().int().min(1),
+});
+
+const folderRenameSchema = folderSchema.extend({ rev: z.number().int().min(0) });
+
+const decodeFolderCiphertext = (value: string): string | null => {
+  try {
+    const bytes = fromBase64Url(value);
+    return bytes.length > 0 && bytes.length <= MAX_FOLDER_CIPHERTEXT_BYTES ? encodeBase64(bytes) : null;
+  } catch {
+    return null;
+  }
+};
+
+const decodeFolder = (data: z.infer<typeof folderSchema>): VaultFolderInput | null => {
+  const nameCt = decodeFolderCiphertext(data.nameCt);
+  const nameIv = decodeIv(data.nameIv);
+  return nameCt && nameIv ? { nameCt, nameIv, dataVersion: data.dataVersion } : null;
+};
+
+export const parseCreateFolderInput = (value: unknown): VaultFolderInput | null => {
+  const parsed = folderSchema.safeParse(value);
+  return parsed.success ? decodeFolder(parsed.data) : null;
+};
+
+export const parseRenameFolderInput = (value: unknown): (VaultFolderInput & { rev: number }) | null => {
+  const parsed = folderRenameSchema.safeParse(value);
+  if (!parsed.success) return null;
+  const { rev, ...folder } = parsed.data;
+  const decoded = decodeFolder(folder);
+  return decoded ? { ...decoded, rev } : null;
+};
 
 export const isVaultId = (value: string): boolean => value.length > 0 && value.length <= 64;

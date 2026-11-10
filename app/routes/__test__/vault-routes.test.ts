@@ -142,7 +142,7 @@ describe('vault sync route', () => {
     const first = await invoke(syncLoader, '/api/vault?since=0', { cookie });
     const firstBody = first.data as { items: unknown[]; serverRev: number; nextCursor?: string };
     expect(firstBody.items).toHaveLength(500);
-    expect(firstBody.serverRev).toBe(500);
+    expect(firstBody.serverRev).toBe(501);
     expect(firstBody.nextCursor).toBeDefined();
 
     const second = await invoke(

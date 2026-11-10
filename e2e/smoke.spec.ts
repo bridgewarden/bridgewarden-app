@@ -44,3 +44,7 @@ test('theme cookie applies the dark class after a reload', async ({ baseURL, con
 
   await expect(page.locator('html')).toHaveClass(/dark/);
 });
+
+test('probe artifact upload', () => {
+  expect(true).toBe(false);
+});

@@ -161,6 +161,12 @@ outbox flushes in order, stops on the first network/5xx failure, rolls back opti
 and emits conflict/error events for the UI. Offline reload still requires the PWA/service worker
 work.
 
+The header lock action discards the in-memory vault key while keeping ciphertext, wrapped key
+material, and the session. A reload of a protected route starts locked; entering the master
+password unwraps the cached key locally without a server request. If cached material is missing or
+expired, the overlay offers sign-out and login instead. Five failed local unlock attempts force a
+sign-out and wipe. Idle timeout, configurable auto-lock, and visibility locking are a separate change.
+
 ## User management
 
 Administrators can open `/admin/users` to list accounts, create setup invitations, change roles,

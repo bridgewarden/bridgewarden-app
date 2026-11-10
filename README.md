@@ -130,7 +130,7 @@ recovery key is regenerated; there is no email or escrow fallback.
 ## Vault API
 
 The authenticated vault API stores ciphertext only. `GET /api/vault?since=<rev>` returns items and
-read-only folders newer than the watermark, including tombstones, with `serverRev` and an opaque
+folders newer than the watermark, including tombstones, with `serverRev` and an opaque
 `nextCursor` when the 500-row page is truncated. `POST /api/vault/items` creates an encrypted item
 with a new global revision; `PATCH /api/vault/items/:id` requires the current `rev` and returns 409
 with the server row on a mismatch. Every query is scoped to the session user, foreign ids return 404,
@@ -139,8 +139,13 @@ and bodies are limited to 256KB with ciphertext capped at 64KB. Items can be sof
 `POST /api/vault/items/:id/purge` plus `{ "confirm": true }`. Deletes and restores are idempotent.
 A daily cron at 03:00 purges tombstones older than 30 days in batches of 1000.
 
-Vault mutations are IP rate-limited and return `Cache-Control: no-store`. Folder writes and the
-trash UI are separate follow-up changes.
+Folders are ciphertext-only. `GET /api/folders` lists active folders, `POST /api/folders` creates
+one, `PATCH /api/folders/:id` renames with the current `rev`, and `DELETE /api/folders/:id`
+soft-deletes it. Folder delete marks a tombstone, detaches contained items with the same revision,
+and the tombstone appears in the next sync. Folder tombstones are retained for offline devices.
+
+Vault and folder reads and mutations are IP rate-limited and return `Cache-Control: no-store`. The
+trash UI is a separate follow-up change.
 
 ## User management
 

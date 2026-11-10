@@ -10,6 +10,8 @@ import { cloudflareContext } from '../../lib/.server/context';
 import { createSession, destroySessionToken, type CreatedSession } from '../../lib/.server/session';
 import { action as createAction } from '../api.vault.items';
 import { action as updateAction } from '../api.vault.items.$id';
+import { action as purgeAction } from '../api.vault.items.$id.purge';
+import { action as restoreAction } from '../api.vault.items.$id.restore';
 import { loader as syncLoader } from '../api.vault';
 
 const context = new RouterContextProvider();
@@ -18,6 +20,7 @@ context.set(cloudflareContext, {
     APP_ORIGIN: 'https://app.example',
     APP_ENV: 'production',
     RATE_LIMITER_IP: env.RATE_LIMITER_IP,
+    RATE_LIMITER_IDENTITY: env.RATE_LIMITER_IDENTITY,
   }),
   ctx: {} as ExecutionContext,
 });
@@ -77,6 +80,7 @@ const headersOf = (result: ActionResult) => new Headers(result.init?.headers);
 beforeEach(async () => {
   vi.restoreAllMocks();
   vi.spyOn(env.RATE_LIMITER_IP, 'limit').mockResolvedValue({ success: true });
+  vi.spyOn(env.RATE_LIMITER_IDENTITY, 'limit').mockResolvedValue({ success: true });
   await resetDatabase();
   sessions.length = 0;
 });
@@ -369,5 +373,179 @@ describe('vault item update route', () => {
         }),
       ),
     ).toBe(400);
+  });
+});
+
+describe('vault trash routes', () => {
+  const makeItem = async (cookie: string) => {
+    const created = await invoke(createAction, '/api/vault/items', {
+      method: 'POST',
+      cookie,
+      body: itemBody(),
+    });
+    return (created.data as { item: { id: string; rev: number } }).item;
+  };
+
+  it('deletes, lists a tombstone, restores, and purges', async () => {
+    const userId = await createTestUser();
+    const cookie = await cookieFor(userId);
+    const item = await makeItem(cookie);
+
+    expect(
+      statusOf(
+        await invoke(updateAction, `/api/vault/items/${item.id}`, {
+          method: 'DELETE',
+          params: { id: item.id },
+        }),
+      ),
+    ).toBe(401);
+
+    const deleted = await invoke(updateAction, `/api/vault/items/${item.id}`, {
+      method: 'DELETE',
+      cookie,
+      params: { id: item.id },
+    });
+    expect(statusOf(deleted)).toBe(200);
+    expect((deleted.data as { item: { deletedAt: number | null } }).item.deletedAt).not.toBeNull();
+    expect(headersOf(deleted).get('cache-control')).toBe('no-store');
+
+    const sync = await invoke(syncLoader, '/api/vault?since=0', { cookie });
+    expect(
+      (sync.data as { items: Array<{ id: string; deletedAt: number | null }> }).items.find((row) => row.id === item.id)
+        ?.deletedAt,
+    ).not.toBeNull();
+
+    const restored = await invoke(restoreAction, `/api/vault/items/${item.id}/restore`, {
+      method: 'POST',
+      cookie,
+      params: { id: item.id },
+      body: {},
+    });
+    expect(statusOf(restored)).toBe(200);
+    expect((restored.data as { item: { deletedAt: number | null } }).item.deletedAt).toBeNull();
+
+    await invoke(updateAction, `/api/vault/items/${item.id}`, {
+      method: 'DELETE',
+      cookie,
+      params: { id: item.id },
+    });
+    expect(
+      statusOf(
+        await invoke(purgeAction, `/api/vault/items/${item.id}/purge`, {
+          method: 'POST',
+          cookie,
+          params: { id: item.id },
+          body: { confirm: false },
+        }),
+      ),
+    ).toBe(400);
+    expect(
+      statusOf(
+        await invoke(purgeAction, `/api/vault/items/${item.id}/purge`, {
+          method: 'POST',
+          cookie,
+          params: { id: item.id },
+          body: { confirm: true },
+        }),
+      ),
+    ).toBe(200);
+    expect(
+      statusOf(
+        await invoke(purgeAction, `/api/vault/items/${item.id}/purge`, {
+          method: 'POST',
+          cookie,
+          params: { id: item.id },
+          body: { confirm: true },
+        }),
+      ),
+    ).toBe(200);
+  });
+
+  it('rejects foreign origins, foreign items, and unsupported methods', async () => {
+    const userId = await createTestUser();
+    const other = await createTestUser();
+    const cookie = await cookieFor(userId);
+    const otherCookie = await cookieFor(other);
+    const item = await makeItem(cookie);
+
+    expect(
+      statusOf(
+        await invoke(updateAction, `/api/vault/items/${item.id}`, {
+          method: 'DELETE',
+          cookie,
+          params: { id: item.id },
+          headers: { origin: 'https://evil.example' },
+        }),
+      ),
+    ).toBe(403);
+
+    expect(
+      statusOf(
+        await invoke(updateAction, `/api/vault/items/${item.id}`, {
+          method: 'DELETE',
+          cookie: otherCookie,
+          params: { id: item.id },
+        }),
+      ),
+    ).toBe(404);
+
+    expect(
+      statusOf(
+        await invoke(restoreAction, `/api/vault/items/${item.id}/restore`, {
+          method: 'PATCH',
+          cookie,
+          params: { id: item.id },
+          body: {},
+        }),
+      ),
+    ).toBe(405);
+
+    expect(
+      statusOf(
+        await invoke(purgeAction, `/api/vault/items/${item.id}/purge`, {
+          method: 'POST',
+          cookie,
+          params: { id: item.id },
+          body: { confirm: true },
+          headers: { origin: 'https://evil.example' },
+        }),
+      ),
+    ).toBe(403);
+    expect(
+      statusOf(
+        await invoke(restoreAction, `/api/vault/items/${item.id}/restore`, {
+          method: 'POST',
+          cookie,
+          params: { id: item.id },
+          body: {},
+          headers: { origin: 'https://evil.example' },
+        }),
+      ),
+    ).toBe(403);
+
+    await invoke(updateAction, `/api/vault/items/${item.id}`, {
+      method: 'DELETE',
+      cookie,
+      params: { id: item.id },
+    });
+    expect(
+      statusOf(
+        await invoke(purgeAction, `/api/vault/items/${item.id}/purge`, {
+          method: 'PATCH',
+          cookie,
+          params: { id: item.id },
+          body: { confirm: true },
+        }),
+      ),
+    ).toBe(405);
+    expect(
+      statusOf(
+        await invoke(restoreAction, `/api/vault/items/${item.id}/restore`, {
+          method: 'POST',
+          params: { id: item.id },
+          body: {},
+        }),
+      ),
+    ).toBe(401);
   });
 });

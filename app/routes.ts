@@ -22,6 +22,8 @@ export default [
   route('api/vault', 'routes/api.vault.ts'),
   route('api/vault/items', 'routes/api.vault.items.ts'),
   route('api/vault/items/:id', 'routes/api.vault.items.$id.ts'),
+  route('api/vault/items/:id/restore', 'routes/api.vault.items.$id.restore.ts'),
+  route('api/vault/items/:id/purge', 'routes/api.vault.items.$id.purge.ts'),
   layout('routes/protected.tsx', [
     route('app', 'routes/vault-list.tsx'),
     route('app/trash', 'routes/vault-trash.tsx'),

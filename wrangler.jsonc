@@ -7,6 +7,9 @@
   "name": "bridgewarden",
   "compatibility_date": "2026-11-04",
   "compatibility_flags": ["nodejs_compat"],
+  "triggers": {
+    "crons": ["0 3 * * *"],
+  },
   "main": "./workers/app.ts",
   "upload_source_maps": true,
   "observability": {

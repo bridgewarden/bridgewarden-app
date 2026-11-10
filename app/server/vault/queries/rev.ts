@@ -22,3 +22,37 @@ export const incrementVaultRevIfItem = (
          )`,
     )
     .bind(userId, itemId, userId, itemRev);
+
+export const incrementVaultRevIfItemLive = (db: D1Database, userId: string, itemId: string): D1PreparedStatement =>
+  db
+    .prepare(
+      `UPDATE users SET vault_rev = vault_rev + 1
+       WHERE id = ?
+         AND EXISTS (
+           SELECT 1 FROM vault_items WHERE id = ? AND user_id = ? AND deleted_at IS NULL
+         )`,
+    )
+    .bind(userId, itemId, userId);
+
+export const incrementVaultRevIfItemDeleted = (db: D1Database, userId: string, itemId: string): D1PreparedStatement =>
+  db
+    .prepare(
+      `UPDATE users SET vault_rev = vault_rev + 1
+       WHERE id = ?
+         AND EXISTS (
+           SELECT 1 FROM vault_items WHERE id = ? AND user_id = ? AND deleted_at IS NOT NULL
+         )`,
+    )
+    .bind(userId, itemId, userId);
+
+export const incrementVaultRevIfItemUnpurged = (db: D1Database, userId: string, itemId: string): D1PreparedStatement =>
+  db
+    .prepare(
+      `UPDATE users SET vault_rev = vault_rev + 1
+       WHERE id = ?
+         AND EXISTS (
+           SELECT 1 FROM vault_items
+           WHERE id = ? AND user_id = ? AND deleted_at IS NOT NULL AND data_ct <> ''
+         )`,
+    )
+    .bind(userId, itemId, userId);

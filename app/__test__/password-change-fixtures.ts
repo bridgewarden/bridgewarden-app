@@ -14,13 +14,20 @@ type PasswordFixtureOptions = {
 
 export type PasswordFixture = {
   userId: string;
+  email: string;
   setup: SetupKeyMaterial;
 };
 
 export const createPasswordFixture = async (options: PasswordFixtureOptions = {}): Promise<PasswordFixture> => {
   const setup = await generateSetupKeyMaterial(CURRENT_PASSWORD);
   const serverHash = await deriveServerAuthHash(fromBase64Url(setup.authHash), generateServerSalt(), TEST_PEPPER);
+  const recoveryHash = await deriveServerAuthHash(
+    fromBase64Url(setup.recoveryAuthKey),
+    generateServerSalt(),
+    TEST_PEPPER,
+  );
   const id = crypto.randomUUID();
+  const email = `password-${id}@example.com`;
   const now = Date.now();
   const testEnvironment = testEnv();
 
@@ -28,12 +35,13 @@ export const createPasswordFixture = async (options: PasswordFixtureOptions = {}
     `INSERT INTO users (
       id, email, display_name, auth_hash, server_salt, kdf_alg, kdf_iterations, kdf_salt,
       vault_key_wrapped, vault_key_wrap_iv, recovery_key_wrapped, recovery_key_wrap_iv,
+      recovery_auth_hash, recovery_server_salt,
       role, status, vault_rev, session_version, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
     .bind(
       id,
-      `password-${id}@example.com`,
+      email,
       'Password Fixture',
       serverHash.authHash,
       serverHash.serverSalt,
@@ -44,6 +52,8 @@ export const createPasswordFixture = async (options: PasswordFixtureOptions = {}
       base64UrlToStandard(setup.vaultKeyWrapIv),
       base64UrlToStandard(setup.recoveryKeyWrapped),
       base64UrlToStandard(setup.recoveryKeyWrapIv),
+      recoveryHash.authHash,
+      recoveryHash.serverSalt,
       'admin',
       options.status ?? 'active',
       0,
@@ -53,7 +63,7 @@ export const createPasswordFixture = async (options: PasswordFixtureOptions = {}
     )
     .run();
 
-  return { userId: id, setup };
+  return { userId: id, email, setup };
 };
 
 export const createFixtureSession = (userId: string, ver = 0): Promise<CreatedSession> =>

@@ -127,6 +127,16 @@ separate audit marker when that happens. The old recovery key is burned: it no l
 the proof. Accounts created before recovery verifiers were added cannot use this flow until their
 recovery key is regenerated; there is no email or escrow fallback.
 
+## Vault API
+
+The authenticated vault API stores ciphertext only. `GET /api/vault?since=<rev>` returns items and
+read-only folders newer than the watermark, including tombstones, with `serverRev` and an opaque
+`nextCursor` when the 500-row page is truncated. `POST /api/vault/items` creates an encrypted item
+with a new global revision; `PATCH /api/vault/items/:id` requires the current `rev` and returns 409
+with the server row on a mismatch. Every query is scoped to the session user, foreign ids return 404,
+and bodies are limited to 256KB with ciphertext capped at 64KB. Vault mutations are IP rate-limited and return `Cache-Control: no-store`. Trash, purge, and folder
+writes are separate follow-up changes.
+
 ## User management
 
 Administrators can open `/admin/users` to list accounts, create setup invitations, change roles,

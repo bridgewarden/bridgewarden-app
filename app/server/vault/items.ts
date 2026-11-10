@@ -1,10 +1,14 @@
-import type { VaultItemInput } from './types';
+import type { VaultCreateItemInput, VaultItemInput } from './types';
 import { createVaultQueries } from './queries';
 import type { VaultItemRow } from './queries/items';
 import { toItemResponse, type VaultItemResponse } from './transport';
 
 export type CreateItemResult =
-  { status: 'created'; item: VaultItemResponse } | { status: 'not-found' } | { status: 'server-error' };
+  | { status: 'created'; item: VaultItemResponse }
+  | { status: 'existing'; item: VaultItemResponse }
+  | { status: 'not-found' }
+  | { status: 'conflict' }
+  | { status: 'server-error' };
 
 export type UpdateItemResult =
   | { status: 'ok'; item: VaultItemResponse }
@@ -15,20 +19,28 @@ export type UpdateItemResult =
 const isForeignKeyError = (error: unknown): boolean =>
   error instanceof Error && /FOREIGN KEY|constraint failed/i.test(error.message);
 
-export const createVaultItem = async (env: Env, userId: string, input: VaultItemInput): Promise<CreateItemResult> => {
+export const createVaultItem = async (
+  env: Env,
+  userId: string,
+  input: VaultCreateItemInput,
+): Promise<CreateItemResult> => {
   const vault = createVaultQueries(env);
   if (input.folderId && !(await vault.findOwnedFolder(userId, input.folderId))) return { status: 'not-found' };
 
-  const id = crypto.randomUUID();
+  const id = input.id ?? crypto.randomUUID();
   const now = Date.now();
 
   let inserted: VaultItemRow | undefined;
   try {
     const results = await vault.batchCreateItem(id, userId, input, now);
     if (results[1]?.meta.changes !== 1) {
-      return input.folderId && !(await vault.findOwnedFolder(userId, input.folderId))
-        ? { status: 'not-found' }
-        : { status: 'server-error' };
+      const existing = await vault.findOwnedItem(userId, id);
+      if (existing) {
+        return existing.deleted_at === null && existing.data_ct !== ''
+          ? { status: 'existing', item: toItemResponse(existing) }
+          : { status: 'conflict' };
+      }
+      return { status: 'not-found' };
     }
     inserted = results[1]?.results?.[0] as VaultItemRow | undefined;
   } catch (error) {

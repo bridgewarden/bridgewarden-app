@@ -31,7 +31,7 @@ const itemInput = (folderId: string | null): VaultItemInput => ({
 
 const makeFolder = async (userId: string) => {
   const result = await createFolder(testEnv(), userId, folderInput());
-  if (result.status !== 'ok') throw new Error('folder create failed');
+  if (result.status !== 'created') throw new Error('folder create failed');
   return result.folder;
 };
 
@@ -121,6 +121,19 @@ describe('folder use cases', () => {
     const delta = await readVaultDelta(testEnv(), other, 0, null);
     expect(delta.status).toBe('ok');
     if (delta.status === 'ok') expect(delta.folders).toHaveLength(0);
+  });
+
+  it('replays an owned client folder id and caps without burning a revision', async () => {
+    const userId = await createTestUser();
+    const id = crypto.randomUUID();
+    const created = await createFolder(testEnv(), userId, { ...folderInput(), id });
+    expect(created.status).toBe('created');
+    if (created.status !== 'created') throw new Error('folder create failed');
+    const rev = (await findVaultRev(env.DB, userId))?.vault_rev;
+
+    const replay = await createFolder(testEnv(), userId, { ...folderInput(), id });
+    expect(replay).toMatchObject({ status: 'existing', folder: { id, rev } });
+    expect((await findVaultRev(env.DB, userId))?.vault_rev).toBe(rev);
   });
 
   it('rejects foreign operations and deleted folder references', async () => {

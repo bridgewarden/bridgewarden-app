@@ -211,6 +211,31 @@ describe('folder routes', () => {
 });
 
 describe('folder route edge cases', () => {
+  it('replays an owned client folder id without a new revision', async () => {
+    const userId = await createTestUser();
+    const cookie = await cookieFor(userId);
+    const id = crypto.randomUUID();
+
+    const created = await invoke(createAction, '/api/folders', {
+      method: 'POST',
+      cookie,
+      body: folderBody({ id }),
+    });
+    expect(statusOf(created)).toBe(201);
+    const folder = (created.data as { folder: { id: string; rev: number } }).folder;
+
+    const replay = await invoke(createAction, '/api/folders', {
+      method: 'POST',
+      cookie,
+      body: folderBody({ id }),
+    });
+    expect(statusOf(replay)).toBe(200);
+    expect((replay.data as { folder: { id: string; rev: number } }).folder).toMatchObject({
+      id,
+      rev: folder.rev,
+    });
+  });
+
   it('rejects deleted-folder rename, missing auth, wrong methods, rate limits, and invalid fields', async () => {
     const userId = await createTestUser();
     const cookie = await cookieFor(userId);

@@ -3,7 +3,13 @@ import { z } from 'zod';
 import { fromBase64Url } from '../../lib/base64-url';
 import { IV_BYTES } from '../../lib/crypto/contract';
 import { encodeBase64 } from '../../lib/crypto/encoding';
-import { MAX_FOLDER_CIPHERTEXT_BYTES, type VaultFolderInput, type VaultItemInput } from './types';
+import {
+  MAX_FOLDER_CIPHERTEXT_BYTES,
+  type VaultCreateFolderInput,
+  type VaultCreateItemInput,
+  type VaultFolderInput,
+  type VaultItemInput,
+} from './types';
 
 const MAX_CIPHERTEXT_BYTES = 64 * 1024;
 
@@ -18,6 +24,7 @@ const itemSchema = z.strictObject({
   dataVersion: z.number().int().min(1),
 });
 
+const createSchema = itemSchema.extend({ id: z.uuid().optional() });
 const updateSchema = itemSchema.extend({ rev: z.number().int().min(0) });
 
 const decodeCiphertext = (value: string): string | null => {
@@ -53,9 +60,12 @@ const decodeItem = (data: z.infer<typeof itemSchema>): VaultItemInput | null => 
   };
 };
 
-export const parseCreateItemInput = (value: unknown): VaultItemInput | null => {
-  const parsed = itemSchema.safeParse(value);
-  return parsed.success ? decodeItem(parsed.data) : null;
+export const parseCreateItemInput = (value: unknown): VaultCreateItemInput | null => {
+  const parsed = createSchema.safeParse(value);
+  if (!parsed.success) return null;
+  const { id, ...itemValue } = parsed.data;
+  const item = decodeItem(itemValue);
+  return item ? { ...item, ...(id ? { id } : {}) } : null;
 };
 
 export const parseUpdateItemInput = (value: unknown): (VaultItemInput & { rev: number }) | null => {
@@ -81,6 +91,7 @@ const folderSchema = z.strictObject({
   dataVersion: z.number().int().min(1),
 });
 
+const folderCreateSchema = folderSchema.extend({ id: z.uuid().optional() });
 const folderRenameSchema = folderSchema.extend({ rev: z.number().int().min(0) });
 
 const decodeFolderCiphertext = (value: string): string | null => {
@@ -98,9 +109,12 @@ const decodeFolder = (data: z.infer<typeof folderSchema>): VaultFolderInput | nu
   return nameCt && nameIv ? { nameCt, nameIv, dataVersion: data.dataVersion } : null;
 };
 
-export const parseCreateFolderInput = (value: unknown): VaultFolderInput | null => {
-  const parsed = folderSchema.safeParse(value);
-  return parsed.success ? decodeFolder(parsed.data) : null;
+export const parseCreateFolderInput = (value: unknown): VaultCreateFolderInput | null => {
+  const parsed = folderCreateSchema.safeParse(value);
+  if (!parsed.success) return null;
+  const { id, ...folderValue } = parsed.data;
+  const folder = decodeFolder(folderValue);
+  return folder ? { ...folder, id } : null;
 };
 
 export const parseRenameFolderInput = (value: unknown): (VaultFolderInput & { rev: number }) | null => {

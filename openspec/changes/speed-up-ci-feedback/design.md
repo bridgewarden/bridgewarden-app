@@ -72,6 +72,8 @@ Generate the same `.dev.vars` content as today, immediately before E2E. Upload `
 3. If the container job is not faster or fails on sandbox/user permissions, revert to a cached-browser variant in a follow-up rather than blocking application work.
 4. Rollback is reverting `.github/workflows/ci.yml`; it has no runtime effect.
 
+Measured result: run `42759706364` completed `quality` in 1m58s and `e2e` in 1m55s, both passing. The previous single job took 8m06s.
+
 ## Open Questions
 
 None. The container image's Node.js version and the project's Node requirement were verified against the Playwright 1.64.1 Dockerfile.

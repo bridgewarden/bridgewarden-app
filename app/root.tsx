@@ -38,7 +38,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   return { theme: readThemeCookie(request.headers.get('cookie')), user, twoFactorEnabled };
 }
 
-export const headers = () => ({ 'Cache-Control': 'no-store' });
+export const headers = () => ({
+  'Cache-Control': 'no-store',
+  'Content-Security-Policy': "frame-ancestors 'none'",
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'no-referrer',
+});
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const data = useRouteLoaderData<typeof loader>('root');

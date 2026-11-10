@@ -9,6 +9,8 @@ import { Button } from '~/components/ui/button';
 import { Toaster } from '~/components/ui/sonner';
 import { t } from '~/lib/i18n/en';
 import type { Theme } from '~/lib/theme';
+import { wipeVaultDb } from '~/lib/vault/local-db';
+import { syncVault } from '~/lib/vault/sync';
 import { clearVaultKey } from '~/lib/vault/key-store';
 
 type AppUser = {
@@ -28,6 +30,11 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
   const fetcher = useFetcher<{ ok: boolean; error?: string }>();
   const navigate = useNavigate();
   const wasSubmitting = useRef(false);
+  const userEmail = user?.email;
+
+  useEffect(() => {
+    if (userEmail) void syncVault();
+  }, [userEmail]);
 
   useEffect(() => {
     if (fetcher.state !== 'idle') {
@@ -37,7 +44,9 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
 
     if (fetcher.data?.ok) {
       clearVaultKey();
-      navigate('/login', { replace: true });
+      void wipeVaultDb()
+        .catch(() => undefined)
+        .finally(() => navigate('/login', { replace: true }));
       return;
     }
 

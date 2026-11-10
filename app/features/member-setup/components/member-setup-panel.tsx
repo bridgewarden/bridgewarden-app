@@ -10,7 +10,7 @@ type MemberSetupPanelProps = {
 };
 
 export const MemberSetupPanel = ({ invitation }: MemberSetupPanelProps) => {
-  const flow = useMemberSetup();
+  const flow = useMemberSetup(invitation?.email ?? '');
   if (!invitation) {
     return (
       <section className="mx-auto w-full max-w-md space-y-4">

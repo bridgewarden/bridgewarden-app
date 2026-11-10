@@ -31,6 +31,7 @@ export const LoginCredentialsForm = ({ credentials, errors, busy, actions }: Log
         autoComplete="email"
         maxLength={254}
         placeholder={t('login.emailPlaceholder')}
+        disabled={busy}
         value={credentials.email}
         aria-invalid={errors.field !== null}
         aria-describedby={errors.field ? 'login-field-error' : undefined}
@@ -45,6 +46,7 @@ export const LoginCredentialsForm = ({ credentials, errors, busy, actions }: Log
         autoComplete="current-password"
         spellCheck={false}
         placeholder={t('login.passwordPlaceholder')}
+        disabled={busy}
         value={credentials.password}
         aria-invalid={errors.field !== null}
         aria-describedby={errors.field ? 'login-field-error' : undefined}

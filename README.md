@@ -147,6 +147,17 @@ and the tombstone appears in the next sync. Folder tombstones are retained for o
 Vault and folder reads and mutations are IP rate-limited and return `Cache-Control: no-store`. The
 trash UI is a separate follow-up change.
 
+## Local vault cache
+
+After unlock, the browser caches ciphertext items and folders plus wrapped vault-key material in
+IndexedDB (`bridgewarden-vault`). Sync resumes from the stored `serverRev`/cursor and applies
+tombstones; the watermark advances only after the last page succeeds. Wrapped key material expires after 30 days. The unwrapped vault key stays
+in a module-scoped variable and is never persisted. Logout and account switch wipe every store.
+When IndexedDB is unavailable the app runs online-only and reports degraded mode.
+
+Outbox/offline mutations and offline reload are separate changes; offline reload also requires the
+PWA/service worker work.
+
 ## User management
 
 Administrators can open `/admin/users` to list accounts, create setup invitations, change roles,

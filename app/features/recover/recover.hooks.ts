@@ -3,10 +3,16 @@ import { useFetcher } from 'react-router';
 
 import { prepareRecoveryReset } from '../../lib/crypto/recovery-reset';
 import { isMasterPasswordAcceptable } from '../../lib/password-policy';
+import { storeKeyMaterial } from '../../lib/vault/key-material';
 import { setVaultKey } from '../../lib/vault/key-store';
+import type { VaultKeyMaterial } from '../../lib/vault/types';
 import type { RecoveryError, RecoveryLookupResponse, RecoveryResetResponse, RecoveryStep } from './recover.types';
 
-type Prepared = { vaultKey: Uint8Array; recoveryKey: string };
+type Prepared = {
+  vaultKey: Uint8Array;
+  recoveryKey: string;
+  material: VaultKeyMaterial;
+};
 
 export const useRecoveryFlow = () => {
   const lookupFetcher = useFetcher<RecoveryLookupResponse>();
@@ -56,6 +62,7 @@ export const useRecoveryFlow = () => {
     preparedRef.current = null;
     if (prepared) {
       setVaultKey(prepared.vaultKey);
+      void storeKeyMaterial(email, prepared.material).catch(() => undefined);
       prepared.vaultKey.fill(0);
       queueMicrotask(() => {
         setNewRecoveryKey(prepared.recoveryKey);
@@ -67,7 +74,7 @@ export const useRecoveryFlow = () => {
         setStep('success');
       });
     }
-  }, [resetFetcher.data]);
+  }, [email, resetFetcher.data]);
 
   const submitEmail = () => {
     setError(null);
@@ -86,7 +93,11 @@ export const useRecoveryFlow = () => {
 
     try {
       const prepared = await prepareRecoveryReset(recoveryKey, wrapper, password);
-      preparedRef.current = { vaultKey: prepared.vaultKey, recoveryKey: prepared.recoveryKey };
+      preparedRef.current = {
+        vaultKey: prepared.vaultKey,
+        recoveryKey: prepared.recoveryKey,
+        material: prepared.request,
+      };
       resetFetcher.submit(
         { email, ...prepared.request },
         { method: 'post', action: '/auth/recover/reset', encType: 'application/json' },

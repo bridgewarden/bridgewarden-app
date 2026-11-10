@@ -4,9 +4,10 @@ import { useFetcher, useNavigate, useSearchParams } from 'react-router';
 import { generateSetupKeyMaterial, type SetupTransportMaterial } from '../../lib/crypto/setup-keys';
 import { normalizeRecoveryKey } from '../../lib/crypto/recovery';
 import { MIN_MASTER_PASSWORD_LENGTH } from '../../lib/password-policy';
+import { storeKeyMaterial } from '../../lib/vault/key-material';
 import { setVaultKey, clearVaultKey } from '../../lib/vault/key-store';
 
-export const useMemberSetup = () => {
+export const useMemberSetup = (email: string) => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') ?? '';
   const navigate = useNavigate();
@@ -20,9 +21,14 @@ export const useMemberSetup = () => {
   const [deriving, setDeriving] = useState(false);
 
   useEffect(() => {
-    if (fetcher.data?.ok) navigate('/app', { replace: true });
+    if (fetcher.data?.ok) {
+      if (material) {
+        void storeKeyMaterial(email, material).catch(() => undefined);
+      }
+      navigate('/app', { replace: true });
+    }
     if (fetcher.data && !fetcher.data.ok) clearVaultKey();
-  }, [fetcher.data, navigate]);
+  }, [email, fetcher.data, material, navigate]);
 
   const generate = async () => {
     if (deriving) return;

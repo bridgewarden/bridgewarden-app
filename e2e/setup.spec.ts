@@ -94,6 +94,41 @@ test('creates the first admin through the wizard and locks setup', async ({ page
   await expect(page).toHaveURL(/\/app$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Vault');
 
+  await expect
+    .poll(async () =>
+      page.evaluate(async () => {
+        const db = await new Promise<IDBDatabase>((resolve, reject) => {
+          const request = indexedDB.open('bridgewarden-vault');
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+        const record = await new Promise<Record<string, unknown> | undefined>((resolve, reject) => {
+          const request = db.transaction('keys').objectStore('keys').get('active');
+          request.onsuccess = () => resolve(request.result as Record<string, unknown> | undefined);
+          request.onerror = () => reject(request.error);
+        });
+        db.close();
+        return record;
+      }),
+    )
+    .toMatchObject({ email: E2E_ADMIN.email });
+
+  const cachedKeys = await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open('bridgewarden-vault');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const values = await new Promise<unknown[]>((resolve, reject) => {
+      const request = db.transaction('keys').objectStore('keys').getAll();
+      request.onsuccess = () => resolve(request.result as unknown[]);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+    return values;
+  });
+  expect(JSON.stringify(cachedKeys)).not.toContain(E2E_ADMIN.password);
+
   const cookies = await page.context().cookies();
   const session = cookies.find((cookie) => cookie.name === 'bw_session');
   expect(session).toBeDefined();
@@ -107,7 +142,7 @@ test('creates the first admin through the wizard and locks setup', async ({ page
   }));
   expect(storage.local).toEqual([]);
   expect(storage.session).toEqual([]);
-  expect(storage.databases).toEqual([]);
+  expect(storage.databases).toEqual(['bridgewarden-vault']);
   expect(storage.cookie).not.toMatch(/vault|recovery/i);
 
   await page.reload();

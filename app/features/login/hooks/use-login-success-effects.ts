@@ -3,6 +3,7 @@ import type { NavigateFunction } from 'react-router';
 
 import { unwrapLoginVault } from '~/lib/crypto/login-keys';
 import { t } from '~/lib/i18n/en';
+import { storeKeyMaterial } from '~/lib/vault/key-material';
 import { clearVaultKey, setVaultKey } from '~/lib/vault/key-store';
 
 import type { ChallengeResponse, LoginResponse } from '../login.types';
@@ -11,7 +12,7 @@ type LoginSuccessEffectsOptions = {
   login: { data: LoginResponse | undefined; state: string };
   challenge: { data: ChallengeResponse | undefined; state: string };
   navigation: { navigate: NavigateFunction; next: string };
-  refs: { wrapKeyRef: MutableRefObject<Uint8Array | null> };
+  refs: { wrapKeyRef: MutableRefObject<Uint8Array | null>; emailRef: MutableRefObject<string> };
   set: {
     setFlowActive: Dispatch<SetStateAction<boolean>>;
     setFormError: Dispatch<SetStateAction<string | null>>;
@@ -24,7 +25,7 @@ type LoginSuccessEffectsOptions = {
 export const useLoginSuccessEffects = (options: LoginSuccessEffectsOptions) => {
   const { login, challenge, navigation, refs, set } = options;
   const { navigate, next } = navigation;
-  const { wrapKeyRef } = refs;
+  const { wrapKeyRef, emailRef } = refs;
   const { setFlowActive, setFormError, setChallengeToken, setChallengeCode, setChallengeError } = set;
   const handledLogin = useRef<LoginResponse | null>(null);
   const handledChallenge = useRef<ChallengeResponse | null>(null);
@@ -69,6 +70,7 @@ export const useLoginSuccessEffects = (options: LoginSuccessEffectsOptions) => {
       try {
         const vaultKey = await unwrapLoginVault(data.vaultKeyWrapped, data.vaultKeyWrapIv, wrapKey);
         setVaultKey(vaultKey);
+        await storeKeyMaterial(emailRef.current, data).catch(() => undefined);
         navigate(next, { replace: true });
       } catch {
         clearVaultKey();
@@ -82,6 +84,7 @@ export const useLoginSuccessEffects = (options: LoginSuccessEffectsOptions) => {
   }, [
     login.data,
     login.state,
+    emailRef,
     navigate,
     next,
     wrapKeyRef,
@@ -130,6 +133,7 @@ export const useLoginSuccessEffects = (options: LoginSuccessEffectsOptions) => {
       try {
         const vaultKey = await unwrapLoginVault(data.vaultKeyWrapped, data.vaultKeyWrapIv, wrapKey);
         setVaultKey(vaultKey);
+        await storeKeyMaterial(emailRef.current, data).catch(() => undefined);
         navigate(next, { replace: true });
       } catch {
         clearVaultKey();
@@ -143,6 +147,7 @@ export const useLoginSuccessEffects = (options: LoginSuccessEffectsOptions) => {
   }, [
     challenge.data,
     challenge.state,
+    emailRef,
     navigate,
     next,
     wrapKeyRef,

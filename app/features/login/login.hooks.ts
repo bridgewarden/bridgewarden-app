@@ -35,7 +35,7 @@ export const useLoginFlow = () => {
     login: { data: login.data, state: login.state },
     challenge: { data: challenge.data, state: challenge.state },
     navigation: { navigate, next },
-    refs: { wrapKeyRef },
+    refs: { wrapKeyRef, emailRef },
     set: { setFlowActive, setFormError, setChallengeToken, setChallengeCode, setChallengeError },
   });
 

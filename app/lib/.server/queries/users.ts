@@ -111,6 +111,65 @@ export const resetLoginFailures = (db: D1Database, userId: string, now: number):
     .bind(now, userId)
     .run();
 
+export type AdminUserRow = {
+  id: string;
+  email: string;
+  displayName: string | null;
+  role: 'admin' | 'member';
+  status: 'active' | 'disabled';
+  twoFactorEnabled: number;
+  createdAt: number;
+};
+
+export const listAdminUsers = (db: D1Database, limit: number): Promise<AdminUserRow[]> =>
+  db
+    .prepare(
+      `SELECT u.id, u.email, u.display_name AS displayName, u.role, u.status,
+        COALESCE(t.enabled, 0) AS twoFactorEnabled, u.created_at AS createdAt
+       FROM users u LEFT JOIN user_2fa t ON t.user_id = u.id
+       ORDER BY u.created_at ASC LIMIT ?`,
+    )
+    .bind(limit)
+    .all<AdminUserRow>()
+    .then((result) => result.results ?? []);
+
+export const findUserByEmail = (db: D1Database, email: string): Promise<{ id: string } | null> =>
+  db.prepare('SELECT id FROM users WHERE email = ?').bind(email).first<{ id: string }>();
+
+export const disableUserGuarded = (db: D1Database, id: string, now: number): Promise<D1Result> =>
+  db
+    .prepare(
+      `UPDATE users SET status = 'disabled', session_version = session_version + 1, updated_at = ?
+       WHERE id = ? AND (
+         role != 'admin' OR (SELECT COUNT(*) FROM users WHERE role = 'admin' AND status = 'active') > 1
+       )`,
+    )
+    .bind(now, id)
+    .run();
+
+export const enableUser = (db: D1Database, id: string, now: number): Promise<D1Result> =>
+  db.prepare("UPDATE users SET status = 'active', updated_at = ? WHERE id = ?").bind(now, id).run();
+
+export const revokeUserSessions = (db: D1Database, id: string, now: number): Promise<D1Result> =>
+  db.prepare('UPDATE users SET session_version = session_version + 1, updated_at = ? WHERE id = ?').bind(now, id).run();
+
+export const changeRoleGuarded = (
+  db: D1Database,
+  id: string,
+  role: 'admin' | 'member',
+  now: number,
+): Promise<D1Result> =>
+  db
+    .prepare(
+      `UPDATE users SET role = ?, session_version = session_version + 1, updated_at = ?
+       WHERE id = ? AND (
+         ? = 'admin' OR role != 'admin' OR status = 'disabled' OR
+         (SELECT COUNT(*) FROM users WHERE role = 'admin' AND status = 'active') > 1
+       )`,
+    )
+    .bind(role, now, id, role)
+    .run();
+
 export const findKdfParametersByEmail = (db: D1Database, email: string): Promise<KdfUserRow | null> =>
   db.prepare('SELECT kdf_alg, kdf_salt, kdf_iterations FROM users WHERE email = ?').bind(email).first<KdfUserRow>();
 
@@ -183,6 +242,12 @@ export const createUsersQueries = (env: Env) => {
       recordFailedLogin(db, userId, now, threshold, lockMs),
     resetLoginFailures: (userId: string, now: number) => resetLoginFailures(db, userId, now),
     findKdfByEmail: (email: string) => findKdfParametersByEmail(db, email),
+    listAdmin: (limit: number) => listAdminUsers(db, limit),
+    findIdByEmail: (email: string) => findUserByEmail(db, email),
+    disableGuarded: (id: string, now: number) => disableUserGuarded(db, id, now),
+    enable: (id: string, now: number) => enableUser(db, id, now),
+    revokeSessions: (id: string, now: number) => revokeUserSessions(db, id, now),
+    changeRoleGuarded: (id: string, role: 'admin' | 'member', now: number) => changeRoleGuarded(db, id, role, now),
     findSessionUser: (id: string) => findSessionUserById(db, id),
     findLoginCompletion: (id: string) => findLoginCompletionById(db, id),
     findAuthById: (id: string) => findUserAuthById(db, id),

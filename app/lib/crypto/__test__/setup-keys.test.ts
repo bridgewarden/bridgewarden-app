@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { fromBase64Url } from '../../../lib/base64-url';
-import { encodeBase64 } from '../../../lib/crypto/encoding';
-import { deriveMasterKey, deriveWrapKey } from '../../../lib/crypto/kdf';
-import { parseRecoveryKey, unwrapVaultKeyWithRecovery } from '../../../lib/crypto/recovery';
-import { unwrapVaultKey } from '../../../lib/crypto/vault-key';
+import { fromBase64Url } from '../../base64-url';
+import { encodeBase64 } from '../encoding';
+import { deriveMasterKey, deriveWrapKey } from '../kdf';
+import { parseRecoveryKey, unwrapVaultKeyWithRecovery } from '../recovery';
+import { unwrapVaultKey } from '../vault-key';
 import { generateSetupKeyMaterial, toSetupPayload } from '../setup-keys';
 
 const decode = (value: string) => fromBase64Url(value);

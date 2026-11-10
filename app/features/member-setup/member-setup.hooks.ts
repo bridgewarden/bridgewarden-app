@@ -3,9 +3,8 @@ import { useFetcher, useNavigate, useSearchParams } from 'react-router';
 
 import { generateSetupKeyMaterial, type SetupTransportMaterial } from '../../lib/crypto/setup-keys';
 import { normalizeRecoveryKey } from '../../lib/crypto/recovery';
+import { MIN_MASTER_PASSWORD_LENGTH } from '../../lib/password-policy';
 import { setVaultKey, clearVaultKey } from '../../lib/vault/key-store';
-
-const MIN_PASSWORD_LENGTH = 12;
 
 export const useMemberSetup = () => {
   const [searchParams] = useSearchParams();
@@ -27,7 +26,7 @@ export const useMemberSetup = () => {
 
   const generate = async () => {
     if (deriving) return;
-    if (password.length < MIN_PASSWORD_LENGTH) {
+    if (password.length < MIN_MASTER_PASSWORD_LENGTH) {
       setError('password');
       return;
     }

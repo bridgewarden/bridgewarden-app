@@ -28,7 +28,7 @@ export const listVaultDelta = async (
        UNION ALL
        SELECT 'folder' AS kind, id, NULL AS type, NULL AS folder_id, NULL AS favorite,
               NULL AS data_ct, NULL AS data_iv, name_ct, name_iv, data_version, rev,
-              NULL AS deleted_at, created_at, updated_at
+              deleted_at, created_at, updated_at
        FROM folders
        WHERE user_id = ? ${baseClause} ${cursorClause}
        ORDER BY rev, id

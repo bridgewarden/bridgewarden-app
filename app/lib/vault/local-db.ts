@@ -1,15 +1,16 @@
 import { deleteDB, openDB, type DBSchema, type IDBPDatabase } from 'idb';
 
-import type { CachedFolder, CachedItem, StoredKeyMaterial, SyncState } from './types';
+import type { CachedFolder, CachedItem, OutboxEntry, StoredKeyMaterial, SyncState } from './types';
 
 export const VAULT_DB_NAME = 'bridgewarden-vault';
-export const VAULT_DB_VERSION = 1;
+export const VAULT_DB_VERSION = 2;
 
 interface VaultDatabase extends DBSchema {
   items: { key: string; value: CachedItem };
   folders: { key: string; value: CachedFolder };
   keys: { key: 'active'; value: StoredKeyMaterial };
   sync: { key: 'active'; value: SyncState };
+  outbox: { key: number; value: OutboxEntry };
 }
 
 export class VaultDbUnavailableError extends Error {}
@@ -40,11 +41,22 @@ const openNow = async (): Promise<IDBPDatabase<VaultDatabase>> => {
   if (!hasIndexedDb()) throw new VaultDbUnavailableError();
 
   dbPromise ??= openDB<VaultDatabase>(VAULT_DB_NAME, VAULT_DB_VERSION, {
-    upgrade(db) {
-      db.createObjectStore('items', { keyPath: 'id' });
-      db.createObjectStore('folders', { keyPath: 'id' });
-      db.createObjectStore('keys', { keyPath: 'key' });
-      db.createObjectStore('sync', { keyPath: 'key' });
+    blocking() {
+      const current = dbPromise;
+      dbPromise = null;
+      void current?.then((db) => db.close()).catch(() => undefined);
+    },
+    blocked() {
+      dbPromise = null;
+    },
+    upgrade(db, oldVersion) {
+      if (oldVersion < 1) {
+        db.createObjectStore('items', { keyPath: 'id' });
+        db.createObjectStore('folders', { keyPath: 'id' });
+        db.createObjectStore('keys', { keyPath: 'key' });
+        db.createObjectStore('sync', { keyPath: 'key' });
+      }
+      if (oldVersion < 2) db.createObjectStore('outbox', { keyPath: 'seq', autoIncrement: true });
     },
   }).catch((error: unknown) => {
     dbPromise = null;

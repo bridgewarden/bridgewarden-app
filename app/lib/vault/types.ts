@@ -37,3 +37,25 @@ export type StoredKeyMaterial = VaultKeyMaterial & {
 };
 
 export type SyncState = { key: 'active'; serverRev: number; cursor: string | null };
+
+export type OutboxKind =
+  | 'item.create'
+  | 'item.update'
+  | 'item.trash'
+  | 'item.restore'
+  | 'item.purge'
+  | 'folder.create'
+  | 'folder.rename'
+  | 'folder.delete';
+
+export type OutboxEntry = {
+  seq?: number;
+  kind: OutboxKind;
+  id: string;
+  idempotencyId: string | null;
+  payload: Record<string, unknown>;
+  entity: 'item' | 'folder';
+  previous: CachedItem | CachedFolder | null;
+  optimistic: CachedItem | CachedFolder | null;
+  queuedAt: number;
+};

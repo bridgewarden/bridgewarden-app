@@ -1,6 +1,6 @@
 import type { VaultItemInput } from '../types';
 import {
-  incrementVaultRev,
+  incrementVaultRevForNewItem,
   incrementVaultRevIfItem,
   incrementVaultRevIfItemDeleted,
   incrementVaultRevIfItemLive,
@@ -44,6 +44,9 @@ export const insertItemStatement = (
       )
       SELECT ?, ?, ?, ?, ?, ?, ?, ?, vault_rev, NULL, ?, ?
       FROM users WHERE id = ?
+        AND (? IS NULL OR EXISTS (
+          SELECT 1 FROM folders WHERE id = ? AND user_id = ? AND deleted_at IS NULL
+        ))
       RETURNING ${ITEM_COLUMNS}`,
     )
     .bind(
@@ -57,6 +60,9 @@ export const insertItemStatement = (
       input.dataVersion,
       now,
       now,
+      userId,
+      input.folderId,
+      input.folderId,
       userId,
     );
 
@@ -74,6 +80,9 @@ export const updateItemStatement = (
        SET type = ?, folder_id = ?, favorite = ?, data_ct = ?, data_iv = ?, data_version = ?,
            rev = (SELECT vault_rev FROM users WHERE id = ?), updated_at = ?
        WHERE id = ? AND user_id = ? AND rev = ? AND deleted_at IS NULL
+         AND (? IS NULL OR EXISTS (
+           SELECT 1 FROM folders WHERE id = ? AND user_id = ? AND deleted_at IS NULL
+         ))
        RETURNING ${ITEM_COLUMNS}`,
     )
     .bind(
@@ -88,6 +97,9 @@ export const updateItemStatement = (
       itemId,
       userId,
       expectedRev,
+      input.folderId,
+      input.folderId,
+      userId,
     );
 
 export const batchCreateItem = (
@@ -97,7 +109,7 @@ export const batchCreateItem = (
   input: VaultItemInput,
   now: number,
 ): Promise<D1Result[]> =>
-  db.batch([incrementVaultRev(db, userId, now), insertItemStatement(db, id, userId, input, now)]);
+  db.batch([incrementVaultRevForNewItem(db, userId, input.folderId), insertItemStatement(db, id, userId, input, now)]);
 
 export const batchUpdateItem = (
   db: D1Database,
@@ -108,7 +120,7 @@ export const batchUpdateItem = (
   now: number,
 ): Promise<D1Result[]> =>
   db.batch([
-    incrementVaultRevIfItem(db, userId, itemId, expectedRev),
+    incrementVaultRevIfItem(db, userId, itemId, expectedRev, input.folderId),
     updateItemStatement(db, userId, itemId, expectedRev, input, now),
   ]);
 

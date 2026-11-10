@@ -25,6 +25,11 @@ export const createVaultItem = async (env: Env, userId: string, input: VaultItem
   let inserted: VaultItemRow | undefined;
   try {
     const results = await vault.batchCreateItem(id, userId, input, now);
+    if (results[1]?.meta.changes !== 1) {
+      return input.folderId && !(await vault.findOwnedFolder(userId, input.folderId))
+        ? { status: 'not-found' }
+        : { status: 'server-error' };
+    }
     inserted = results[1]?.results?.[0] as VaultItemRow | undefined;
   } catch (error) {
     return { status: isForeignKeyError(error) ? 'not-found' : 'server-error' };
@@ -56,6 +61,7 @@ export const updateVaultItem = async (
   }
 
   if (changes !== 1) {
+    if (input.folderId && !(await vault.findOwnedFolder(userId, input.folderId))) return { status: 'not-found' };
     const current = await vault.findOwnedItem(userId, itemId);
     return current ? { status: 'conflict', item: toItemResponse(current) } : { status: 'not-found' };
   }

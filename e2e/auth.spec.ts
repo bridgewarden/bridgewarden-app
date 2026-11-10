@@ -53,6 +53,10 @@ test('login unlocks the app, redirects an authenticated visit, and logout revoke
   await page.getByRole('button', { name: en['common.signOut'] }).click();
   await expect(page).toHaveURL(/\/login$/);
 
+  await expect
+    .poll(async () => page.evaluate(async () => (await indexedDB.databases?.())?.map((db) => db.name) ?? []))
+    .not.toContain('bridgewarden-vault');
+
   await page.goto('/app');
   await expect(page).toHaveURL(/\/login\?next=/);
 });

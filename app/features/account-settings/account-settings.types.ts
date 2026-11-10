@@ -3,10 +3,16 @@ export type TwoFactorState = {
   remaining: number;
 };
 
+export type PasswordSettings = {
+  kdfSalt: string;
+  kdfIterations: number;
+};
+
 export type AccountSettingsProps = {
   email: string;
   displayName: string | null;
   twoFactor: TwoFactorState;
+  password: PasswordSettings;
 };
 
 export type EnrollResponse = { ok: true; secret: string; uri: string } | { ok: false; error: string };

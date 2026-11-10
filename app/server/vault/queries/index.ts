@@ -1,7 +1,15 @@
 import { getDatabase } from '../../../lib/.server/db';
 import type { VaultItemInput } from '../types';
 import { findOwnedFolder } from './folders';
-import { batchCreateItem, batchUpdateItem, findOwnedItem } from './items';
+import {
+  batchCreateItem,
+  batchRestoreItem,
+  batchTrashItem,
+  batchUpdateItem,
+  deleteExpiredItemsBatch,
+  findOwnedItem,
+  batchPurgeItem,
+} from './items';
 import { findVaultRev } from './rev';
 import { listVaultDelta } from './sync';
 
@@ -15,6 +23,10 @@ export const createVaultQueries = (env: Env) => {
       batchCreateItem(db, id, userId, input, now),
     batchUpdateItem: (userId: string, itemId: string, expectedRev: number, input: VaultItemInput, now: number) =>
       batchUpdateItem(db, userId, itemId, expectedRev, input, now),
+    batchTrashItem: (userId: string, itemId: string, now: number) => batchTrashItem(db, userId, itemId, now),
+    batchRestoreItem: (userId: string, itemId: string, now: number) => batchRestoreItem(db, userId, itemId, now),
+    purgeItem: (userId: string, itemId: string) => batchPurgeItem(db, userId, itemId, Date.now()),
+    deleteExpiredItemsBatch: (cutoff: number, limit: number) => deleteExpiredItemsBatch(db, cutoff, limit),
     listVaultDelta: (userId: string, since: number, cursor: { rev: number; id: string } | null, limit?: number) =>
       listVaultDelta(db, userId, since, cursor, limit),
   };

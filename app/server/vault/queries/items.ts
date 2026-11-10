@@ -1,5 +1,11 @@
 import type { VaultItemInput } from '../types';
-import { incrementVaultRev, incrementVaultRevIfItem } from './rev';
+import {
+  incrementVaultRev,
+  incrementVaultRevIfItem,
+  incrementVaultRevIfItemDeleted,
+  incrementVaultRevIfItemLive,
+  incrementVaultRevIfItemUnpurged,
+} from './rev';
 
 export type VaultItemRow = {
   id: string;
@@ -105,3 +111,53 @@ export const batchUpdateItem = (
     incrementVaultRevIfItem(db, userId, itemId, expectedRev),
     updateItemStatement(db, userId, itemId, expectedRev, input, now),
   ]);
+
+const trashItemStatement = (db: D1Database, userId: string, itemId: string, now: number): D1PreparedStatement =>
+  db
+    .prepare(
+      `UPDATE vault_items
+       SET deleted_at = ?, rev = (SELECT vault_rev FROM users WHERE id = ?), updated_at = ?
+       WHERE id = ? AND user_id = ? AND deleted_at IS NULL
+       RETURNING ${ITEM_COLUMNS}`,
+    )
+    .bind(now, userId, now, itemId, userId);
+
+const restoreItemStatement = (db: D1Database, userId: string, itemId: string, now: number): D1PreparedStatement =>
+  db
+    .prepare(
+      `UPDATE vault_items
+       SET deleted_at = NULL, rev = (SELECT vault_rev FROM users WHERE id = ?), updated_at = ?
+       WHERE id = ? AND user_id = ? AND deleted_at IS NOT NULL
+       RETURNING ${ITEM_COLUMNS}`,
+    )
+    .bind(userId, now, itemId, userId);
+
+const purgeItemStatement = (db: D1Database, userId: string, itemId: string, now: number): D1PreparedStatement =>
+  db
+    .prepare(
+      `UPDATE vault_items
+       SET data_ct = '', data_iv = '', rev = (SELECT vault_rev FROM users WHERE id = ?), updated_at = ?
+       WHERE id = ? AND user_id = ? AND deleted_at IS NOT NULL AND data_ct <> ''
+       RETURNING ${ITEM_COLUMNS}`,
+    )
+    .bind(userId, now, itemId, userId);
+
+export const batchTrashItem = (db: D1Database, userId: string, itemId: string, now: number): Promise<D1Result[]> =>
+  db.batch([incrementVaultRevIfItemLive(db, userId, itemId), trashItemStatement(db, userId, itemId, now)]);
+
+export const batchRestoreItem = (db: D1Database, userId: string, itemId: string, now: number): Promise<D1Result[]> =>
+  db.batch([incrementVaultRevIfItemDeleted(db, userId, itemId), restoreItemStatement(db, userId, itemId, now)]);
+
+export const batchPurgeItem = (db: D1Database, userId: string, itemId: string, now: number): Promise<D1Result[]> =>
+  db.batch([incrementVaultRevIfItemUnpurged(db, userId, itemId), purgeItemStatement(db, userId, itemId, now)]);
+
+export const deleteExpiredItemsBatch = (db: D1Database, cutoff: number, limit: number): Promise<D1Result> =>
+  db
+    .prepare(
+      `DELETE FROM vault_items
+       WHERE id IN (
+         SELECT id FROM vault_items WHERE deleted_at IS NOT NULL AND deleted_at < ? LIMIT ?
+       )`,
+    )
+    .bind(cutoff, limit)
+    .run();

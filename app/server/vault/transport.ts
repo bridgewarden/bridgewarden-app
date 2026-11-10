@@ -1,4 +1,6 @@
 import { standardToBase64Url } from '../../lib/base64-url';
+
+const transportValue = (value: string): string => (value === '' ? '' : standardToBase64Url(value));
 import type { VaultFolderRow } from './queries/folders';
 import type { VaultItemRow } from './queries/items';
 import type { VaultDeltaRow } from './queries/sync';
@@ -32,8 +34,8 @@ export const toItemResponse = (row: VaultItemRow): VaultItemResponse => ({
   type: row.type,
   folderId: row.folder_id,
   favorite: row.favorite === 1,
-  dataCt: standardToBase64Url(row.data_ct),
-  dataIv: standardToBase64Url(row.data_iv),
+  dataCt: transportValue(row.data_ct),
+  dataIv: transportValue(row.data_iv),
   dataVersion: row.data_version,
   rev: row.rev,
   deletedAt: row.deleted_at,

@@ -67,4 +67,12 @@ export const parseUpdateItemInput = (value: unknown): (VaultItemInput & { rev: n
   return item ? { ...item, rev } : null;
 };
 
+const restoreSchema = z.strictObject({});
+
+const purgeSchema = z.strictObject({ confirm: z.literal(true) });
+
+export const parseRestoreInput = (value: unknown): boolean => restoreSchema.safeParse(value).success;
+
+export const parsePurgeInput = (value: unknown): boolean => purgeSchema.safeParse(value).success;
+
 export const isVaultId = (value: string): boolean => value.length > 0 && value.length <= 64;

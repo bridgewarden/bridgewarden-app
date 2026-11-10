@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import { base64UrlToStandard } from '../../base64-url';
+import { WrongPasswordError } from '../errors';
 import { prepareLogin } from '../login-keys';
 import { rewrapPassword } from '../password-change';
+import { parseRecoveryKey, unwrapVaultKeyWithRecovery } from '../recovery';
 import { generateSetupKeyMaterial } from '../setup-keys';
 import { unwrapVaultKey } from '../vault-key';
 
 describe('password change', () => {
-  it('rewraps the same vault key under the new password', async () => {
+  it('rewraps the same vault key and leaves the recovery wrapper usable', async () => {
     const oldPassword = 'old master password 123';
     const newPassword = 'new master password 456';
     const setup = await generateSetupKeyMaterial(oldPassword);
@@ -18,32 +20,67 @@ describe('password change', () => {
         vaultKeyWrapped: setup.vaultKeyWrapped,
         vaultKeyWrapIv: setup.vaultKeyWrapIv,
       });
+      const next = await prepareLogin(newPassword, result.request.kdfSalt, result.request.kdfIterations);
 
-      expect(result.request.kdfSalt).not.toBe(setup.kdfSalt);
-      expect(result.request.authHash).not.toBe(setup.authHash);
+      try {
+        expect(result.request.kdfSalt).not.toBe(setup.kdfSalt);
+        expect(result.request.vaultKeyWrapIv).not.toBe(setup.vaultKeyWrapIv);
+        expect(next.authHash).toBe(result.request.authHash);
 
-      const newMaster = await deriveMasterKeyForTest(newPassword, result.request.kdfSalt);
-      const newWrap = await deriveWrapKeyForTest(newMaster, result.request.kdfSalt);
-      const unwrapped = await unwrapVaultKey(
-        {
-          ciphertext: base64UrlToStandard(result.request.vaultKeyWrapped),
-          iv: base64UrlToStandard(result.request.vaultKeyWrapIv),
-        },
-        newWrap,
-      );
-      expect(unwrapped).toEqual(setup.vaultKey);
+        const unwrapped = await unwrapVaultKey(
+          {
+            ciphertext: base64UrlToStandard(result.request.vaultKeyWrapped),
+            iv: base64UrlToStandard(result.request.vaultKeyWrapIv),
+          },
+          next.wrapKey,
+        );
+        expect(unwrapped).toEqual(setup.vaultKey);
+
+        const recovered = await unwrapVaultKeyWithRecovery(
+          {
+            ciphertext: base64UrlToStandard(setup.recoveryKeyWrapped),
+            iv: base64UrlToStandard(setup.recoveryKeyWrapIv),
+          },
+          parseRecoveryKey(setup.recoveryKey),
+        );
+        expect(recovered).toEqual(setup.vaultKey);
+      } finally {
+        next.wrapKey.fill(0);
+      }
     } finally {
       current.wrapKey.fill(0);
     }
-  });
+  }, 20_000);
+
+  it('rejects the old password wrapper under the new wrap key', async () => {
+    const oldPassword = 'old master password 123';
+    const newPassword = 'new master password 456';
+    const setup = await generateSetupKeyMaterial(oldPassword);
+    const current = await prepareLogin(oldPassword, setup.kdfSalt, setup.kdfIterations);
+
+    try {
+      const result = await rewrapPassword(current.authHash, current.wrapKey, newPassword, {
+        vaultKeyWrapped: setup.vaultKeyWrapped,
+        vaultKeyWrapIv: setup.vaultKeyWrapIv,
+      });
+      const next = await prepareLogin(newPassword, result.request.kdfSalt, result.request.kdfIterations);
+
+      try {
+        await expect(
+          unwrapVaultKey(
+            {
+              ciphertext: base64UrlToStandard(setup.vaultKeyWrapped),
+              iv: base64UrlToStandard(setup.vaultKeyWrapIv),
+            },
+            next.wrapKey,
+          ),
+        ).rejects.toThrow(WrongPasswordError);
+        expect(current.authHash).not.toBe(result.request.authHash);
+      } finally {
+        next.wrapKey.fill(0);
+      }
+    } finally {
+      current.wrapKey.fill(0);
+    }
+  }, 20_000);
 });
-
-const deriveMasterKeyForTest = async (password: string, salt: string) => {
-  const { deriveMasterKey } = await import('../kdf');
-  return deriveMasterKey(password, base64UrlToStandard(salt), 600_000);
-};
-
-const deriveWrapKeyForTest = async (masterKey: Uint8Array, salt: string) => {
-  const { deriveWrapKey } = await import('../kdf');
-  return deriveWrapKey(masterKey, base64UrlToStandard(salt));
-};

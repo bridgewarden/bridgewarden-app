@@ -1,4 +1,4 @@
-import { incrementVaultRev, incrementVaultRevIfFolderActive } from './rev';
+import { incrementVaultRevForNewFolder, incrementVaultRevIfFolderActive } from './rev';
 import type { VaultFolderInput } from '../types';
 import { MAX_ACTIVE_FOLDERS, MAX_FOLDER_ROWS } from '../types';
 
@@ -49,7 +49,7 @@ export const insertFolderStatement = (
 ): D1PreparedStatement =>
   db
     .prepare(
-      `INSERT INTO folders (id, user_id, name_ct, name_iv, data_version, rev, deleted_at, created_at, updated_at)
+      `INSERT OR IGNORE INTO folders (id, user_id, name_ct, name_iv, data_version, rev, deleted_at, created_at, updated_at)
        SELECT ?, ?, ?, ?, ?, vault_rev, NULL, ?, ?
        FROM users
        WHERE id = ?
@@ -132,7 +132,7 @@ export const batchCreateFolder = (
   input: VaultFolderInput,
   now: number,
 ): Promise<D1Result[]> =>
-  db.batch([incrementVaultRev(db, userId, now), insertFolderStatement(db, id, userId, input, now)]);
+  db.batch([incrementVaultRevForNewFolder(db, userId, id), insertFolderStatement(db, id, userId, input, now)]);
 
 export const batchRenameFolder = (
   db: D1Database,

@@ -1,14 +1,18 @@
 import { createVaultQueries } from './queries';
 import type { VaultFolderRow } from './queries/folders';
 import { toFolderResponse, type VaultFolderResponse } from './transport';
-import type { VaultFolderInput } from './types';
+import type { VaultCreateFolderInput, VaultFolderInput } from './types';
 
 const FOLDER_LIMIT = 500;
 
 export type FolderListResult = { status: 'ok'; folders: VaultFolderResponse[] } | { status: 'server-error' };
 
 export type FolderCreateResult =
-  { status: 'ok'; folder: VaultFolderResponse } | { status: 'limit' } | { status: 'server-error' };
+  | { status: 'created'; folder: VaultFolderResponse }
+  | { status: 'existing'; folder: VaultFolderResponse }
+  | { status: 'limit' }
+  | { status: 'not-found' }
+  | { status: 'server-error' };
 
 export type FolderRenameResult =
   | { status: 'ok'; folder: VaultFolderResponse }
@@ -33,15 +37,26 @@ export const listFolders = async (env: Env, userId: string): Promise<FolderListR
   }
 };
 
-export const createFolder = async (env: Env, userId: string, input: VaultFolderInput): Promise<FolderCreateResult> => {
+export const createFolder = async (
+  env: Env,
+  userId: string,
+  input: VaultCreateFolderInput,
+): Promise<FolderCreateResult> => {
   const vault = createVaultQueries(env);
-  const id = crypto.randomUUID();
+  const id = input.id ?? crypto.randomUUID();
   const now = Date.now();
 
   try {
     const results = await vault.batchCreateFolder(id, userId, input, now);
     const row = resultRow(results);
-    if (row) return { status: 'ok', folder: toFolderResponse(row) };
+    if (row) return { status: 'created', folder: toFolderResponse(row) };
+
+    const existing = await vault.findAnyOwnedFolder(userId, id);
+    if (existing) {
+      return existing.deleted_at === null
+        ? { status: 'existing', folder: toFolderResponse(existing) }
+        : { status: 'not-found' };
+    }
     return results[1]?.meta.changes === 0 ? { status: 'limit' } : { status: 'server-error' };
   } catch {
     return { status: 'server-error' };

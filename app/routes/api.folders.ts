@@ -38,6 +38,10 @@ export async function action({ request, context }: Route.ActionArgs) {
   const result = await createFolder(env, user.id, input);
   if (result.status === 'server-error')
     return data({ ok: false, error: 'server-error' }, { status: 500, headers: NO_STORE });
+  if (result.status === 'not-found') return data({ ok: false, error: 'not-found' }, { status: 404, headers: NO_STORE });
   if (result.status === 'limit') return data({ ok: false, error: 'limit' }, { status: 409, headers: NO_STORE });
-  return data({ ok: true, folder: result.folder }, { status: 201, headers: NO_STORE });
+  return data(
+    { ok: true, folder: result.folder },
+    { status: result.status === 'created' ? 201 : 200, headers: NO_STORE },
+  );
 }

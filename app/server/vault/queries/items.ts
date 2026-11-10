@@ -38,12 +38,13 @@ export const insertItemStatement = (
 ): D1PreparedStatement =>
   db
     .prepare(
-      `INSERT INTO vault_items (
+      `INSERT OR IGNORE INTO vault_items (
         id, user_id, folder_id, type, favorite, data_ct, data_iv, data_version, rev,
         deleted_at, created_at, updated_at
       )
       SELECT ?, ?, ?, ?, ?, ?, ?, ?, vault_rev, NULL, ?, ?
       FROM users WHERE id = ?
+        AND NOT EXISTS (SELECT 1 FROM vault_items WHERE id = ?)
         AND (? IS NULL OR EXISTS (
           SELECT 1 FROM folders WHERE id = ? AND user_id = ? AND deleted_at IS NULL
         ))
@@ -61,6 +62,7 @@ export const insertItemStatement = (
       now,
       now,
       userId,
+      id,
       input.folderId,
       input.folderId,
       userId,
@@ -109,7 +111,10 @@ export const batchCreateItem = (
   input: VaultItemInput,
   now: number,
 ): Promise<D1Result[]> =>
-  db.batch([incrementVaultRevForNewItem(db, userId, input.folderId), insertItemStatement(db, id, userId, input, now)]);
+  db.batch([
+    incrementVaultRevForNewItem(db, userId, input.folderId, id),
+    insertItemStatement(db, id, userId, input, now),
+  ]);
 
 export const batchUpdateItem = (
   db: D1Database,

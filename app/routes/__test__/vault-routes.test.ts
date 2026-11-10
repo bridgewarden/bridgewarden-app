@@ -275,6 +275,60 @@ describe('vault item create route', () => {
     expect(statusOf(exact)).toBe(201);
   });
 
+  it('accepts client ids, replays an owned id without a revision, and hides foreign collisions', async () => {
+    const userId = await createTestUser();
+    const other = await createTestUser();
+    const cookie = await cookieFor(userId);
+    const otherCookie = await cookieFor(other);
+    const id = crypto.randomUUID();
+
+    const created = await invoke(createAction, '/api/vault/items', {
+      method: 'POST',
+      cookie,
+      body: itemBody({ id }),
+    });
+    expect(statusOf(created)).toBe(201);
+    expect((created.data as { item: { id: string; rev: number } }).item).toMatchObject({ id, rev: 1 });
+
+    const replay = await invoke(createAction, '/api/vault/items', {
+      method: 'POST',
+      cookie,
+      body: itemBody({ id }),
+    });
+    expect(statusOf(replay)).toBe(200);
+    expect((replay.data as { item: { id: string; rev: number } }).item).toMatchObject({ id, rev: 1 });
+
+    const sync = await invoke(syncLoader, '/api/vault?since=0', { cookie });
+    expect((sync.data as { serverRev: number }).serverRev).toBe(1);
+
+    await invoke(updateAction, `/api/vault/items/${id}`, {
+      method: 'DELETE',
+      cookie,
+      params: { id },
+    });
+    const tombstonedReplay = await invoke(createAction, '/api/vault/items', {
+      method: 'POST',
+      cookie,
+      body: itemBody({ id }),
+    });
+    expect(statusOf(tombstonedReplay)).toBe(409);
+
+    const foreign = await invoke(createAction, '/api/vault/items', {
+      method: 'POST',
+      cookie: otherCookie,
+      body: itemBody({ id }),
+    });
+    expect(statusOf(foreign)).toBe(404);
+    expect((foreign.data as { item?: unknown }).item).toBeUndefined();
+
+    const invalid = await invoke(createAction, '/api/vault/items', {
+      method: 'POST',
+      cookie,
+      body: itemBody({ id: 'not-a-uuid' }),
+    });
+    expect(statusOf(invalid)).toBe(400);
+  });
+
   it('rejects unauthenticated and unsupported methods before parsing a body', async () => {
     const userId = await createTestUser();
     const cookie = await cookieFor(userId);

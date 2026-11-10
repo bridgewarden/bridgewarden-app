@@ -26,8 +26,9 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   const result = await createVaultItem(env, user.id, input);
   if (result.status === 'not-found') return data({ ok: false, error: 'not-found' }, { status: 404, headers: NO_STORE });
+  if (result.status === 'conflict') return data({ ok: false, error: 'conflict' }, { status: 409, headers: NO_STORE });
   if (result.status === 'server-error')
     return data({ ok: false, error: 'server-error' }, { status: 500, headers: NO_STORE });
 
-  return data({ ok: true, item: result.item }, { status: 201, headers: NO_STORE });
+  return data({ ok: true, item: result.item }, { status: result.status === 'created' ? 201 : 200, headers: NO_STORE });
 }

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { en } from '../app/lib/i18n/en';
-import { E2E_ADMIN, waitForHydration } from './fixtures';
+import { E2E_ADMIN, unlockVault, waitForHydration } from './fixtures';
 
 const NEW_PASSWORD = 'rotated master password 456';
 
@@ -25,6 +25,7 @@ test('rotates the master password and revokes the old credential', async ({ page
 
     await page.goto('/app/settings');
     await waitForHydration(page);
+    await unlockVault(page);
     await page.getByLabel(en['passwordChange.current']).fill(E2E_ADMIN.password);
     await page.getByLabel(en['passwordChange.new'], { exact: true }).fill(NEW_PASSWORD);
     await page.getByLabel(en['passwordChange.confirm']).fill(NEW_PASSWORD);
@@ -51,6 +52,7 @@ test('rotates the master password and revokes the old credential', async ({ page
 
   await page.goto('/app/settings');
   await waitForHydration(page);
+  await unlockVault(page, NEW_PASSWORD);
   await page.getByLabel(en['passwordChange.current']).fill(NEW_PASSWORD);
   await page.getByLabel(en['passwordChange.new'], { exact: true }).fill(E2E_ADMIN.password);
   await page.getByLabel(en['passwordChange.confirm']).fill(E2E_ADMIN.password);

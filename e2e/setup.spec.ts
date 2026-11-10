@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 
 import { expect, test } from '@playwright/test';
 
-import { E2E_ADMIN, waitForHydration } from './fixtures';
+import { E2E_ADMIN, unlockVault, waitForHydration } from './fixtures';
 import { resetE2eDatabase } from './reset-database';
 
 test.describe.configure({ mode: 'serial' });
@@ -146,12 +146,14 @@ test('creates the first admin through the wizard and locks setup', async ({ page
   expect(storage.cookie).not.toMatch(/vault|recovery/i);
 
   await page.reload();
+  await unlockVault(page);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Vault');
 
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bridgewarden');
 
   await page.goto('/app/trash');
+  await unlockVault(page);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Trash');
 
   await page.goto('/setup');

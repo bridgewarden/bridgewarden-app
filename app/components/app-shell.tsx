@@ -1,23 +1,27 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 
 import { CircleUserIcon, LockIcon, ShieldAlertIcon, ShieldIcon } from 'lucide-react';
-import { Link, useFetcher, useNavigate } from 'react-router';
+import { Link, useFetcher, useMatches, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 
+import { LockedOverlay } from '~/components/locked-overlay';
 import { ThemeControl } from '~/components/theme-control';
 import { Button } from '~/components/ui/button';
 import { Toaster } from '~/components/ui/sonner';
 import { t } from '~/lib/i18n/en';
 import type { Theme } from '~/lib/theme';
+import { isUnlocked, subscribeKeyState } from '~/lib/vault/key-store';
 import { wipeVaultDb } from '~/lib/vault/local-db';
+import { clearUnlockFailures, lockVault, unlockVault } from '~/lib/vault/lock';
 import { syncVault } from '~/lib/vault/sync';
-import { clearVaultKey } from '~/lib/vault/key-store';
 
 type AppUser = {
   displayName: string | null;
   email: string;
   role: 'admin' | 'member';
 };
+
+const lockedSnapshot = () => false;
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -29,12 +33,23 @@ type AppShellProps = {
 export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellProps) => {
   const fetcher = useFetcher<{ ok: boolean; error?: string }>();
   const navigate = useNavigate();
+  const matches = useMatches();
   const wasSubmitting = useRef(false);
+  const wasLocked = useRef(false);
+  const lockButtonRef = useRef<HTMLButtonElement>(null);
+  const unlocked = useSyncExternalStore(subscribeKeyState, isUnlocked, lockedSnapshot);
   const userEmail = user?.email;
+  const protectedRoute = matches.some((match) => match.id === 'routes/protected');
+  const locked = Boolean(user) && !unlocked && protectedRoute;
 
   useEffect(() => {
-    if (userEmail) void syncVault();
-  }, [userEmail]);
+    if (userEmail && unlocked) void syncVault();
+  }, [unlocked, userEmail]);
+
+  useEffect(() => {
+    if (wasLocked.current && !locked) lockButtonRef.current?.focus();
+    wasLocked.current = locked;
+  }, [locked]);
 
   useEffect(() => {
     if (fetcher.state !== 'idle') {
@@ -43,7 +58,8 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
     }
 
     if (fetcher.data?.ok) {
-      clearVaultKey();
+      lockVault();
+      clearUnlockFailures();
       void wipeVaultDb()
         .catch(() => undefined)
         .finally(() => navigate('/login', { replace: true }));
@@ -69,7 +85,7 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
   return (
     <div className="flex min-h-screen flex-col">
       {user && !twoFactorEnabled ? (
-        <div role="status" className="border-b border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm">
+        <div role="status" inert={locked} className="border-b border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm">
           <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-2 text-center">
             <ShieldAlertIcon className="size-4 shrink-0" aria-hidden="true" />
             <span>{t('twoFactor.banner')}</span>
@@ -79,13 +95,21 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
           </div>
         </div>
       ) : null}
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
+      <header inert={locked} className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex min-h-16 w-full max-w-5xl items-center gap-1 px-4">
           <Link to="/" className="mr-auto flex min-h-11 min-w-0 items-center gap-2 rounded-md px-1 font-semibold">
             <ShieldIcon className="size-5 shrink-0" aria-hidden="true" />
             <span className="truncate">{t('app.name')}</span>
           </Link>
-          <Button variant="ghost" size="icon" className="size-11 shrink-0" disabled aria-label={t('common.lock')}>
+          <Button
+            ref={lockButtonRef}
+            variant="ghost"
+            size="icon"
+            className="size-11 shrink-0"
+            disabled={!user || !unlocked}
+            aria-label={t('common.lock')}
+            onClick={lockVault}
+          >
             <LockIcon className="size-5" aria-hidden="true" />
           </Button>
           <ThemeControl theme={theme} />
@@ -119,7 +143,13 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
           )}
         </div>
       </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">{children}</main>
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+        {locked ? (
+          <LockedOverlay signingOut={fetcher.state !== 'idle'} onUnlock={unlockVault} onSignOut={logout} />
+        ) : (
+          children
+        )}
+      </main>
       <Toaster theme={theme} />
     </div>
   );

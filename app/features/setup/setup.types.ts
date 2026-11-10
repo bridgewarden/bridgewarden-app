@@ -1,4 +1,4 @@
-import type { SetupTransportMaterial } from './setup-keys';
+import type { SetupTransportMaterial } from '../../lib/crypto/setup-keys';
 
 export type SetupError =
   'forbidden' | 'invalid-input' | 'already-configured' | 'server-error' | 'rate-limited' | 'network';

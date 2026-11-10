@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { initialSetupState, setupReducer } from '../setup.state';
 import { isMasterPasswordValid, passwordsMatch, recoveryConfirmationMatches, validateAccount } from '../setup.lib';
 import type { SetupState } from '../setup.types';
-import type { SetupTransportMaterial } from '../setup-keys';
+import type { SetupTransportMaterial } from '../../../lib/crypto/setup-keys';
 
 const keys: SetupTransportMaterial = {
   kdfSalt: 'salt',

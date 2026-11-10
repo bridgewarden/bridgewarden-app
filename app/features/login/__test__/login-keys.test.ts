@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { generateSetupKeyMaterial } from '../../setup/setup-keys';
+import { generateSetupKeyMaterial } from '../../../lib/crypto/setup-keys';
 import { prepareLogin, unwrapLoginVault } from '../../../lib/crypto/login-keys';
 
 describe('login key preparation', () => {

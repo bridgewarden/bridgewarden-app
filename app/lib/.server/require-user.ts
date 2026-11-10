@@ -24,3 +24,15 @@ export const requireUserApi = async (request: Request, env: Env): Promise<Sessio
 
   return context;
 };
+
+export const requireAdmin = async (request: Request, env: Env): Promise<SessionContext> => {
+  const context = await requireUser(request, env);
+  if (context.user.role !== 'admin') throw data({ error: 'forbidden' }, { status: 403 });
+  return context;
+};
+
+export const requireAdminApi = async (request: Request, env: Env): Promise<SessionContext> => {
+  const context = await requireUserApi(request, env);
+  if (context.user.role !== 'admin') throw data({ error: 'forbidden' }, { status: 403 });
+  return context;
+};

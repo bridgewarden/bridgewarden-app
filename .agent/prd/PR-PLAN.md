@@ -45,7 +45,8 @@
 | #8 | First-run setup wizard | `feat/setup-wizard` | TASK-18 | #4, #6, #7 | M | Atomic bootstrap, empty-table guard, refresh safety |
 | #9 | Login, sessions, route guard, logout | `feat/auth-sessions` | TASK-19, TASK-20 | #4, #6, #7 | M | Generic errors, cookie flags, KV hashing |
 | #10 | TOTP 2FA + backup codes | `feat/auth-2fa` | TASK-21, TASK-22, TASK-23 | #9 | M | Replay protection, seed never returned |
-| #11 | Rate limiting, lockout, admin users | `feat/auth-abuse-admin` | TASK-24, TASK-25 | #8, #9, #10 | M | Bypass paths, last-admin guard |
+| #11a | Rate limiting and lockout | `feat/auth-rate-limit-lockout` | TASK-24 | #8, #9, #10 | M | Bypass paths, lockout counters |
+| #11b | Admin users and member setup | `feat/admin-user-management` | TASK-25 | #8, #9, #10 | L | Last-admin guard, invitation single-use |
 | #12 | Change password, recovery reset, auto-lock | `feat/account-security` | TASK-26, TASK-27, TASK-28 | #7, #9, #10 | L | Key rewrap correctness, session revocation |
 | #13 | Vault API (sync, CRUD, trash, folders, authz) | `feat/vault-api` | TASK-29 … TASK-35 | #6, #9, #11 | L | Cross-user isolation, rev conflicts, payload caps |
 | #14 | Client cache, outbox, sync engine, key lifetime | `feat/vault-client-core` | TASK-36, TASK-37 | #7, #12, #13 | L | No plaintext key persistence, offline replay |

@@ -37,7 +37,7 @@
     {
       "step": 4,
       "description": "Implement one-time setup tokens",
-      "details": "Create `setup_tokens` usage via KV: key `setup:<sha256(token)>` with `{ userId, expiresAt }`, TTL 24 hours. The admin create action inserts the user with `status='active'` but no vault data, then returns the setup link `APP_ORIGIN/setup/member?token=...`. The member route lets the new user set their own master password, derive keys, and confirm a recovery key; the admin never sees any of it. Token is single-use.",
+      "details": "Create a `setup_invitations` D1 table with a hashed 24-hour token, email, display name, role, inviter, and consumed marker. Admin create inserts only the invitation and returns `APP_ORIGIN/setup/member?token=...`. The member route derives keys locally and atomically consumes the invitation and creates the user; the admin never sees secrets. Token is single-use.",
       "pass": false
     },
     {
@@ -70,7 +70,7 @@
   "technicalNotes": [
     "The rate limiting binding is approximate and edge-local; account lockout in D1 is the authoritative protection.",
     "Never persist raw IPs or emails for rate limiting; store HMACs.",
-    "Setup tokens belong in KV with TTL, not D1, to get automatic expiry.",
+    "Setup invitations belong in D1 so consume-and-create is atomic; KV cannot atomically consume a token.",
     "Admin actions must not expose another user's ciphertext or wrapped keys in the list response.",
     "Audit events are defined in TASK-19; emit through a small interface now and let TASK-19 implement storage if it has not merged."
   ],

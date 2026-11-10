@@ -5,7 +5,7 @@ import { t, type MessageKey } from '~/lib/i18n/en';
 import { clearVaultKey, setVaultKey } from '~/lib/vault/key-store';
 
 import { ERROR_KEY } from './setup.constants';
-import { generateSetupKeyMaterial, toSetupPayload } from './setup-keys';
+import { generateSetupKeyMaterial, toSetupPayload } from '../../lib/crypto/setup-keys';
 import {
   isMasterPasswordValid,
   passwordScore,

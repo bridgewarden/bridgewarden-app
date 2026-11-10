@@ -106,6 +106,17 @@ with `Retry-After`. Ten consecutive password failures lock the account for 15 mi
 login returns 423 with `Retry-After`, and a successful login clears both counters. Rate limiting for
 `/auth/recover` will be wired when that route lands with account security.
 
+## User management
+
+Administrators can open `/admin/users` to list accounts, create setup invitations, change roles,
+disable or enable users, and revoke sessions. Invitations expire after 24 hours and store only a
+token hash; the admin copies the setup link manually and no email is sent.
+
+`/setup/member?token=...` lets the invited member create their own master password and recovery key
+in the browser. The invitation is consumed and the user row is created atomically, so the same token
+cannot create two accounts. Disabling a user increments the session version, invalidating all their
+sessions. The last active administrator cannot be disabled or demoted.
+
 ## Two-factor authentication
 
 Enable TOTP from `/app/settings` by confirming your master password. The page shows an `otpauth://`

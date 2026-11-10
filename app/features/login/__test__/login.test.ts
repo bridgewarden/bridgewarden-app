@@ -6,7 +6,7 @@ import { createTestUser } from '../../../__test__/fixtures';
 import { fromBase64Url } from '../../../lib/base64-url';
 import { encodeBase64 } from '../../../lib/crypto/encoding';
 import { deriveServerAuthHash } from '../../../lib/.server/auth-hash';
-import { generateSetupKeyMaterial } from '../../setup/setup-keys';
+import { generateSetupKeyMaterial } from '../../../lib/crypto/setup-keys';
 import { readChallenge } from '../../../lib/.server/challenge';
 import { createTwoFactorUser } from '../../two-factor/__test__/two-factor-fixtures';
 import { loginWithPassword } from '../.server/use-cases/login';

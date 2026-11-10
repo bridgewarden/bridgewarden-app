@@ -82,8 +82,17 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
           <ThemeControl theme={theme} />
           {user ? (
             <>
+              {user.role === 'admin' ? (
+                <Button variant="ghost" size="sm" className="min-h-11" asChild>
+                  <Link to="/admin/users">
+                    <span className="hidden sm:inline">{t('adminUsers.nav')}</span>
+                  </Link>
+                </Button>
+              ) : null}
               <Button variant="ghost" size="sm" className="min-h-11" asChild>
-                <Link to="/app/settings">{t('common.settings')}</Link>
+                <Link to="/app/settings">
+                  <span className="hidden sm:inline">{t('common.settings')}</span>
+                </Link>
               </Button>
               <span className="hidden max-w-32 truncate text-sm text-muted-foreground sm:inline">
                 {user.displayName ?? user.email}

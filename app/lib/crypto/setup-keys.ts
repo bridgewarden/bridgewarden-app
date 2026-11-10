@@ -1,9 +1,9 @@
-import { standardToBase64Url, toBase64Url } from '../../lib/base64-url';
-import { DEFAULT_KDF_ITERATIONS, SALT_BYTES } from '../../lib/crypto/contract';
-import { encodeBase64 } from '../../lib/crypto/encoding';
-import { deriveAuthHash, deriveMasterKey, deriveWrapKey } from '../../lib/crypto/kdf';
-import { formatRecoveryKey, generateRecoverySecret, wrapVaultKeyWithRecovery } from '../../lib/crypto/recovery';
-import { generateVaultKey, wrapVaultKey } from '../../lib/crypto/vault-key';
+import { standardToBase64Url, toBase64Url } from '../base64-url';
+import { DEFAULT_KDF_ITERATIONS, SALT_BYTES } from './contract';
+import { encodeBase64 } from './encoding';
+import { deriveAuthHash, deriveMasterKey, deriveWrapKey } from './kdf';
+import { formatRecoveryKey, generateRecoverySecret, wrapVaultKeyWithRecovery } from './recovery';
+import { generateVaultKey, wrapVaultKey } from './vault-key';
 
 export type SetupTransportMaterial = {
   kdfSalt: string;

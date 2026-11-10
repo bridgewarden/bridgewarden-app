@@ -92,7 +92,7 @@ workers/app.ts               # Worker entry, cron and handlers
 ```
 
 Features planned for the MVP: `setup`, `login`, `two-factor`, `recover`,
-`account-settings`, `admin-users`, `vault-list`, `vault-item`, `vault-trash`, `generator`.
+`account-settings`, `admin-users`, `member-setup`, `vault-list`, `vault-item`, `vault-trash`, `generator`.
 
 ## Routing
 

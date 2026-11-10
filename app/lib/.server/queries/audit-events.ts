@@ -6,6 +6,7 @@ export type AuditEvent = {
   createdAt: number;
   uaHash?: string | null;
   ipHash?: string | null;
+  metadata?: string | null;
 };
 
 export const insertAuditEvent = (db: D1Database, event: AuditEvent): Promise<D1Result> =>

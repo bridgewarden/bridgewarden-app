@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { createTestUser } from '../../../__test__/fixtures';
 import { resetDatabase } from '../../../__test__/reset-database';
-import { requireUser } from '../require-user';
+import { requireAdmin, requireAdminApi, requireUser } from '../require-user';
 import { createSession, SESSION_COOKIE_NAME } from '../session';
 
 const protectedRequest = (token?: string) =>
@@ -47,5 +47,31 @@ describe('requireUser', () => {
     const stale = await createSession(env, { userId, ver: 0 });
     await env.DB.prepare('UPDATE users SET session_version = 1 WHERE id = ?').bind(userId).run();
     await expect(redirectLocation(protectedRequest(stale.token))).resolves.toContain('/login?next=');
+  });
+});
+
+describe('requireAdmin', () => {
+  it('rejects members and anonymous callers', async () => {
+    const memberId = await createTestUser({ email: 'member-auth@example.com' });
+    const member = await createSession(env, { userId: memberId, ver: 0 });
+
+    const pageError = await requireAdmin(protectedRequest(member.token), env).catch((error) => error);
+    expect((pageError as { init?: { status?: number } }).init?.status).toBe(403);
+
+    const apiError = await requireAdminApi(protectedRequest(member.token), env).catch((error) => error);
+    expect((apiError as { init?: { status?: number } }).init?.status).toBe(403);
+
+    const anonApi = await requireAdminApi(protectedRequest(), env).catch((error) => error);
+    expect((anonApi as { init?: { status?: number } }).init?.status).toBe(401);
+  });
+
+  it('accepts administrators', async () => {
+    const adminId = await createTestUser({ email: 'admin-auth@example.com' });
+    await env.DB.prepare("UPDATE users SET role = 'admin' WHERE id = ?").bind(adminId).run();
+    const admin = await createSession(env, { userId: adminId, ver: 0 });
+
+    await expect(requireAdmin(protectedRequest(admin.token), env)).resolves.toMatchObject({
+      user: { id: adminId, role: 'admin' },
+    });
   });
 });

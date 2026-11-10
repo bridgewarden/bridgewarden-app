@@ -14,6 +14,7 @@ export const DELETE_ORDER = [
   'orgs',
   'vault_items',
   'folders',
+  'setup_invitations',
   'backup_codes',
   'two_factor_challenges',
   'user_2fa',

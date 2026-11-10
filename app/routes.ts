@@ -14,6 +14,8 @@ export default [
   route('api/account/2fa/verify', 'routes/api-account-2fa-verify.ts'),
   route('api/account/2fa/disable', 'routes/api-account-2fa-disable.ts'),
   route('api/account/2fa/backup-codes/regenerate', 'routes/api-account-2fa-regenerate.ts'),
+  route('api/account/password', 'routes/api-account-password.ts'),
+  route('api/account/password/prepare', 'routes/api-account-password-prepare.ts'),
   layout('routes/protected.tsx', [
     route('app', 'routes/vault-list.tsx'),
     route('app/trash', 'routes/vault-trash.tsx'),

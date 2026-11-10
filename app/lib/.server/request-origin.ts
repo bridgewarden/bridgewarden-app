@@ -2,11 +2,16 @@ export const isSameOrigin = (request: Request, appOrigin?: string, allowRequestO
   const origin = request.headers.get('origin');
   if (!origin) return false;
 
-  if (allowRequestOrigin && origin === new URL(request.url).origin) return true;
-  if (!appOrigin) return false;
+  const requestOrigin = new URL(request.url).origin;
+  const targetOrigin = allowRequestOrigin ? requestOrigin : appOrigin;
+  if (!targetOrigin) return false;
 
   try {
-    return new URL(appOrigin).origin === origin;
+    const target = new URL(targetOrigin);
+    if (target.origin !== origin) return false;
+
+    const host = request.headers.get('host');
+    return host === null || host === target.host;
   } catch {
     return false;
   }

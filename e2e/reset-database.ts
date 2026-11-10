@@ -44,7 +44,7 @@ export const resetE2eDatabase = () => {
     '--persist-to',
     persistTo,
     '--command',
-    'DELETE FROM audit_events',
+    'DELETE FROM setup_invitations; DELETE FROM audit_events',
   ]);
   wrangler([
     'd1',

@@ -134,8 +134,13 @@ read-only folders newer than the watermark, including tombstones, with `serverRe
 `nextCursor` when the 500-row page is truncated. `POST /api/vault/items` creates an encrypted item
 with a new global revision; `PATCH /api/vault/items/:id` requires the current `rev` and returns 409
 with the server row on a mismatch. Every query is scoped to the session user, foreign ids return 404,
-and bodies are limited to 256KB with ciphertext capped at 64KB. Vault mutations are IP rate-limited and return `Cache-Control: no-store`. Trash, purge, and folder
-writes are separate follow-up changes.
+and bodies are limited to 256KB with ciphertext capped at 64KB. Items can be soft-deleted with `DELETE /api/vault/items/:id`, restored with
+`POST /api/vault/items/:id/restore`, and permanently removed with
+`POST /api/vault/items/:id/purge` plus `{ "confirm": true }`. Deletes and restores are idempotent.
+A daily cron at 03:00 purges tombstones older than 30 days in batches of 1000.
+
+Vault mutations are IP rate-limited and return `Cache-Control: no-store`. Folder writes and the
+trash UI are separate follow-up changes.
 
 ## User management
 

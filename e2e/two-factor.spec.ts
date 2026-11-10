@@ -38,8 +38,8 @@ test('enrolls TOTP and captures backup codes', async ({ page }) => {
   await page.getByRole('link', { name: en['common.settings'] }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(en['settings.title']);
 
-  await page.getByLabel(en['settings.twoFactor.password']).fill(E2E_ADMIN.password);
-  await expect(page.getByLabel(en['settings.twoFactor.password'])).toHaveValue(E2E_ADMIN.password);
+  await page.getByLabel(en['settings.twoFactor.password'], { exact: true }).fill(E2E_ADMIN.password);
+  await expect(page.getByLabel(en['settings.twoFactor.password'], { exact: true })).toHaveValue(E2E_ADMIN.password);
   await page.getByRole('button', { name: en['settings.twoFactor.enable'] }).click();
   await expect(page.getByLabel(en['settings.twoFactor.qrLabel'])).toBeVisible({ timeout: 15_000 });
   secret = (await page.locator('#setup-secret').textContent())!.trim();
@@ -106,7 +106,7 @@ test('invalidates the challenge after five failures and disables 2FA', async ({ 
   await expect(page).toHaveURL(/\/app$/);
 
   await page.getByRole('link', { name: en['common.settings'] }).click();
-  await page.getByLabel(en['settings.twoFactor.password']).fill(E2E_ADMIN.password);
+  await page.getByLabel(en['settings.twoFactor.password'], { exact: true }).fill(E2E_ADMIN.password);
   await page.getByRole('button', { name: en['settings.twoFactor.disable'] }).click();
   await expect(page.getByRole('button', { name: en['settings.twoFactor.enable'] })).toBeVisible();
   await expect(page.getByText(en['twoFactor.banner'])).toBeVisible();

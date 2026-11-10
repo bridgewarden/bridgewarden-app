@@ -41,9 +41,16 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
     },
     {
+      name: 'password-change',
+      testMatch: /password-change\.spec\.ts/,
+      dependencies: ['admin-users'],
+      retries: 0,
+      use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
+    },
+    {
       name: 'abuse',
       testMatch: /abuse\.spec\.ts/,
-      dependencies: ['admin-users'],
+      dependencies: ['password-change'],
       retries: 0,
       use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
     },

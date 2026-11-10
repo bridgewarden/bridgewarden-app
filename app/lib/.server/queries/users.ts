@@ -50,6 +50,18 @@ export type LoginCompletionRow = {
   session_version: number;
 };
 
+export type PasswordChangeRow = {
+  auth_hash: string;
+  server_salt: string;
+  status: 'active' | 'disabled';
+  session_version: number;
+  locked_until: number | null;
+  kdf_salt: string;
+  kdf_iterations: number;
+  vault_key_wrapped: string;
+  vault_key_wrap_iv: string;
+};
+
 export type UserAuthRow = {
   auth_hash: string;
   server_salt: string;
@@ -194,6 +206,62 @@ export const findLoginCompletionById = (db: D1Database, id: string): Promise<Log
 export const findUserAuthById = (db: D1Database, id: string): Promise<UserAuthRow | null> =>
   db.prepare('SELECT auth_hash, server_salt, status FROM users WHERE id = ?').bind(id).first<UserAuthRow>();
 
+export const findPasswordKdfById = (
+  db: D1Database,
+  id: string,
+): Promise<{ kdf_salt: string; kdf_iterations: number } | null> =>
+  db.prepare('SELECT kdf_salt, kdf_iterations FROM users WHERE id = ?').bind(id).first();
+
+export const findPasswordChangeState = (db: D1Database, id: string): Promise<PasswordChangeRow | null> =>
+  db
+    .prepare(
+      `SELECT auth_hash, server_salt, status, session_version, locked_until, kdf_salt, kdf_iterations,
+        vault_key_wrapped, vault_key_wrap_iv
+       FROM users WHERE id = ?`,
+    )
+    .bind(id)
+    .first<PasswordChangeRow>();
+
+export type RotatePasswordInput = {
+  authHash: string;
+  serverSalt: string;
+  kdfSalt: string;
+  kdfIterations: number;
+  vaultKeyWrapped: string;
+  vaultKeyWrapIv: string;
+};
+
+export const rotatePassword = (
+  db: D1Database,
+  id: string,
+  input: RotatePasswordInput,
+  now: number,
+  expectedAuthHash: string,
+  expectedServerSalt: string,
+): Promise<D1Result> =>
+  db
+    .prepare(
+      `UPDATE users
+       SET auth_hash = ?, server_salt = ?, kdf_alg = 'pbkdf2-sha256',
+           kdf_salt = ?, kdf_iterations = ?, vault_key_wrapped = ?, vault_key_wrap_iv = ?,
+           session_version = session_version + 1,
+           failed_login_count = 0, locked_until = NULL, updated_at = ?
+       WHERE id = ? AND status = 'active' AND auth_hash = ? AND server_salt = ?`,
+    )
+    .bind(
+      input.authHash,
+      input.serverSalt,
+      input.kdfSalt,
+      input.kdfIterations,
+      input.vaultKeyWrapped,
+      input.vaultKeyWrapIv,
+      now,
+      id,
+      expectedAuthHash,
+      expectedServerSalt,
+    )
+    .run();
+
 export const incrementSessionVersion = (db: D1Database, id: string, now: number): Promise<D1Result> =>
   db.prepare('UPDATE users SET session_version = session_version + 1, updated_at = ? WHERE id = ?').bind(now, id).run();
 
@@ -251,6 +319,15 @@ export const createUsersQueries = (env: Env) => {
     findSessionUser: (id: string) => findSessionUserById(db, id),
     findLoginCompletion: (id: string) => findLoginCompletionById(db, id),
     findAuthById: (id: string) => findUserAuthById(db, id),
+    findPasswordChangeState: (id: string) => findPasswordChangeState(db, id),
+    rotatePassword: (
+      id: string,
+      input: RotatePasswordInput,
+      now: number,
+      expectedAuthHash: string,
+      expectedServerSalt: string,
+    ) => rotatePassword(db, id, input, now, expectedAuthHash, expectedServerSalt),
+    findPasswordKdf: (id: string) => findPasswordKdfById(db, id),
     incrementSessionVersion: (id: string, now: number) => incrementSessionVersion(db, id, now),
     count: () => countUsers(db),
     createFirstAdmin: (admin: NewAdminInput) => createFirstAdmin(db, admin),

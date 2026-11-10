@@ -24,4 +24,12 @@ export const fromBase64Url = (value: string): Uint8Array => {
 
 export const standardToBase64Url = (value: string): string => toBase64Url(decodeBase64(value));
 
+export const storedToBase64Url = (value: string): string => {
+  try {
+    return toBase64Url(fromBase64Url(value));
+  } catch {
+    return standardToBase64Url(value);
+  }
+};
+
 export const base64UrlToStandard = (value: string): string => encodeBase64(fromBase64Url(value));

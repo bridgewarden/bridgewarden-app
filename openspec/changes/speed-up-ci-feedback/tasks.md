@@ -3,7 +3,7 @@
 ## 1. Split quality checks into their own job
 
 - [x] 1.1 Create a `quality` job in `.github/workflows/ci.yml` that runs checkout, pnpm setup, Node setup with pnpm cache, `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, and `pnpm build`; verify the workflow contains all five checks and `pnpm exec prettier --check .github/workflows/ci.yml` passes.
-- [ ] 1.2 Add `permissions: contents: read`, a job timeout, and workflow-level concurrency keyed by workflow and ref with `cancel-in-progress: true`; verify a superseded pull-request run is reported as cancelled in GitHub Actions.
+- [x] 1.2 Add `permissions: contents: read`, a job timeout, and workflow-level concurrency keyed by workflow and ref with `cancel-in-progress: true`; verify a superseded pull-request run is reported as cancelled in GitHub Actions.
 
 ## 2. Move E2E to the pinned Playwright container
 

@@ -13,8 +13,8 @@
 
 ## 3. Verify behavior and measure the improvement
 
-- [ ] 3.1 Open a pull request and confirm both `quality` and `e2e` jobs pass on the same commit; verify the PR checks list shows two independent jobs.
-- [ ] 3.2 Record per-job and total wall-clock timings in the pull request and compare them with run `42757787138` (8m 6s total, 346s Playwright install); verify quality finishes under 2 minutes and the E2E job under 3 minutes including image pull.
+- [x] 3.1 Open a pull request and confirm both `quality` and `e2e` jobs pass on the same commit; verify the PR checks list shows two independent jobs.
+- [x] 3.2 Record per-job and total wall-clock timings in the pull request and compare them with run `42757787138` (8m 6s total, 346s Playwright install); verify quality finishes under 2 minutes and the E2E job under 3 minutes including image pull.
 - [ ] 3.3 Confirm failure artifacts are uploaded by inspecting a deliberately failing E2E run or the workflow dry-run output, then remove the temporary failure; verify the report artifact exists only for the failed attempt.
 - [ ] 3.4 If the container job is slower than the baseline or fails on sandbox/user permissions, document the measured result and revert to the cached-browser fallback from `design.md` rather than disabling browser sandboxing.
 

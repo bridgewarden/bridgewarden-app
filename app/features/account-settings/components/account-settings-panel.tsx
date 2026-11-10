@@ -13,7 +13,7 @@ type AccountSettingsPanelProps = {
 };
 
 export const AccountSettingsPanel = ({ email, displayName, twoFactor, password }: AccountSettingsPanelProps) => {
-  const passwordFlow = usePasswordChange(password);
+  const passwordFlow = usePasswordChange(password, email);
 
   return (
     <section className="mx-auto w-full max-w-2xl space-y-8">

@@ -3,6 +3,8 @@ import { useFetcher } from 'react-router';
 
 import { prepareLogin } from '../../lib/crypto/login-keys';
 import { rewrapPassword } from '../../lib/crypto/password-change';
+import { storeKeyMaterial } from '../../lib/vault/key-material';
+import type { VaultKeyMaterial } from '../../lib/vault/types';
 import { MIN_MASTER_PASSWORD_LENGTH } from '../../lib/password-policy';
 import type { PasswordSettings } from './account-settings.types';
 
@@ -12,7 +14,7 @@ type Prepared =
 
 export type PasswordFlow = ReturnType<typeof usePasswordChange>;
 
-export const usePasswordChange = (password: PasswordSettings) => {
+export const usePasswordChange = (password: PasswordSettings, email: string) => {
   const prepareFetcher = useFetcher<Prepared>();
   const changeFetcher = useFetcher<{ ok: true } | { ok: false; error: string }>();
   const [currentPassword, setCurrentPassword] = useState('');
@@ -23,6 +25,7 @@ export const usePasswordChange = (password: PasswordSettings) => {
   const [success, setSuccess] = useState(false);
   const currentRef = useRef<{ authHash: string; wrapKey: Uint8Array } | null>(null);
   const startedRef = useRef(false);
+  const materialRef = useRef<VaultKeyMaterial | null>(null);
 
   useEffect(() => {
     const prepared = prepareFetcher.data;
@@ -45,6 +48,7 @@ export const usePasswordChange = (password: PasswordSettings) => {
 
     void rewrapPassword(current.authHash, current.wrapKey, newPassword, prepared.material)
       .then((result) => {
+        materialRef.current = result.request;
         changeFetcher.submit(
           { currentAuthHash: result.currentAuthHash, ...result.request },
           {
@@ -63,6 +67,8 @@ export const usePasswordChange = (password: PasswordSettings) => {
     if (!result) return;
 
     if (result.ok) {
+      if (materialRef.current) void storeKeyMaterial(email, materialRef.current).catch(() => undefined);
+      materialRef.current = null;
       queueMicrotask(() => {
         setCurrentPassword('');
         setNewPassword('');
@@ -73,7 +79,7 @@ export const usePasswordChange = (password: PasswordSettings) => {
     }
 
     queueMicrotask(() => setLocalError(result.error));
-  }, [changeFetcher.data]);
+  }, [changeFetcher.data, email]);
 
   const submit = async () => {
     if (!currentPassword || newPassword.length < MIN_MASTER_PASSWORD_LENGTH || newPassword !== confirmation) {

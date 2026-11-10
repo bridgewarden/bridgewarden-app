@@ -2,6 +2,7 @@ import { useEffect, useReducer, useRef, useState } from 'react';
 import { useBlocker, useFetcher, useNavigate } from 'react-router';
 
 import { t, type MessageKey } from '~/lib/i18n/en';
+import { storeKeyMaterial } from '~/lib/vault/key-material';
 import { clearVaultKey, setVaultKey } from '~/lib/vault/key-store';
 
 import { ERROR_KEY } from './setup.constants';
@@ -54,6 +55,10 @@ export const useSetupFlow = () => {
     if (!fetcher.data) return;
 
     if (fetcher.data.ok) {
+      const keys = state.keys;
+      if (keys) {
+        void storeKeyMaterial(state.email, keys).catch(() => undefined);
+      }
       dispatch({ type: 'succeeded' });
       return;
     }
@@ -63,7 +68,7 @@ export const useSetupFlow = () => {
     }
 
     dispatch({ type: 'failed', error: fetcher.data.error });
-  }, [fetcher.data]);
+  }, [fetcher.data, state.email, state.keys]);
 
   useEffect(() => {
     if (state.step === 'done' && fetcher.state === 'idle') {

@@ -138,3 +138,47 @@ The value SHALL be stored in D1 as the authoritative revocation state for that u
 #### Scenario: Version only increases
 - **WHEN** a revocation increments the session version
 - **THEN** the new value is greater than the previous value and cannot be negative
+
+### Requirement: Setup invitation storage
+
+The system SHALL store pending member invitations with a lowercase unique email, display name, role, hashed token, inviter, expiry, optional consumption time, and creation time. The raw invitation token MUST NOT be stored.
+
+#### Scenario: Token stored as hash
+- **WHEN** an invitation is created
+- **THEN** the table contains only the token hash and never the raw token
+
+#### Scenario: Invitation is single-use
+- **WHEN** an invitation is consumed
+- **THEN** its consumption marker is set and the same token cannot be accepted again
+
+#### Scenario: Email uniqueness with users
+- **WHEN** a user already exists with the invitation email
+- **THEN** the invitation cannot create a second account with that email
+
+### Requirement: Recovery verifier storage
+
+Each user row SHALL support a recovery auth hash and recovery server salt. Both SHALL be nullable for accounts created before the recovery reset capability exists. When present, they SHALL store only the server-verified HMAC output and random salt, never the recovery secret, proof, vault key, or recovery wrap key.
+
+#### Scenario: New account has recovery verifier
+- **WHEN** a user is created through setup or member setup after this change
+- **THEN** `recovery_auth_hash` and `recovery_server_salt` are non-null
+
+#### Scenario: Legacy account remains null
+- **WHEN** an existing user row is migrated without regenerating its recovery key
+- **THEN** both recovery verifier columns remain null
+
+#### Scenario: No plaintext recovery material
+- **WHEN** a user row is inspected
+- **THEN** it contains no recovery secret, recovery auth proof, vault key, or recovery wrap key in plaintext
+
+### Requirement: Atomic credential replacement
+
+The database SHALL allow a recovery reset to replace the master auth hash, server salt, KDF parameters, vault wrapper, recovery wrapper, and recovery verifier in one guarded statement that is conditional on the verified recovery proof and active status. A concurrent reset that no longer matches the precondition MUST change no rows.
+
+#### Scenario: Conditional reset succeeds once
+- **WHEN** a reset matches the active row and current recovery verifier
+- **THEN** exactly one user row is updated and the session version increments once
+
+#### Scenario: Concurrent reset fails closed
+- **WHEN** a second reset uses the pre-reset recovery verifier
+- **THEN** it changes no rows and leaves the first reset intact

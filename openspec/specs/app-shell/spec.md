@@ -71,3 +71,15 @@ ciphertext in its own markup.
 
 - **WHEN** the application is locked or the user has not unlocked the vault
 - **THEN** the shell renders its header and navigation with no vault content in the document
+
+### Requirement: Admin navigation
+
+The shell SHALL expose a user-management navigation link only to authenticated administrators. Members and anonymous visitors MUST NOT see the link.
+
+#### Scenario: Admin sees the link
+- **WHEN** an administrator views the shell
+- **THEN** a link to `/admin/users` is present and keyboard reachable
+
+#### Scenario: Member does not see the link
+- **WHEN** a member views the shell
+- **THEN** no admin user-management link is rendered

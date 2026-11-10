@@ -33,7 +33,7 @@ serverSalt)` and a constant-time comparison. Unknown email and wrong password MU
 
 #### Scenario: Correct credentials
 - **WHEN** a known email and matching `authHash` are submitted
-- **THEN** the request proceeds to session issuance
+- **THEN** the request proceeds to the second-factor challenge when enabled, otherwise to session issuance
 
 #### Scenario: Unknown email
 - **WHEN** an unknown email is submitted with any hash
@@ -45,23 +45,28 @@ serverSalt)` and a constant-time comparison. Unknown email and wrong password MU
 
 ### Requirement: Login response and client unlock
 
-A successful login SHALL return only `requires2fa`, the account's KDF parameters, and the wrapped
-vault key with its IV. The browser SHALL derive the wrap key, unwrap the vault key into memory, clear
-the master password, and navigate to the validated `next` path or `/app`. The vault key MUST NOT be
-written to storage or a cookie.
+A successful password login SHALL return KDF parameters and, when 2FA is disabled, the wrapped vault key and IV plus a session. With 2FA enabled it SHALL return only a challenge token and no session or key. The browser SHALL derive and unwrap only after the required factors succeed, clear the password, and navigate to the validated next path. The vault key MUST NOT be written to storage or a cookie.
 
 #### Scenario: Unlocked landing page
-- **WHEN** login succeeds
-- **THEN** the response contains wrapped key material and the browser lands on the requested app route with an in-memory vault key
+- **WHEN** a user without 2FA logs in successfully
+- **THEN** the response contains wrapped key material, a session cookie, and the app route unlocks
+
+#### Scenario: Challenge before unlock with 2FA
+- **WHEN** a user with 2FA logs in with a correct password
+- **THEN** the response contains a challenge token and no session or wrapped key
+
+#### Scenario: Unlock after challenge
+- **WHEN** the second factor is verified successfully
+- **THEN** the response contains wrapped key material and a session cookie
 
 #### Scenario: Password cleared
-- **WHEN** the client finishes unwrapping
+- **WHEN** the client finishes deriving credentials or unwrapping
 - **THEN** the password and derived key material are no longer held by the form
 
 ### Requirement: Session issuance and lifetime
 
-Successful login SHALL issue a 32-byte random token stored only as its SHA-256 hash in KV, set an
-`HttpOnly; Secure; SameSite=Lax; Path=/` cookie valid for 30 days, and record
+Successful authentication SHALL issue a 32-byte random token stored only as its SHA-256 hash in KV,
+set an `HttpOnly; Secure; SameSite=Lax; Path=/` cookie valid for 30 days, and record
 `{userId, createdAt, lastSeenAt, uaHash, ipHash, ver}`. The lifetime SHALL be absolute; activity
 updates `lastSeenAt` but MUST NOT extend expiry.
 
@@ -72,6 +77,10 @@ updates `lastSeenAt` but MUST NOT extend expiry.
 #### Scenario: Activity does not extend lifetime
 - **WHEN** a session is refreshed after the hourly threshold
 - **THEN** only `lastSeenAt` changes and the absolute expiry stays fixed
+
+#### Scenario: 2FA delays session issuance
+- **WHEN** a user with 2FA submits only the password
+- **THEN** no session is issued until the second factor succeeds
 
 ### Requirement: Session resolution
 
@@ -154,3 +163,167 @@ NOT include emails, passwords, auth hashes, tokens, or ciphertext.
 #### Scenario: Logout audited
 - **WHEN** a user logs out
 - **THEN** a logout event references that user
+
+### Requirement: Rate-limited authentication requests
+
+Authentication endpoints SHALL apply request budgets derived from HMAC hashes of the caller's IP and, when available, the account identifier. Requests over budget MUST return 429 with a `Retry-After` header and no credential or session result. Raw IP addresses and emails MUST NOT be stored as rate-limit keys.
+
+#### Scenario: Login rate limit rejects the request
+- **WHEN** a caller exceeds the login budget for its IP hash or email hash
+- **THEN** the response is 429 with `Retry-After`, and no password verification or session issuance occurs
+
+#### Scenario: Two-factor rate limit rejects the request
+- **WHEN** a caller exceeds the two-factor budget for its IP hash or challenge identity
+- **THEN** the response is 429 with `Retry-After`, and the challenge is not consumed
+
+#### Scenario: Limits are keyed by hashes
+- **WHEN** a request is rate limited
+- **THEN** no raw IP address or email is persisted in the rate-limit key
+
+### Requirement: Account lockout after consecutive password failures
+
+A known active account SHALL become locked after ten consecutive failed password attempts. The lock MUST last 15 minutes and a login attempt during the lock MUST return 423 with `Retry-After` without verifying or issuing a session. Unknown emails MUST continue to return the generic 401.
+
+#### Scenario: Tenth failure locks the account
+- **WHEN** the tenth consecutive password attempt fails for a known active account
+- **THEN** the account's `locked_until` is set to 15 minutes from that attempt
+
+#### Scenario: Locked account is rejected
+- **WHEN** a login attempt targets an account whose `locked_until` is in the future
+- **THEN** the response is 423 with `Retry-After` and no session is issued
+
+#### Scenario: Unknown email remains generic
+- **WHEN** an unknown email is submitted
+- **THEN** the response remains the generic 401 and no lock state is created
+
+### Requirement: Lockout reset and per-account isolation
+
+A successful password login SHALL reset the account's consecutive failure count and lock deadline. A lock on one account MUST NOT lock another account, though the shared IP budget MAY still apply.
+
+#### Scenario: Success resets counters
+- **WHEN** a correct password is accepted before or after a lock expires
+- **THEN** `failed_login_count` returns to zero and `locked_until` is cleared
+
+#### Scenario: Another account remains usable
+- **WHEN** one account is locked from an IP
+- **THEN** a different account from the same IP can authenticate unless the shared IP budget is exhausted
+
+### Requirement: Authenticated master-password rotation
+
+An authenticated user SHALL change their master password by proving the current password and submitting only newly derived transport material. The server MUST verify the current auth hash, atomically replace the password hash, KDF parameters, and wrapped vault key, and leave vault items unchanged.
+
+#### Scenario: Password rotation succeeds
+- **WHEN** a user submits the correct current auth hash and valid new KDF/wrapped-key material
+- **THEN** the stored password hash, KDF parameters, and vault-key wrapper are replaced in one update
+
+#### Scenario: Old password stops working
+- **WHEN** the password has been rotated
+- **THEN** login with the old password returns the generic 401 and login with the new password succeeds
+
+#### Scenario: Wrong current password
+- **WHEN** the submitted current auth hash does not match the stored account
+- **THEN** the request is rejected and no password or key material is changed
+
+#### Scenario: Failed update leaves old password
+- **WHEN** the database update fails
+- **THEN** the account remains on the old password and old wrapped key
+
+### Requirement: Password rotation reuses the vault key
+
+Password rotation SHALL unwrap the existing vault key in the browser and re-wrap the same key under the new master key. The server MUST NOT receive the plaintext vault key, master password, or recovery secret. Recovery key material MUST remain valid after the password change.
+
+#### Scenario: Ciphertext untouched
+- **WHEN** a password rotation completes
+- **THEN** vault item ciphertext and the vault key are unchanged, and only the wrapper changes
+
+#### Scenario: No plaintext secret sent
+- **WHEN** the browser submits a password rotation
+- **THEN** the request contains only auth hashes, KDF parameters, wrapped keys, and IVs
+
+#### Scenario: Recovery key still works
+- **WHEN** the user later unwraps the vault with the existing recovery key
+- **THEN** the unwrap succeeds
+
+### Requirement: Rotation revokes other sessions
+
+Password rotation SHALL invalidate every existing session except the current device. The current session MUST be reissued with the new session version.
+
+#### Scenario: Other session rejected
+- **WHEN** a second browser has an older session and the password is rotated elsewhere
+- **THEN** the older session is rejected on its next request
+
+#### Scenario: Current session remains usable
+- **WHEN** rotation completes on the current device
+- **THEN** a new cookie is issued and the device continues without re-login
+
+### Requirement: Uniform recovery lookup
+
+The recovery lookup SHALL accept an email and return only the account's recovery-wrapped vault key and IV. Known and unknown emails MUST receive the same status and field shape. Unknown emails SHALL receive deterministic synthetic wrapper and IV values derived from the configured pepper so repeated requests cannot reveal account existence. The response MUST NOT contain the master auth hash, KDF parameters, vault wrapper, tokens, or recovery proof.
+
+#### Scenario: Known email lookup
+- **WHEN** a client submits the email of an account with recovery material
+- **THEN** the response contains that account's recovery wrapper and IV
+
+#### Scenario: Unknown email lookup
+- **WHEN** a client submits an email that does not exist
+- **THEN** the response has the same status and shape with deterministic synthetic wrapper and IV values
+
+#### Scenario: No credential material in lookup
+- **WHEN** any recovery lookup response is inspected
+- **THEN** it contains no master auth hash, KDF parameters, vault wrapper, session token, or recovery proof
+
+### Requirement: Recovery proof verification
+
+A recovery reset SHALL require a proof derived from the recovery secret with a domain separate from the vault wrap key. The server MUST verify the submitted proof against the stored recovery auth hash with `HMAC-SHA256(AUTH_PEPPER, proof || recoveryServerSalt)` and a constant-time comparison. Wrong proof, missing account, unknown email, and an account without recovery proof MUST return the same generic failure and MUST NOT mutate credentials.
+
+#### Scenario: Correct recovery proof
+- **WHEN** a reset request presents proof matching the stored recovery verifier
+- **THEN** the reset may proceed
+
+#### Scenario: Wrong recovery proof
+- **WHEN** a reset request presents a non-matching proof
+- **THEN** the response is a generic failure and the user row is unchanged
+
+#### Scenario: Account without recovery proof
+- **WHEN** a pre-migration account has no stored recovery verifier
+- **THEN** the response is the same generic failure and no password material changes
+
+### Requirement: Recovery reset rotates and burns credentials
+
+A successful recovery reset SHALL replace the server auth hash, server salt, KDF parameters, vault-key wrapper, recovery-key wrapper, and recovery proof in one guarded update, increment the session version, and issue a new session for the resetting device. Every previous session MUST be rejected on its next request. The old recovery key MUST fail after the reset because both its wrapper and verifier are replaced.
+
+#### Scenario: Successful reset
+- **WHEN** the correct recovery proof and valid new password and recovery material are submitted
+- **THEN** the account is updated atomically, a new session cookie is issued, and the vault key remains usable
+
+#### Scenario: Old sessions revoked
+- **WHEN** a reset completes while another browser holds a session
+- **THEN** the other browser is rejected on its next request
+
+#### Scenario: Old recovery key burned
+- **WHEN** the account has been reset with a new recovery key
+- **THEN** the old recovery key no longer unwraps the vault and no longer satisfies the recovery proof
+
+#### Scenario: Session issuance fails after commit
+- **WHEN** the credential update commits but the new session cannot be issued
+- **THEN** the client still receives the new recovery key once and is directed to sign in with the new password
+
+#### Scenario: Failed update leaves old credentials
+- **WHEN** the guarded update changes no row because of a concurrent reset
+- **THEN** the response is a generic failure and the previous credentials remain
+
+### Requirement: Recovery audit
+
+Recovery lookup failures, proof failures, and successful resets SHALL write payload-free audit events. Events MAY include peppered UA and IP hashes but MUST NOT include email, passwords, auth hashes, recovery secrets, proofs, tokens, or ciphertext.
+
+#### Scenario: Failed reset audited
+- **WHEN** a reset is rejected
+- **THEN** an audit event is written without request secrets
+
+#### Scenario: Successful reset audited
+- **WHEN** a reset succeeds
+- **THEN** a completion event references the user without any secret material
+
+#### Scenario: Two-factor bypass audited
+- **WHEN** a reset succeeds for an account with two-factor authentication enabled
+- **THEN** the server records a distinct audit event marking the break-glass bypass

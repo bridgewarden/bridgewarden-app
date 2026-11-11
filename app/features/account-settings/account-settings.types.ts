@@ -15,8 +15,9 @@ export type AccountSettingsProps = {
   password: PasswordSettings;
 };
 
-export type EnrollResponse = { ok: true; secret: string; uri: string } | { ok: false; error: string };
-export type CodesResponse = { ok: true; backupCodes: string[] } | { ok: false; error: string };
-export type DisableResponse = { ok: true } | { ok: false; error: string };
+export type EnrollResponse =
+  { ok: true; secret: string; uri: string; sessionIssued?: boolean } | { ok: false; error: string };
+export type CodesResponse = { ok: true; backupCodes: string[]; sessionIssued?: boolean } | { ok: false; error: string };
+export type DisableResponse = { ok: true; sessionIssued?: boolean } | { ok: false; error: string };
 export type PreloginResponse =
   { ok: true; kdfAlg: string; kdfSalt: string; kdfIterations: number } | { ok: false; error: string };

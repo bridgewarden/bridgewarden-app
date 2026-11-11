@@ -99,6 +99,15 @@ describe('auth route guards', () => {
     }
   });
 
+  it('rate-limits 2FA step-up before body parsing', async () => {
+    vi.spyOn(env.RATE_LIMITER_IP, 'limit').mockResolvedValue({ success: false });
+    const result = await settle(() =>
+      invoke(disableAction, request('/api/account/2fa/disable', JSON.stringify({ authHash: 'A'.repeat(43) }))),
+    );
+    expect(statusOf(result)).toBe(429);
+    expect((result as { init?: { headers?: Record<string, string> } }).init?.headers?.['Retry-After']).toBe('60');
+  });
+
   it('guards the 2FA challenge and account API routes', async () => {
     const foreign = { origin: 'https://evil.example' };
     const authHash = 'A'.repeat(43);

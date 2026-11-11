@@ -1,32 +1,21 @@
 import { data } from 'react-router';
 
 import type { Route } from './+types/api-account-2fa-enroll';
-import { cloudflareContext } from '~/lib/.server/context';
-import { readMutationJson } from '~/lib/.server/json-action';
-import { requireUserApi } from '~/lib/.server/require-user';
 import { beginEnrollment } from '~/features/two-factor/.server/use-cases/enroll';
-import { parseDisableInput } from '~/features/two-factor/.server/two-factor-input';
+import {
+  readStepUpAction,
+  stepUpErrorResponse,
+  stepUpSuccessResponse,
+} from '~/features/two-factor/.server/step-up-route';
 
 export async function action({ request, context }: Route.ActionArgs) {
-  const { env } = context.get(cloudflareContext);
-  const mutation = await readMutationJson(request, env);
-  if (!mutation.ok) return data({ ok: false, error: mutation.error }, { status: mutation.status });
+  const guard = await readStepUpAction(request, context);
+  if (!guard.ok) return guard.response;
 
-  const input = parseDisableInput(mutation.value);
-  if (!input) return data({ ok: false, error: 'invalid-input' }, { status: 400 });
-
-  const { user } = await requireUserApi(request, env);
-  const result = await beginEnrollment(env, request, user.id, user.email, input);
-
-  if (result.status === 'invalid-password') {
-    return data({ ok: false, error: 'invalid-password' }, { status: 400 });
-  }
+  const result = await beginEnrollment(guard.env, request, guard.user.id, guard.user.email, guard.input);
   if (result.status === 'already-enabled') {
-    return data({ ok: false, error: 'already-enabled' }, { status: 409 });
+    return data({ ok: false, error: 'already-enabled' }, { status: 409, headers: { 'Cache-Control': 'no-store' } });
   }
-  if (result.status === 'server-error') {
-    return data({ ok: false, error: 'server-error' }, { status: 500 });
-  }
-
-  return data({ ok: true, secret: result.secret, uri: result.uri }, { headers: { 'Cache-Control': 'no-store' } });
+  if (result.status !== 'ok') return stepUpErrorResponse(result)!;
+  return stepUpSuccessResponse({ secret: result.secret, uri: result.uri }, null);
 }

@@ -35,7 +35,7 @@ describe('2FA lifecycle', () => {
 
     await expect(
       disableTwoFactor(twoFactorEnv(), request(), user.userId, { authHashBytes: user.authHash }),
-    ).resolves.toEqual({ status: 'ok' });
+    ).resolves.toMatchObject({ status: 'ok' });
 
     const twoFactor = await env.DB.prepare('SELECT COUNT(*) AS count FROM user_2fa WHERE user_id = ?')
       .bind(user.userId)

@@ -70,6 +70,7 @@ export const useLoginSuccessEffects = (options: LoginSuccessEffectsOptions) => {
       try {
         const vaultKey = await unwrapLoginVault(data.vaultKeyWrapped, data.vaultKeyWrapIv, wrapKey);
         setVaultKey(vaultKey);
+        vaultKey.fill(0);
         await storeKeyMaterial(emailRef.current, data).catch(() => undefined);
         navigate(next, { replace: true });
       } catch {
@@ -133,6 +134,7 @@ export const useLoginSuccessEffects = (options: LoginSuccessEffectsOptions) => {
       try {
         const vaultKey = await unwrapLoginVault(data.vaultKeyWrapped, data.vaultKeyWrapIv, wrapKey);
         setVaultKey(vaultKey);
+        vaultKey.fill(0);
         await storeKeyMaterial(emailRef.current, data).catch(() => undefined);
         navigate(next, { replace: true });
       } catch {

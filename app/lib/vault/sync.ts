@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { applyVaultDelta, getSyncState, setSyncState } from './cache';
 import { readKeyMaterial } from './key-material';
-import { getVaultKey } from './key-store';
+import { isUnlocked } from './key-store';
 import { getVaultEpoch, openVaultDb, VaultDbUnavailableError } from './local-db';
 import type { CachedFolder, CachedItem } from './types';
 
@@ -76,7 +76,7 @@ const runSync = async (): Promise<SyncStatus> => {
   }
 
   try {
-    if (!getVaultKey() || !(await readKeyMaterial())) {
+    if (!isUnlocked() || !(await readKeyMaterial())) {
       setStatus('idle');
       return status;
     }

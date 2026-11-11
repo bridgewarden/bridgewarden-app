@@ -2,6 +2,7 @@ import { t } from '~/lib/i18n/en';
 
 import type { PasswordSettings, TwoFactorState } from '../account-settings.types';
 import { usePasswordChange } from '../password-change.hooks';
+import { AutoLockCard } from './auto-lock-card';
 import { PasswordCard } from './password-card';
 import { TwoFactorCard } from './two-factor-card';
 
@@ -26,6 +27,8 @@ export const AccountSettingsPanel = ({ email, displayName, twoFactor, password }
       </div>
 
       <PasswordCard flow={passwordFlow} />
+
+      <AutoLockCard />
 
       <TwoFactorCard email={email} twoFactor={twoFactor} />
     </section>

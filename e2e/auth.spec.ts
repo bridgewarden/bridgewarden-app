@@ -87,6 +87,106 @@ test('manual lock requires the master password and sign out revokes the session'
   await expect(page).toHaveURL(/\/login$/);
 });
 
+test('idle auto-lock fires at the configured timeout and activity postpones it', async ({ page }) => {
+  await page.clock.install();
+  await page.goto('/login');
+  await signIn(page);
+  await expect(page).toHaveURL(/\/app$/);
+  await page.getByRole('link', { name: en['common.settings'] }).click();
+  await expect(page.getByRole('heading', { name: en['settings.title'] })).toBeVisible();
+
+  const timeout = page.getByRole('combobox', { name: en['settings.autoLock.minutes'] });
+  await expect(timeout).toHaveText(en['settings.autoLock.minutes.15']);
+  await timeout.click();
+  await page.getByRole('option', { name: en['settings.autoLock.minutes.1'] }).click();
+
+  await page.clock.fastForward(30_000);
+  await page.keyboard.press('Tab');
+  await page.clock.fastForward(30_000);
+  await expect(page.getByRole('heading', { name: en['lock.title'] })).toBeHidden();
+  await page.clock.fastForward(31_000);
+  await expect(page.getByRole('heading', { name: en['lock.title'] })).toBeVisible();
+  await expect(page.getByRole('heading', { name: en['settings.title'] })).toHaveCount(0);
+
+  await unlockVault(page);
+  await expect(page.getByRole('heading', { name: en['settings.title'] })).toBeVisible();
+});
+
+test('enabling hide-lock locks immediately when the tab becomes hidden', async ({ page }) => {
+  await page.goto('/login');
+  await signIn(page);
+  await expect(page).toHaveURL(/\/app$/);
+  await page.getByRole('link', { name: en['common.settings'] }).click();
+  await page.getByRole('checkbox', { name: en['settings.autoLock.hide'] }).click();
+
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, value: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+
+  await expect(page.getByRole('heading', { name: en['lock.title'] })).toBeVisible();
+});
+
+test('auto-lock settings persist across reload and hide-lock defaults off', async ({ page }) => {
+  await page.goto('/login');
+  await signIn(page);
+  await expect(page).toHaveURL(/\/app$/);
+  await page.getByRole('link', { name: en['common.settings'] }).click();
+
+  const timeout = page.getByRole('combobox', { name: en['settings.autoLock.minutes'] });
+  await timeout.click();
+  await page.getByRole('option', { name: en['settings.autoLock.minutes.30'] }).click();
+  const hide = page.getByRole('checkbox', { name: en['settings.autoLock.hide'] });
+  await expect(hide).not.toBeChecked();
+  await hide.click();
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        minutes: localStorage.getItem('bw_auto_lock_minutes'),
+        hide: localStorage.getItem('bw_lock_on_hide'),
+      })),
+    )
+    .toEqual({ minutes: '30', hide: 'true' });
+
+  await page.reload();
+  await unlockVault(page);
+  await page.getByRole('link', { name: en['common.settings'] }).click();
+  await expect(page.getByRole('combobox', { name: en['settings.autoLock.minutes'] })).toHaveText(
+    en['settings.autoLock.minutes.30'],
+  );
+  await expect(page.getByRole('checkbox', { name: en['settings.autoLock.hide'] })).toBeChecked();
+
+  await page.getByRole('button', { name: en['common.signOut'] }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        minutes: localStorage.getItem('bw_auto_lock_minutes'),
+        hide: localStorage.getItem('bw_lock_on_hide'),
+      })),
+    )
+    .toEqual({ minutes: null, hide: null });
+});
+
+test('locking one tab locks sibling tabs in the same context', async ({ context, page }) => {
+  await page.goto('/login');
+  await signIn(page);
+  await expect(page).toHaveURL(/\/app$/);
+
+  const second = await context.newPage();
+  try {
+    await second.goto('/app');
+    await unlockVault(second);
+    await expect(second.getByRole('heading', { level: 1 })).toHaveText(en['vault.title']);
+
+    await page.getByRole('button', { name: en['common.lock'] }).click();
+    await expect(second.getByRole('heading', { name: en['lock.title'] })).toBeVisible();
+  } finally {
+    await second.close();
+  }
+});
+
 test('five failed local unlocks force sign out', async ({ page }) => {
   await page.goto('/login');
   await signIn(page);

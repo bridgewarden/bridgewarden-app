@@ -4,12 +4,14 @@ import { CircleUserIcon, LockIcon, ShieldAlertIcon, ShieldIcon } from 'lucide-re
 import { Link, useFetcher, useMatches, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 
+import { useAutoLock } from '~/hooks/use-auto-lock';
 import { LockedOverlay } from '~/components/locked-overlay';
 import { ThemeControl } from '~/components/theme-control';
 import { Button } from '~/components/ui/button';
 import { Toaster } from '~/components/ui/sonner';
 import { t } from '~/lib/i18n/en';
 import type { Theme } from '~/lib/theme';
+import { resetAutoLockPreferences } from '~/lib/vault/auto-lock';
 import { isUnlocked, subscribeKeyState } from '~/lib/vault/key-store';
 import { wipeVaultDb } from '~/lib/vault/local-db';
 import { clearUnlockFailures, lockVault, unlockVault } from '~/lib/vault/lock';
@@ -36,15 +38,26 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
   const matches = useMatches();
   const wasSubmitting = useRef(false);
   const wasLocked = useRef(false);
+  const hadUser = useRef(Boolean(user));
   const lockButtonRef = useRef<HTMLButtonElement>(null);
   const unlocked = useSyncExternalStore(subscribeKeyState, isUnlocked, lockedSnapshot);
   const userEmail = user?.email;
   const protectedRoute = matches.some((match) => match.id === 'routes/protected');
   const locked = Boolean(user) && !unlocked && protectedRoute;
+  useAutoLock(unlocked);
 
   useEffect(() => {
     if (userEmail && unlocked) void syncVault();
   }, [unlocked, userEmail]);
+
+  useEffect(() => {
+    if (!user) {
+      hadUser.current = false;
+      return;
+    }
+    if (!hadUser.current) resetAutoLockPreferences();
+    hadUser.current = true;
+  }, [user]);
 
   useEffect(() => {
     if (wasLocked.current && !locked) lockButtonRef.current?.focus();
@@ -59,6 +72,7 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
 
     if (fetcher.data?.ok) {
       lockVault();
+      resetAutoLockPreferences();
       clearUnlockFailures();
       void wipeVaultDb()
         .catch(() => undefined)
@@ -79,6 +93,7 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
   }, [fetcher.data, fetcher.state, navigate]);
 
   const logout = () => {
+    lockVault();
     fetcher.submit({}, { method: 'post', action: '/auth/logout', encType: 'application/json' });
   };
 

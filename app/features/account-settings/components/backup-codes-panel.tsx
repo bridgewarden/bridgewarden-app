@@ -2,7 +2,9 @@ import { useEffect, useRef } from 'react';
 import { CopyIcon, DownloadIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { Alert, AlertDescription } from '~/components/ui/alert';
 import { Button } from '~/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
 import { t } from '~/lib/i18n/en';
 
 type BackupCodesPanelProps = {
@@ -10,7 +12,7 @@ type BackupCodesPanelProps = {
 };
 
 export const BackupCodesPanel = ({ codes }: BackupCodesPanelProps) => {
-  const headingRef = useRef<HTMLHeadingElement>(null);
+  const headingRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     headingRef.current?.focus();
@@ -38,28 +40,34 @@ export const BackupCodesPanel = ({ codes }: BackupCodesPanelProps) => {
   };
 
   return (
-    <div data-testid="backup-codes" className="space-y-3 rounded-lg border border-destructive/40 p-5">
-      <h2 ref={headingRef} tabIndex={-1} className="text-lg font-medium">
-        {t('settings.twoFactor.codesTitle')}
-      </h2>
-      <p className="text-sm text-destructive">{t('settings.twoFactor.codesWarning')}</p>
-      <div className="grid gap-2 font-mono text-sm sm:grid-cols-2">
-        {codes.map((backupCode) => (
-          <code key={backupCode} className="rounded-md border bg-muted px-3 py-2 select-all">
-            {backupCode}
-          </code>
-        ))}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="outline" className="min-h-11" onClick={copyCodes}>
-          <CopyIcon aria-hidden="true" />
-          {t('settings.twoFactor.copyCodes')}
-        </Button>
-        <Button type="button" variant="outline" className="min-h-11" onClick={downloadCodes}>
-          <DownloadIcon aria-hidden="true" />
-          {t('settings.twoFactor.downloadCodes')}
-        </Button>
-      </div>
-    </div>
+    <Card data-testid="backup-codes" className="border-destructive/40">
+      <CardHeader>
+        <CardTitle ref={headingRef} tabIndex={-1} role="heading" aria-level={2}>
+          {t('settings.twoFactor.codesTitle')}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <Alert variant="destructive" role="status">
+          <AlertDescription>{t('settings.twoFactor.codesWarning')}</AlertDescription>
+        </Alert>
+        <div className="grid gap-2 font-mono text-sm sm:grid-cols-2">
+          {codes.map((backupCode) => (
+            <code key={backupCode} className="rounded-md border bg-muted px-3 py-2 select-all">
+              {backupCode}
+            </code>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" className="min-h-11" onClick={copyCodes}>
+            <CopyIcon aria-hidden="true" />
+            {t('settings.twoFactor.copyCodes')}
+          </Button>
+          <Button type="button" variant="outline" className="min-h-11" onClick={downloadCodes}>
+            <DownloadIcon aria-hidden="true" />
+            {t('settings.twoFactor.downloadCodes')}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 };

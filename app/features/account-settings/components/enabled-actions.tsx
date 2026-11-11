@@ -1,6 +1,7 @@
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
+import { Separator } from '~/components/ui/separator';
 import { t } from '~/lib/i18n/en';
 
 type EnabledActionsProps = {
@@ -23,10 +24,11 @@ export const EnabledActions = ({
   <>
     <p className="text-sm text-muted-foreground">{t('settings.twoFactor.regenerateWarning')}</p>
     <p className="text-sm text-muted-foreground">{t('settings.twoFactor.disableDescription')}</p>
-    <div className="space-y-2 border-t pt-4">
-      <Label htmlFor="enable-password">{t('settings.twoFactor.password')}</Label>
+    <Separator />
+    <div className="space-y-2">
+      <Label htmlFor="disable-password">{t('settings.twoFactor.password')}</Label>
       <Input
-        id="enable-password"
+        id="disable-password"
         type="password"
         autoComplete="current-password"
         spellCheck={false}

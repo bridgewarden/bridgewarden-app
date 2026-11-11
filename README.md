@@ -165,7 +165,13 @@ The header lock action discards the in-memory vault key while keeping ciphertext
 material, and the session. A reload of a protected route starts locked; entering the master
 password unwraps the cached key locally without a server request. If cached material is missing or
 expired, the overlay offers sign-out and login instead. Five failed local unlock attempts force a
-sign-out and wipe. Idle timeout, configurable auto-lock, and visibility locking are a separate change.
+sign-out and wipe.
+
+The idle auto-lock defaults to 15 minutes and is configurable in account settings as 1, 5, 15, 30,
+60, or never. Pointer, keyboard, touch, and scroll activity restart the deadline. An optional,
+default-off setting locks immediately when the tab becomes hidden; without it, the idle deadline
+still applies. Only the timeout and tab-hide flag are stored locally; they contain no vault data.
+A successful sign-out resets them to the default policy. Locking one tab locks sibling tabs in the same browser profile.
 
 ## User management
 

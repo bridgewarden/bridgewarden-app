@@ -207,3 +207,26 @@ test('unsafe next targets fall back to the app root', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/app$/);
 });
+
+test('failed logout still locks and wipes local vault state', async ({ page }) => {
+  await page.goto('/login');
+  await signIn(page);
+  await expect(page).toHaveURL(/\/app$/);
+  let intercepted = false;
+  await page.route(/\/auth\/logout/, async (route) => {
+    intercepted = true;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    await route.abort();
+  });
+
+  await page.getByRole('button', { name: en['common.signOut'] }).click();
+
+  await expect(page.getByRole('heading', { name: en['lock.title'] })).toBeVisible();
+  await expect.poll(() => intercepted).toBe(true);
+  await expect(page.getByText(en['common.signOutFailed'])).toBeVisible();
+  await expect(page).toHaveURL(/\/app$/);
+  await expect
+    .poll(async () => page.evaluate(async () => (await indexedDB.databases?.())?.map((db) => db.name) ?? []))
+    .not.toContain('bridgewarden-vault');
+  await page.unroute(/\/auth\/logout/);
+});

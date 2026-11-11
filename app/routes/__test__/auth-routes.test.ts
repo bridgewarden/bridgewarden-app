@@ -83,6 +83,12 @@ describe('auth route guards', () => {
     expect(statusOf(await invoke(loginAction, request('/auth/login', '{}')))).toBe(400);
   });
 
+  it('charges the identity budget only after a failed login', async () => {
+    vi.spyOn(env.RATE_LIMITER_IDENTITY, 'limit').mockResolvedValue({ success: false });
+    const body = JSON.stringify({ email: 'nobody@example.com', authHash: 'A'.repeat(43) });
+    expect(statusOf(await invoke(loginAction, request('/auth/login', body)))).toBe(429);
+  });
+
   it('returns 429 before parsing bodies when the IP budget rejects', async () => {
     vi.spyOn(env.RATE_LIMITER_IP, 'limit').mockResolvedValue({ success: false });
     const endpoints = [

@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resetDatabase } from '../../__test__/reset-database';
 import { createAuthUser } from '../../__test__/auth-fixtures';
-import { toBase64Url } from '../../lib/base64-url';
 import { cloudflareContext } from '../../lib/.server/context';
 import { action as loginAction } from '../auth-login';
 
@@ -43,11 +42,11 @@ beforeEach(async () => {
 });
 
 describe('login route abuse guards', () => {
-  it('returns 429 with Retry-After when the identity budget rejects', async () => {
+  it('returns 429 with Retry-After when the identity budget rejects a failed login', async () => {
     vi.spyOn(env.RATE_LIMITER_IDENTITY, 'limit').mockResolvedValue({ success: false });
     const user = await createAuthUser({ email: 'limited@example.com' });
 
-    const result = await invoke(request({ email: user.email, authHash: toBase64Url(user.authHash) }));
+    const result = await invoke(request({ email: user.email, authHash: 'A'.repeat(43) }));
 
     expect(statusOf(result)).toBe(429);
     expect(headerOf(result, 'Retry-After')).toBe('60');

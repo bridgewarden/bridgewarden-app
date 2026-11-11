@@ -173,6 +173,13 @@ default-off setting locks immediately when the tab becomes hidden; without it, t
 still applies. Only the timeout and tab-hide flag are stored locally; they contain no vault data.
 A successful sign-out resets them to the default policy. Locking one tab locks sibling tabs in the same browser profile.
 
+The vault list decrypts cached ciphertext in memory only. It shows item name, username, folder,
+favorite, and type, with combined type/folder/favorite filters and name/updated sorting. `j`/`k` or
+the arrow keys move the active row and Enter opens a read-only detail; `Ctrl/Cmd+K` arrives with
+client-side search. The empty state creates a minimal named login or note through the encrypted
+outbox, so the item appears immediately and syncs when online. Full item fields, editing, and
+delete remain in the editor changes.
+
 ## User management
 
 Administrators can open `/admin/users` to list accounts, create setup invitations, change roles,

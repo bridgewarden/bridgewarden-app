@@ -15,6 +15,13 @@ export const waitForHydration = async (page: Page) => {
   );
 };
 
+export const signIn = async (page: Page) => {
+  await waitForHydration(page);
+  await page.getByLabel(en['login.email']).fill(E2E_ADMIN.email);
+  await page.getByLabel(en['login.password']).fill(E2E_ADMIN.password);
+  await page.getByRole('button', { name: en['login.submit'] }).click();
+};
+
 export const unlockVault = async (page: Page, password = E2E_ADMIN.password) => {
   await waitForHydration(page);
   await expect(page.getByRole('heading', { name: en['lock.title'] })).toBeVisible();

@@ -22,7 +22,7 @@ export const AccountSettingsPanel = ({ email, displayName, twoFactor, password }
         <h1 className="text-2xl font-semibold">{t('settings.title')}</h1>
         <p className="text-muted-foreground">{t('settings.description')}</p>
         <p className="text-sm text-muted-foreground">
-          {displayName ?? email} · {email}
+          {displayName && displayName !== email ? `${displayName} · ${email}` : email}
         </p>
       </div>
 

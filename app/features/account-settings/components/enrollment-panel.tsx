@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
+import { Separator } from '~/components/ui/separator';
 import { t } from '~/lib/i18n/en';
 import { TOTP_CODE_PATTERN } from '~/lib/totp-code';
 
@@ -26,7 +27,8 @@ export const EnrollmentPanel = ({ enrollment, code, status, onVerify, onQrError 
   }, [enrollment.uri, onQrError]);
 
   return (
-    <div className="space-y-4 border-t pt-4">
+    <div className="space-y-4">
+      <Separator />
       <p className="text-sm text-muted-foreground">{t('settings.twoFactor.scan')}</p>
       <canvas
         ref={canvasRef}

@@ -43,6 +43,10 @@ test('admin invites a member, member sets up, admin disables them', async ({ bro
   await unlockVault(page);
   const memberRow = page.getByRole('row', { name: new RegExp(MEMBER_EMAIL) });
   await expect(memberRow).toBeVisible();
+  const roleSelect = memberRow.getByLabel(`${en['adminUsers.role']} — ${MEMBER_EMAIL}`);
+  await roleSelect.selectOption('admin');
+  await expect(roleSelect).toHaveValue('admin');
+  await page.waitForLoadState('networkidle');
   await memberRow.getByRole('button', { name: en['adminUsers.disable'] }).click();
   await expect(memberRow.getByRole('button', { name: en['adminUsers.enable'] })).toBeVisible();
 

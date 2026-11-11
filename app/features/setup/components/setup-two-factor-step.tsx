@@ -1,3 +1,4 @@
+import { Alert, AlertDescription } from '~/components/ui/alert';
 import { Button } from '~/components/ui/button';
 import { t } from '~/lib/i18n/en';
 
@@ -15,14 +16,14 @@ export const SetupTwoFactorStep = ({ errorMessage, canRetry, busy, onRetry, onCo
       <h2 className="text-lg font-medium">{t('setup.twoFactor.heading')}</h2>
       <p className="text-sm text-muted-foreground">{t('setup.twoFactor.description')}</p>
     </div>
-    <p className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
-      {t('setup.twoFactor.warning')}
-    </p>
+    <Alert variant="destructive" role="status">
+      <AlertDescription>{t('setup.twoFactor.warning')}</AlertDescription>
+    </Alert>
     <p className="text-sm text-muted-foreground">{t('setup.twoFactor.enrollLater')}</p>
     {errorMessage ? (
-      <p role="alert" className="text-sm text-destructive">
-        {errorMessage}
-      </p>
+      <Alert variant="destructive">
+        <AlertDescription>{errorMessage}</AlertDescription>
+      </Alert>
     ) : null}
     <div className="flex gap-2">
       {canRetry ? (

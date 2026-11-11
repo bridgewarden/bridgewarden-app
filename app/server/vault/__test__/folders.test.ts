@@ -105,11 +105,12 @@ describe('folder use cases', () => {
     const repeat = await deleteFolder(testEnv(), userId, folder.id);
     expect(repeat.status).toBe('ok');
     expect((await findVaultRev(env.DB, userId))?.vault_rev).toBe(4);
-    expect(
-      await env.DB.prepare('SELECT id, folder_id, rev, updated_at FROM vault_items WHERE user_id = ? ORDER BY id')
-        .bind(userId)
-        .all(),
-    ).toEqual(beforeRepeatItems);
+    const afterRepeatItems = await env.DB.prepare(
+      'SELECT id, folder_id, rev, updated_at FROM vault_items WHERE user_id = ? ORDER BY id',
+    )
+      .bind(userId)
+      .all();
+    expect(afterRepeatItems.results).toEqual(beforeRepeatItems.results);
   });
 
   it('does not expose another user folder tombstone in the delta', async () => {

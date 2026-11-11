@@ -179,6 +179,7 @@ export const en = {
   'adminUsers.error.self': 'You cannot change your own admin access here.',
   'adminUsers.error.rateLimited': 'Too many attempts. Try again later.',
   'adminUsers.error.serverError': 'The action failed. Try again.',
+  'adminUsers.error.title': 'Action failed',
   'recover.title': 'Recover your vault',
   'recover.description': 'Use your recovery key to set a new master password. The old recovery key stops working.',
   'recover.email.label': 'Email',

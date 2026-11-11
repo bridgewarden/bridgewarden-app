@@ -5,6 +5,7 @@ import { Link, useFetcher, useMatches, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 
 import { useAutoLock } from '~/hooks/use-auto-lock';
+import { Alert, AlertDescription } from '~/components/ui/alert';
 import { LockedOverlay } from '~/components/locked-overlay';
 import { ThemeControl } from '~/components/theme-control';
 import { Button } from '~/components/ui/button';
@@ -100,15 +101,19 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
   return (
     <div className="flex min-h-screen flex-col">
       {user && !twoFactorEnabled ? (
-        <div role="status" inert={locked} className="border-b border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm">
-          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-2 text-center">
-            <ShieldAlertIcon className="size-4 shrink-0" aria-hidden="true" />
+        <Alert
+          role="status"
+          inert={locked}
+          className="rounded-none border-x-0 border-t-0 px-4 py-2 [&>svg]:mx-auto [&>svg]:size-4"
+        >
+          <ShieldAlertIcon aria-hidden="true" />
+          <AlertDescription className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-2 text-center">
             <span>{t('twoFactor.banner')}</span>
             <Link to="/app/settings" className="font-medium underline underline-offset-4">
               {t('twoFactor.enableNow')}
             </Link>
-          </div>
-        </div>
+          </AlertDescription>
+        </Alert>
       ) : null}
       <header inert={locked} className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex min-h-16 w-full max-w-5xl items-center gap-1 px-4">

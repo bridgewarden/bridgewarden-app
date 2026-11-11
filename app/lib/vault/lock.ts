@@ -6,7 +6,20 @@ import type { UnlockResult } from './types';
 
 const FAILURE_KEY = 'bw_unlock_failures';
 const MAX_UNLOCK_FAILURES = 5;
+const LOCK_CHANNEL = 'bw-vault-lock';
 let unlockAttempt = 0;
+
+const applyLock = (): void => {
+  unlockAttempt += 1;
+  clearVaultKey();
+};
+
+const lockChannel =
+  typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(LOCK_CHANNEL) : null;
+
+lockChannel?.addEventListener('message', (event: MessageEvent<{ type?: string }>) => {
+  if (event.data?.type === 'lock') applyLock();
+});
 let fallbackFailures = 0;
 
 const readFailures = (): number => {
@@ -41,8 +54,8 @@ export const clearUnlockFailures = (): void => {
 export const hasExceededUnlockAttempts = (): boolean => readFailures() >= MAX_UNLOCK_FAILURES;
 
 export const lockVault = (): void => {
-  unlockAttempt += 1;
-  clearVaultKey();
+  applyLock();
+  lockChannel?.postMessage({ type: 'lock' });
 };
 
 export const unlockVault = async (password: string): Promise<UnlockResult> => {

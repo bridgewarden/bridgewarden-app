@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { fromBase64Url, toBase64Url } from '../base64-url';
+import { fromBase64Url, storedToStandardBase64, toBase64Url } from '../base64-url';
 import { InvalidEncodingError } from '../crypto/errors';
 
 describe('base64url transport', () => {
@@ -16,6 +16,12 @@ describe('base64url transport', () => {
   it('uses the url-safe alphabet', () => {
     expect(toBase64Url(new Uint8Array([0xfb, 0xff]))).toBe('-_8');
     expect(fromBase64Url('-_8')).toEqual(new Uint8Array([0xfb, 0xff]));
+  });
+
+  it('normalizes transport and storage values to standard base64', () => {
+    expect(storedToStandardBase64('-_8')).toBe('+/8=');
+    expect(storedToStandardBase64('+/8=')).toBe('+/8=');
+    expect(() => storedToStandardBase64('!!!!')).toThrow(InvalidEncodingError);
   });
 
   it('rejects padding, foreign alphabet, empty, and non-canonical values', () => {

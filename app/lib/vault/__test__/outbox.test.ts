@@ -114,6 +114,9 @@ describe('vault outbox', () => {
     await expect(
       enqueueOutbox({ ...createEntry(crypto.randomUUID()), payload: { password: 'plaintext' } }),
     ).rejects.toThrow('ciphertext-only');
+    await expect(
+      enqueueOutbox({ ...createEntry(crypto.randomUUID()), payload: { body: 'plaintext' } }),
+    ).rejects.toThrow('ciphertext-only');
   });
 
   it('persists optimistic rows and survives reopen', async () => {
@@ -137,6 +140,8 @@ describe('vault outbox', () => {
 
     expect(await flushOutbox()).toBe(2);
     expect(fetchMock.mock.calls.map((call) => JSON.parse(String(call[1]?.body)).id)).toEqual([ID1, ID2]);
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)).dataCt).toBe('Y3Q');
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)).dataIv).toBe('aXY');
     expect(await getOutboxEntries()).toHaveLength(0);
     expect((await getAllCachedItems()).map((row) => row.rev).sort()).toEqual([2, 3]);
   });

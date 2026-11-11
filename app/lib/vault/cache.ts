@@ -1,3 +1,4 @@
+import { storedToStandardBase64 } from '../base64-url';
 import { openVaultDb } from './local-db';
 import type { CachedFolder, CachedItem, SyncState } from './types';
 
@@ -7,8 +8,18 @@ export const applyVaultDelta = async (items: CachedItem[], folders: CachedFolder
   const itemStore = transaction.objectStore('items');
   const folderStore = transaction.objectStore('folders');
 
-  for (const item of items) itemStore.put(item);
-  for (const folder of folders) folderStore.put(folder);
+  for (const item of items)
+    itemStore.put({
+      ...item,
+      dataCt: storedToStandardBase64(item.dataCt),
+      dataIv: storedToStandardBase64(item.dataIv),
+    });
+  for (const folder of folders)
+    folderStore.put({
+      ...folder,
+      nameCt: storedToStandardBase64(folder.nameCt),
+      nameIv: storedToStandardBase64(folder.nameIv),
+    });
   await transaction.done;
 };
 

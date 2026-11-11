@@ -27,6 +27,12 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
     },
     {
+      name: 'vault-list',
+      testMatch: /vault-list\.spec\.ts/,
+      dependencies: ['auth'],
+      use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
+    },
+    {
       name: 'two-factor',
       testMatch: /two-factor\.spec\.ts/,
       dependencies: ['auth'],

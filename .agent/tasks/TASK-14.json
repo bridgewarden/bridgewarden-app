@@ -1,77 +1,82 @@
 {
   "id": "TASK-14",
-  "title": "PR #15 — Vault list, filters, keyboard navigation, and search",
+  "title": "PR #15 \u2014 Vault list, minimal create, filters, and keyboard navigation",
   "category": "ui-ux",
-  "description": "Render the decrypted vault list with sorting, filtering, keyboard navigation, a command-palette search, and an empty state, all computed in memory over cached ciphertext. Requirement IDs: TASK-38, TASK-39.",
+  "description": "Render the decrypted vault list with sorting, filtering, keyboard navigation, and a minimal encrypted create path, all computed in memory over cached ciphertext. Requirement IDs: TASK-38, plus the minimal-create slice of TASK-40. Search is TASK-39 and full editors are TASK-40/41.",
   "acceptanceCriteria": [
-    "List rows show decrypted name, secondary line (username or note snippet), folder, favorite, and type",
+    "List rows show decrypted name, username (if login), folder, favorite, and type",
     "Sorting by name and updated-at works; filtering by type, folder, and favorite works and combines",
-    "Keyboard navigation supports arrow keys and `j`/`k`, Enter to open, and `Ctrl/Cmd+K` to focus search",
-    "Search matches name, username, URL, and notes substring with debounce and match highlighting",
-    "Search performs no network request and works offline",
-    "Results update within 100ms for 1000 items",
-    "A 500-item list renders without visible jank or layout thrash",
-    "An empty vault shows a primary call to action to create the first item",
+    "Keyboard navigation supports arrow keys, j/k, roving tabindex, and Enter to open",
+    "An empty vault shows a working CTA that creates a minimal named login or note",
+    "Minimal creates encrypt locally, enqueue through the outbox, appear optimistically, and sync when online",
+    "A 500-item projection renders without blocking input or failing",
     "Every action is reachable by keyboard alone"
   ],
   "steps": [
     {
       "step": 1,
-      "description": "Add the decryption selector layer",
-      "details": "Create `app/lib/vault/selectors.ts` that takes cached ciphertext rows, opens each envelope with the in-memory key, and returns a memoized list of `{ id, type, favorite, folderId, rev, updatedAt, decrypted: { name, username, url, notes } }`. Cache results by `rev` and invalidate on cache writes.",
+      "description": "Add payload and projection layers",
+      "details": "Create app/lib/vault/item-payload.ts with strict login/note/folder payload schemas. Create app/lib/vault/projection.ts that opens cached envelopes with the in-memory key, decrypts folders first, uses bounded concurrency, skips corrupt rows, and zeros the key copy.",
       "pass": false
     },
     {
       "step": 2,
       "description": "Build the list surface",
-      "details": "Create `app/routes/vault.tsx` as a transport-only route plus the page entry `app/features/vault-list/vault-list.tsx` with `index.ts`, `components/`, and `vault-list.hooks.ts`. Use a two-pane layout on desktop (list + detail placeholder) and a single-pane flow on mobile. Render rows with name, secondary line, folder chip, favorite star, and type icon. Include a toolbar with new-item, sort, and filter controls.",
+      "details": "Keep app/routes/vault-list.tsx transport-only. Implement the page entry and container under app/features/vault-list/ with components/, vault-list.hooks.ts, and vault-list.lib.ts. Use a single list with a read-only detail dialog rather than a two-pane placeholder.",
       "pass": false
     },
     {
       "step": 3,
       "description": "Implement sorting and filtering",
-      "details": "Add a reducer for `{ sort: 'name'|'updated', direction, type?, folderId?, favoriteOnly }`. Persist the preference in the `meta` store. Apply filters before sorting and memoize by the filter key.",
+      "details": "Add sort by name/updated and combined type/folder/favorite filters. Keep the preference in session state; persistence is deferred and recorded in the design. Apply filters before sorting and memoize the visible rows.",
       "pass": false
     },
     {
       "step": 4,
       "description": "Implement keyboard navigation",
-      "details": "Add a roving tabindex list with ArrowUp/ArrowDown and `j`/`k`, Enter to open, Escape to clear focus, and a visible focus ring. Ensure shortcuts do not fire while typing in an input or textarea.",
+      "details": "Use a roving tabindex list with ArrowUp/ArrowDown, j/k, Enter to open, and focus restoration after the detail dialog closes. Shortcuts must not fire in editable or interactive controls.",
       "pass": false
     },
     {
       "step": 5,
-      "description": "Implement the search palette",
-      "details": "Add a `Ctrl/Cmd+K` command palette using the dialog primitive with a debounced input (150ms), matching over decrypted fields, highlighted substrings, and keyboard selection. Show a short empty-result message. No fetch calls.",
+      "description": "Add minimal encrypted create",
+      "details": "Add a dialog for name, type, folder, and favorite. Validate the payload schema, seal it with the vault key, write an optimistic cache row plus outbox entry, refresh the list, and flush. Normalize standard base64 cache ciphertext to base64url at the HTTP boundary.",
       "pass": false
     },
     {
       "step": 6,
-      "description": "Add the empty and locked states",
-      "details": "Empty vault: illustration-free message plus a primary new-item button. Locked: render nothing beyond the lock overlay. Loading: skeleton rows sized to the final row height to avoid layout shift.",
+      "description": "Add empty, loading, offline, and error states",
+      "details": "Empty vault shows the create CTA. Loading uses skeletons. Offline/error banners keep cached rows visible and expose retry. Corrupt rows are counted without blanking the list.",
       "pass": false
     },
     {
       "step": 7,
       "description": "Verify performance and behavior",
-      "details": "Add a fixture with 1000 cached items; measure initial decrypt+render and search latency in a Playwright trace. Assert search under 100ms and no long task over 200ms during scrolling. Verify offline search by blocking the network.",
+      "details": "Add a 500-row projection test and Playwright coverage for create, filters, detail, lock/unlock, note creation, 360px layout, and offline create followed by reconnect.",
       "pass": false
     }
   ],
-  "dependencies": ["TASK-3", "TASK-13"],
+  "dependencies": [
+    "TASK-3",
+    "TASK-13"
+  ],
   "estimatedComplexity": "high",
   "technicalNotes": [
     "Decrypt only what is needed; do not keep decrypted objects in a global store longer than necessary.",
-    "Search must never hit the server; the server cannot read names by design.",
-    "Virtualize the list only if measurement shows it is needed for 1000 items; do not add a dependency preemptively.",
-    "Keyboard shortcuts must be inert inside editable fields.",
-    "Folder names are ciphertext too; decrypt them with the same selector layer."
+    "Search must never hit the server; it moves to TASK-39.",
+    "Virtualize the list only if measurement shows it is needed; 500 rows are acceptable for this slice.",
+    "Keyboard shortcuts must be inert inside editable fields and must not override button activation.",
+    "Folder names are ciphertext too; decrypt them with the same projection layer.",
+    "Search and Ctrl/Cmd+K are out of scope; TASK-39 owns them."
   ],
   "pullRequest": {
-    "title": "feat(vault): list, filters, keyboard navigation, and search",
+    "title": "feat(vault): list, filters, keyboard navigation, and minimal create",
     "branch": "feat/vault-list",
-    "requirementIds": ["TASK-38", "TASK-39"],
-    "scope": "Decryption selectors, list surface, sort/filter state, keyboard nav, command palette search, empty/locked states.",
-    "outOfScope": "Item editors, generators, trash, responsive polish beyond the single-pane flow."
+    "requirementIds": [
+      "TASK-38",
+      "TASK-40"
+    ],
+    "scope": "Payload schemas, decrypt projection, list surface, sort/filter state, keyboard navigation, read-only detail, minimal encrypted create, offline outbox flush, tests.",
+    "outOfScope": "Search palette and Ctrl/Cmd+K (TASK-39), full item fields, update/delete, unsaved guard (TASK-40/41), folder management, generator, TOTP UI, clipboard/reveal, responsive hardening."
   }
 }

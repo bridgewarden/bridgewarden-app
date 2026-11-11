@@ -1,3 +1,4 @@
+import { storedToBase64Url, storedToStandardBase64 } from '../base64-url';
 import { readKeyMaterial } from './key-material';
 import { getVaultKey } from './key-store';
 import { getVaultEpoch, openVaultDb } from './local-db';
@@ -13,6 +14,7 @@ type Listener = (event: OutboxEvent) => void;
 
 const listeners = new Set<Listener>();
 let activeFlush: Promise<number> | null = null;
+let flushRequested = false;
 
 export const subscribeOutboxEvents = (listener: Listener): (() => void) => {
   listeners.add(listener);
@@ -30,6 +32,7 @@ const FORBIDDEN_PAYLOAD_KEYS = new Set([
   'username',
   'password',
   'notes',
+  'body',
   'url',
   'urls',
   'customFields',
@@ -39,15 +42,21 @@ const FORBIDDEN_PAYLOAD_KEYS = new Set([
   'recoveryKey',
 ]);
 
+const hasPlaintextKey = (value: unknown, depth = 0): boolean => {
+  if (depth > 8 || value === null || typeof value !== 'object') return false;
+  if (Array.isArray(value)) return value.some((entry) => hasPlaintextKey(entry, depth + 1));
+  return Object.entries(value as Record<string, unknown>).some(
+    ([key, nested]) => FORBIDDEN_PAYLOAD_KEYS.has(key) || hasPlaintextKey(nested, depth + 1),
+  );
+};
+
 const assertEncryptedEntry = (entry: OutboxEntry): void => {
   const expectedEntity = entry.kind.startsWith('item.') ? 'item' : 'folder';
   if (entry.entity !== expectedEntity) throw new Error('outbox entity does not match operation');
   if (CREATE_KINDS.has(entry.kind) && !UUID_PATTERN.test(entry.id)) {
     throw new Error('outbox create requires a UUID id');
   }
-  for (const key of Object.keys(entry.payload)) {
-    if (FORBIDDEN_PAYLOAD_KEYS.has(key)) throw new Error('outbox payload must be ciphertext-only');
-  }
+  if (hasPlaintextKey(entry.payload)) throw new Error('outbox payload must be ciphertext-only');
 };
 
 export const enqueueOutbox = async (entry: OutboxEntry): Promise<number> => {
@@ -98,7 +107,21 @@ const complete = async (entry: OutboxEntry, body: Record<string, unknown>): Prom
   const db = await openVaultDb();
   const entityStore = entry.entity === 'item' ? 'items' : 'folders';
   const transaction = db.transaction(['outbox', entityStore], 'readwrite');
-  const row = (body.item ?? body.folder) as CachedItem | CachedFolder | undefined;
+  const rawRow = (body.item ?? body.folder) as CachedItem | CachedFolder | undefined;
+  const row =
+    rawRow && entry.entity === 'item'
+      ? {
+          ...rawRow,
+          dataCt: storedToStandardBase64((rawRow as CachedItem).dataCt),
+          dataIv: storedToStandardBase64((rawRow as CachedItem).dataIv),
+        }
+      : rawRow && entry.entity === 'folder'
+        ? {
+            ...rawRow,
+            nameCt: storedToStandardBase64((rawRow as CachedFolder).nameCt),
+            nameIv: storedToStandardBase64((rawRow as CachedFolder).nameIv),
+          }
+        : undefined;
   if (row) {
     if (entry.entity === 'item') {
       await transaction.objectStore('items').put(row as CachedItem);
@@ -112,6 +135,17 @@ const complete = async (entry: OutboxEntry, body: Record<string, unknown>): Prom
   await transaction.done;
 };
 
+const CIPHERTEXT_FIELDS = ['dataCt', 'dataIv', 'nameCt', 'nameIv'] as const;
+
+const transportPayload = (payload: Record<string, unknown>): Record<string, unknown> => {
+  const next = { ...payload };
+  for (const field of CIPHERTEXT_FIELDS) {
+    const value = next[field];
+    if (typeof value === 'string' && value.length > 0) next[field] = storedToBase64Url(value);
+  }
+  return next;
+};
+
 const requestFor = (entry: OutboxEntry): { path: string; method: string; body?: string } => {
   const encoded = encodeURIComponent(entry.id);
   switch (entry.kind) {
@@ -119,10 +153,14 @@ const requestFor = (entry: OutboxEntry): { path: string; method: string; body?: 
       return {
         path: '/api/vault/items',
         method: 'POST',
-        body: JSON.stringify({ ...entry.payload, id: entry.idempotencyId ?? entry.id }),
+        body: JSON.stringify({ ...transportPayload(entry.payload), id: entry.idempotencyId ?? entry.id }),
       };
     case 'item.update':
-      return { path: `/api/vault/items/${encoded}`, method: 'PATCH', body: JSON.stringify(entry.payload) };
+      return {
+        path: `/api/vault/items/${encoded}`,
+        method: 'PATCH',
+        body: JSON.stringify(transportPayload(entry.payload)),
+      };
     case 'item.trash':
       return { path: `/api/vault/items/${encoded}`, method: 'DELETE' };
     case 'item.restore':
@@ -133,10 +171,14 @@ const requestFor = (entry: OutboxEntry): { path: string; method: string; body?: 
       return {
         path: '/api/folders',
         method: 'POST',
-        body: JSON.stringify({ ...entry.payload, id: entry.idempotencyId ?? entry.id }),
+        body: JSON.stringify({ ...transportPayload(entry.payload), id: entry.idempotencyId ?? entry.id }),
       };
     case 'folder.rename':
-      return { path: `/api/folders/${encoded}`, method: 'PATCH', body: JSON.stringify(entry.payload) };
+      return {
+        path: `/api/folders/${encoded}`,
+        method: 'PATCH',
+        body: JSON.stringify(transportPayload(entry.payload)),
+      };
     case 'folder.delete':
       return { path: `/api/folders/${encoded}`, method: 'DELETE' };
     default:
@@ -212,8 +254,27 @@ const runFlush = async (): Promise<number> => {
 };
 
 export const flushOutbox = (): Promise<number> => {
-  activeFlush ??= runFlush().finally(() => {
+  if (activeFlush) {
+    flushRequested = true;
+    return activeFlush;
+  }
+
+  activeFlush = (async () => {
+    let total = 0;
+    do {
+      flushRequested = false;
+      total += await runFlush();
+    } while (flushRequested);
+    return total;
+  })().finally(() => {
     activeFlush = null;
+    flushRequested = false;
   });
   return activeFlush;
 };
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    void flushOutbox();
+  });
+}

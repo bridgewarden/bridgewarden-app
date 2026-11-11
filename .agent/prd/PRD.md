@@ -326,11 +326,13 @@ Requirement IDs are stable and become implementation task IDs. `TASK-1` is reser
 
 #### TASK-38 — Vault list UI
 - List rows show decrypted name, username (if login), folder, favorite, type; sort by name/updated; filter by type/folder/favorite.
-- Keyboard: `j/k` or arrow navigation, Enter to open, `Ctrl/Cmd+K` opens search.
-- **Acceptance:** list renders 500 items without jank; filters combine; empty list shows a CTA to create the first item; every action is reachable by keyboard.
+- Keyboard: `j/k` or arrow navigation, Enter to open.
+- Empty state creates a minimal named login or secure note through the encrypted outbox; full fields remain in TASK-40/41.
+- **Acceptance:** list renders 500 items without jank; filters combine; empty list shows a working CTA to create the first item; every action is reachable by keyboard.
 
 #### TASK-39 — Client-side search
 - Search matches decrypted name, username, URL, and notes substring; debounced; highlights matches.
+- `Ctrl/Cmd+K` opens the search palette.
 - Search runs only in memory over decrypted items; no server call.
 - **Acceptance:** search works offline; no query string is sent to the server; results update within 100ms for 1000 items.
 

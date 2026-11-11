@@ -3,8 +3,8 @@ import { recordAuditEventSafe } from '../../../../lib/.server/audit';
 import { requireSecret } from '../../../../lib/.server/env';
 import { createUsersQueries } from '../../../../lib/.server/queries/users';
 import { auditFingerprints } from '../../../../lib/.server/request-fingerprint';
-import { verifyServerAuthHash } from '../../../../lib/.server/verify-auth';
-import { LOCKOUT_DURATION_MS, MAX_FAILED_LOGIN_ATTEMPTS } from '../../../login/.server/constants/auth';
+import { verifyPasswordProof } from '../../../../lib/.server/password-proof';
+import { LOCKOUT_DURATION_MS, MAX_FAILED_LOGIN_ATTEMPTS } from '../../../../lib/.server/constants/auth';
 
 export type PreparePasswordChangeResult =
   | {
@@ -33,21 +33,31 @@ export const preparePasswordChange = async (
   if (!state || state.status !== 'active') return { status: 'server-error' };
 
   const now = Date.now();
-  if (state.locked_until && state.locked_until > now) {
-    return { status: 'locked', retryAfter: Math.ceil((state.locked_until - now) / 1000) };
-  }
-
-  if (!(await verifyServerAuthHash(currentAuthHashBytes, state.server_salt, pepper, state.auth_hash))) {
-    const failure = await users.recordFailedLogin(userId, now, MAX_FAILED_LOGIN_ATTEMPTS, LOCKOUT_DURATION_MS);
-    await recordAuditEventSafe(env, {
-      type: 'password.change_failed',
-      userId,
-      createdAt: now,
-      ...(await auditFingerprints(env, request)),
-    });
-    return failure?.locked_until && failure.failed_login_count >= MAX_FAILED_LOGIN_ATTEMPTS
-      ? { status: 'locked', retryAfter: Math.ceil((failure.locked_until - now) / 1000) }
-      : { status: 'invalid-current' };
+  const result = await verifyPasswordProof({
+    authHashBytes: currentAuthHashBytes,
+    serverSalt: state.server_salt,
+    pepper,
+    expectedHash: state.auth_hash,
+    lockedUntil: state.locked_until,
+    now,
+    maxAttempts: MAX_FAILED_LOGIN_ATTEMPTS,
+    durationMs: LOCKOUT_DURATION_MS,
+    recordFailure: async () => {
+      const state = await users.recordFailedLogin(userId, now, MAX_FAILED_LOGIN_ATTEMPTS, LOCKOUT_DURATION_MS);
+      return state ? { failed_count: state.failed_login_count, locked_until: state.locked_until } : null;
+    },
+    resetFailures: () => users.resetLoginFailures(userId, Date.now()),
+    onFailure: async () => {
+      await recordAuditEventSafe(env, {
+        type: 'password.change_failed',
+        userId,
+        createdAt: now,
+        ...(await auditFingerprints(env, request)),
+      });
+    },
+  });
+  if (result.status !== 'ok') {
+    return result.status === 'invalid-password' ? { status: 'invalid-current' } : result;
   }
 
   return {

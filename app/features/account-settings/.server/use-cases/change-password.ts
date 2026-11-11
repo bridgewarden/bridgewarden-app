@@ -5,8 +5,8 @@ import { auditFingerprints } from '../../../../lib/.server/request-fingerprint';
 import { requireSecret } from '../../../../lib/.server/env';
 import { createUsersQueries } from '../../../../lib/.server/queries/users';
 import { createSession, destroySessionToken, readSessionToken } from '../../../../lib/.server/session';
-import { LOCKOUT_DURATION_MS, MAX_FAILED_LOGIN_ATTEMPTS } from '../../../login/.server/constants/auth';
-import { verifyServerAuthHash } from '../../../../lib/.server/verify-auth';
+import { LOCKOUT_DURATION_MS, MAX_FAILED_LOGIN_ATTEMPTS } from '../../../../lib/.server/constants/auth';
+import { verifyPasswordProof } from '../../../../lib/.server/password-proof';
 import type { PasswordChangeInput } from '../password-input';
 
 export type ChangePasswordResult =
@@ -31,20 +31,32 @@ export const changeMasterPassword = async (
   const users = createUsersQueries(env);
   const current = await users.findPasswordChangeState(userId);
   if (!current || current.status !== 'active') return { status: 'invalid-current' };
-  if (current.locked_until && current.locked_until > Date.now()) {
-    return { status: 'locked', retryAfter: Math.ceil((current.locked_until - Date.now()) / 1000) };
-  }
-  if (!(await verifyServerAuthHash(input.currentAuthHashBytes, current.server_salt, pepper, current.auth_hash))) {
-    const state = await users.recordFailedLogin(userId, Date.now(), MAX_FAILED_LOGIN_ATTEMPTS, LOCKOUT_DURATION_MS);
-    await recordAuditEventSafe(env, {
-      type: 'password.change_failed',
-      userId,
-      createdAt: Date.now(),
-      ...(await auditFingerprints(env, request)),
-    });
-    return state?.locked_until && state.failed_login_count >= MAX_FAILED_LOGIN_ATTEMPTS
-      ? { status: 'locked', retryAfter: Math.ceil((state.locked_until - Date.now()) / 1000) }
-      : { status: 'invalid-current' };
+  const now = Date.now();
+  const result = await verifyPasswordProof({
+    authHashBytes: input.currentAuthHashBytes,
+    serverSalt: current.server_salt,
+    pepper,
+    expectedHash: current.auth_hash,
+    lockedUntil: current.locked_until,
+    now,
+    maxAttempts: MAX_FAILED_LOGIN_ATTEMPTS,
+    durationMs: LOCKOUT_DURATION_MS,
+    recordFailure: async () => {
+      const state = await users.recordFailedLogin(userId, now, MAX_FAILED_LOGIN_ATTEMPTS, LOCKOUT_DURATION_MS);
+      return state ? { failed_count: state.failed_login_count, locked_until: state.locked_until } : null;
+    },
+    resetFailures: () => users.resetLoginFailures(userId, now),
+    onFailure: async () => {
+      await recordAuditEventSafe(env, {
+        type: 'password.change_failed',
+        userId,
+        createdAt: now,
+        ...(await auditFingerprints(env, request)),
+      });
+    },
+  });
+  if (result.status !== 'ok') {
+    return result.status === 'invalid-password' ? { status: 'invalid-current' } : result;
   }
 
   const serverHash = await deriveServerAuthHash(input.authHashBytes, generateServerSalt(), pepper);

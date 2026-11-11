@@ -1,6 +1,8 @@
+import { z } from 'zod';
+
 import { storedToBase64Url, storedToStandardBase64 } from '../base64-url';
 import { readKeyMaterial } from './key-material';
-import { getVaultKey } from './key-store';
+import { isUnlocked } from './key-store';
 import { getVaultEpoch, openVaultDb } from './local-db';
 import { syncVault } from './sync';
 import type { CachedFolder, CachedItem, OutboxEntry } from './types';
@@ -27,27 +29,80 @@ const emit = (event: OutboxEvent) => {
 
 const CREATE_KINDS = new Set(['item.create', 'folder.create']);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const FORBIDDEN_PAYLOAD_KEYS = new Set([
-  'name',
-  'username',
-  'password',
-  'notes',
-  'body',
-  'url',
-  'urls',
-  'customFields',
-  'totpSecret',
-  'vaultKey',
-  'masterKey',
-  'recoveryKey',
-]);
+const ciphertext = z.string().refine(
+  (value) => {
+    if (value === '') return true;
+    try {
+      return btoa(atob(value)) === value;
+    } catch {
+      return false;
+    }
+  },
+  { message: 'ciphertext must be standard base64' },
+);
 
-const hasPlaintextKey = (value: unknown, depth = 0): boolean => {
-  if (depth > 8 || value === null || typeof value !== 'object') return false;
-  if (Array.isArray(value)) return value.some((entry) => hasPlaintextKey(entry, depth + 1));
-  return Object.entries(value as Record<string, unknown>).some(
-    ([key, nested]) => FORBIDDEN_PAYLOAD_KEYS.has(key) || hasPlaintextKey(nested, depth + 1),
-  );
+const cachedItemSchema = z.strictObject({
+  id: z.string().min(1),
+  type: z.enum(['login', 'note']),
+  folderId: z.string().nullable(),
+  favorite: z.boolean(),
+  dataCt: z.string(),
+  dataIv: z.string(),
+  dataVersion: z.number().int().min(1),
+  rev: z.number().int().min(0),
+  deletedAt: z.number().int().nullable(),
+  createdAt: z.number().int(),
+  updatedAt: z.number().int(),
+});
+
+const cachedFolderSchema = z.strictObject({
+  id: z.string().min(1),
+  nameCt: z.string(),
+  nameIv: z.string(),
+  dataVersion: z.number().int().min(1),
+  rev: z.number().int().min(0),
+  deletedAt: z.number().int().nullable(),
+  createdAt: z.number().int(),
+  updatedAt: z.number().int(),
+});
+
+const nonEmptyCiphertext = ciphertext.refine((value) => value !== '', { message: 'ciphertext is required' });
+
+const itemCiphertextSchema = z.strictObject({
+  id: z.uuid().optional(),
+  type: z.enum(['login', 'note']),
+  folderId: z.string().nullable(),
+  favorite: z.boolean(),
+  dataCt: nonEmptyCiphertext,
+  dataIv: nonEmptyCiphertext,
+  dataVersion: z.number().int().min(1),
+});
+const itemUpdateSchema = itemCiphertextSchema.extend({ rev: z.number().int().min(0) });
+const folderCiphertextSchema = z.strictObject({
+  id: z.uuid().optional(),
+  nameCt: nonEmptyCiphertext,
+  nameIv: nonEmptyCiphertext,
+  dataVersion: z.number().int().min(1),
+});
+const folderUpdateSchema = folderCiphertextSchema.extend({ rev: z.number().int().min(0) });
+const emptySchema = z.strictObject({});
+
+const payloadSchema = (kind: OutboxEntry['kind']) => {
+  switch (kind) {
+    case 'item.create':
+      return itemCiphertextSchema;
+    case 'item.update':
+      return itemUpdateSchema;
+    case 'folder.create':
+      return folderCiphertextSchema;
+    case 'folder.rename':
+      return folderUpdateSchema;
+    case 'item.trash':
+    case 'item.restore':
+    case 'item.purge':
+    case 'folder.delete':
+      return emptySchema;
+  }
 };
 
 const assertEncryptedEntry = (entry: OutboxEntry): void => {
@@ -56,7 +111,26 @@ const assertEncryptedEntry = (entry: OutboxEntry): void => {
   if (CREATE_KINDS.has(entry.kind) && !UUID_PATTERN.test(entry.id)) {
     throw new Error('outbox create requires a UUID id');
   }
-  if (hasPlaintextKey(entry.payload)) throw new Error('outbox payload must be ciphertext-only');
+  if (entry.idempotencyId !== null && !UUID_PATTERN.test(entry.idempotencyId)) {
+    throw new Error('outbox idempotency id must be a UUID');
+  }
+  if (!payloadSchema(entry.kind).safeParse(entry.payload).success) {
+    throw new Error('outbox payload must be ciphertext-only');
+  }
+  if (entry.optimistic) {
+    const parsed =
+      entry.entity === 'item'
+        ? cachedItemSchema.safeParse(entry.optimistic).success
+        : cachedFolderSchema.safeParse(entry.optimistic).success;
+    if (!parsed) throw new Error('outbox optimistic row must be ciphertext-only');
+  }
+  if (entry.previous) {
+    const parsed =
+      entry.entity === 'item'
+        ? cachedItemSchema.safeParse(entry.previous).success
+        : cachedFolderSchema.safeParse(entry.previous).success;
+    if (!parsed) throw new Error('outbox previous row must be ciphertext-only');
+  }
 };
 
 export const enqueueOutbox = async (entry: OutboxEntry): Promise<number> => {
@@ -108,6 +182,13 @@ const complete = async (entry: OutboxEntry, body: Record<string, unknown>): Prom
   const entityStore = entry.entity === 'item' ? 'items' : 'folders';
   const transaction = db.transaction(['outbox', entityStore], 'readwrite');
   const rawRow = (body.item ?? body.folder) as CachedItem | CachedFolder | undefined;
+  if (rawRow) {
+    const valid =
+      entry.entity === 'item'
+        ? cachedItemSchema.safeParse(rawRow).success
+        : cachedFolderSchema.safeParse(rawRow).success;
+    if (!valid) throw new Error('outbox server row must be ciphertext-only');
+  }
   const row =
     rawRow && entry.entity === 'item'
       ? {
@@ -187,7 +268,7 @@ const requestFor = (entry: OutboxEntry): { path: string; method: string; body?: 
 };
 
 const runFlush = async (): Promise<number> => {
-  if (!getVaultKey() || !(await readKeyMaterial())) return 0;
+  if (!isUnlocked() || !(await readKeyMaterial())) return 0;
   const epoch = getVaultEpoch();
   const entries = await getOutboxEntries();
   let processed = 0;
@@ -197,6 +278,7 @@ const runFlush = async (): Promise<number> => {
 
     let request: ReturnType<typeof requestFor>;
     try {
+      assertEncryptedEntry(entry);
       request = requestFor(entry);
     } catch {
       await rollback(entry);

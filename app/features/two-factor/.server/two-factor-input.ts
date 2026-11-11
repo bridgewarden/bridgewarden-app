@@ -6,7 +6,7 @@ import { TOTP_CODE_PATTERN } from '../../../lib/totp-code';
 const codeSchema = z.strictObject({ code: z.string().regex(TOTP_CODE_PATTERN) });
 const disableSchema = z.strictObject({ authHash: z.string().min(1).max(512) });
 
-export type DisableInput = { authHashBytes: Uint8Array };
+export type StepUpInput = { authHashBytes: Uint8Array };
 
 export const parseCodeInput = (value: unknown): { code: string } | null => {
   const parsed = codeSchema.safeParse(value);
@@ -14,7 +14,7 @@ export const parseCodeInput = (value: unknown): { code: string } | null => {
   return parsed.success ? parsed.data : null;
 };
 
-export const parseDisableInput = (value: unknown): DisableInput | null => {
+export const parseStepUpInput = (value: unknown): StepUpInput | null => {
   const parsed = disableSchema.safeParse(value);
   if (!parsed.success) return null;
 

@@ -61,7 +61,7 @@ export const incrementVaultRevIfItemDeleted = (db: D1Database, userId: string, i
       `UPDATE users SET vault_rev = vault_rev + 1
        WHERE id = ?
          AND EXISTS (
-           SELECT 1 FROM vault_items WHERE id = ? AND user_id = ? AND deleted_at IS NOT NULL
+           SELECT 1 FROM vault_items WHERE id = ? AND user_id = ? AND deleted_at IS NOT NULL AND data_ct <> '' AND data_iv <> ''
          )`,
     )
     .bind(userId, itemId, userId);

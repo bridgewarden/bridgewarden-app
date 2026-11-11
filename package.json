@@ -8,9 +8,9 @@
   },
   "scripts": {
     "dev": "NODE_ENV=development react-router dev",
-    "build": "react-router build",
-    "preview": "pnpm build && vite preview",
-    "deploy": "pnpm build && rm -f build/server/.dev.vars && wrangler deploy",
+    "build": "react-router build && node scripts/strip-build-secrets.ts",
+    "preview": "pnpm build && node scripts/prepare-preview-secrets.ts && vite preview",
+    "deploy": "pnpm build && wrangler deploy",
     "typecheck": "wrangler types && react-router typegen && tsc -b",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

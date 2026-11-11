@@ -166,7 +166,7 @@ NOT include emails, passwords, auth hashes, tokens, or ciphertext.
 
 ### Requirement: Rate-limited authentication requests
 
-Authentication endpoints SHALL apply request budgets derived from HMAC hashes of the caller's IP and, when available, the account identifier. Requests over budget MUST return 429 with a `Retry-After` header and no credential or session result. Raw IP addresses and emails MUST NOT be stored as rate-limit keys.
+Authentication endpoints SHALL apply request budgets derived from HMAC hashes of the caller's IP and, when available, the account identifier. The IP budget applies before password verification. The account-identity budget SHALL be charged only for failed credential results, so repeated successful sign-ins cannot exhaust a victim's budget; an exhausted identity budget MUST return 429 with `Retry-After` and no session result. Raw IP addresses and emails MUST NOT be stored as rate-limit keys.
 
 #### Scenario: Login rate limit rejects the request
 - **WHEN** a caller exceeds the login budget for its IP hash or email hash

@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
+import { toast } from 'sonner';
+
 import { ENVELOPE_VERSION } from '~/lib/crypto/contract';
 import { sealItem } from '~/lib/crypto/envelope';
+import { t } from '~/lib/i18n/en';
 import { parseItemPayload } from '~/lib/vault/item-payload';
 import { getVaultKey } from '~/lib/vault/key-store';
 import { enqueueOutbox, flushOutbox, subscribeOutboxEvents } from '~/lib/vault/outbox';
@@ -69,7 +72,10 @@ export const useVaultList = () => {
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const unsubscribe = subscribeOutboxEvents((event) => {
-      if (event.type === 'error') return;
+      if (event.type === 'error') {
+        toast.error(t('vault.outboxError'));
+        return;
+      }
       if (timer !== undefined) clearTimeout(timer);
       timer = setTimeout(() => void load(), 100);
     });

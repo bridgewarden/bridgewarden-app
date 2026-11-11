@@ -117,6 +117,12 @@ describe('vault outbox', () => {
     await expect(
       enqueueOutbox({ ...createEntry(crypto.randomUUID()), payload: { body: 'plaintext' } }),
     ).rejects.toThrow('ciphertext-only');
+    await expect(
+      enqueueOutbox({
+        ...createEntry(crypto.randomUUID()),
+        payload: { ...createEntry(crypto.randomUUID()).payload, dataCt: '' },
+      }),
+    ).rejects.toThrow('ciphertext-only');
   });
 
   it('persists optimistic rows and survives reopen', async () => {
@@ -188,6 +194,25 @@ describe('vault outbox', () => {
     expect(await flushOutbox()).toBe(1);
     expect(await getOutboxEntries()).toHaveLength(0);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a tampered persisted entry at flush time', async () => {
+    await prepareSession();
+    await enqueueOutbox(createEntry(ID1));
+    const [entry] = await getOutboxEntries();
+    const db = await openVaultDb();
+    await db.put('outbox', { ...entry!, payload: { ...entry!.payload, body: 'plaintext' } });
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const events: string[] = [];
+    const unsubscribe = subscribeOutboxEvents((event) => events.push(event.type));
+
+    expect(await flushOutbox()).toBe(1);
+    unsubscribe();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(await getOutboxEntries()).toHaveLength(0);
+    expect(await getAllCachedItems()).toHaveLength(0);
+    expect(events).toEqual(['error']);
   });
 
   it('keeps entries on network rejection', async () => {

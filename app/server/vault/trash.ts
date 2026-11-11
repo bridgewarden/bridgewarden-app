@@ -34,8 +34,15 @@ const transition = async (env: Env, userId: string, itemId: string, run: Transit
 export const trashVaultItem = (env: Env, userId: string, itemId: string): Promise<TrashResult> =>
   transition(env, userId, itemId, (vault, owner, id, now) => vault.batchTrashItem(owner, id, now));
 
-export const restoreVaultItem = (env: Env, userId: string, itemId: string): Promise<TrashResult> =>
-  transition(env, userId, itemId, (vault, owner, id, now) => vault.batchRestoreItem(owner, id, now));
+export const restoreVaultItem = async (env: Env, userId: string, itemId: string): Promise<TrashResult> => {
+  const result = await transition(env, userId, itemId, (vault, owner, id, now) =>
+    vault.batchRestoreItem(owner, id, now),
+  );
+  if (result.status === 'ok' && (result.item.dataCt === '' || result.item.dataIv === '')) {
+    return { status: 'not-found' };
+  }
+  return result;
+};
 
 export const purgeVaultItem = async (env: Env, userId: string, itemId: string): Promise<TrashResult> => {
   const vault = createVaultQueries(env);

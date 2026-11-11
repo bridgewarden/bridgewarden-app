@@ -1,36 +1,27 @@
 import { recordAuditEventSafe } from '../../../../lib/.server/audit';
-import { requireSecret } from '../../../../lib/.server/env';
 import { auditFingerprints } from '../../../../lib/.server/request-fingerprint';
 import { createUserTwoFactorQueries } from '../../../../lib/.server/queries/user-two-factor';
-import { createUsersQueries } from '../../../../lib/.server/queries/users';
-import { verifyServerAuthHash } from '../../../../lib/.server/verify-auth';
 import { generateAndStoreBackupCodes } from '../backup-codes';
-import type { DisableInput } from '../two-factor-input';
+import { reissueSessionAfterFactorChange } from '../reissue-session';
+import { verifyTwoFactorStepUp } from '../step-up';
+import type { StepUpInput } from '../two-factor-input';
 
 export type RegenerateResult =
-  | { status: 'ok'; backupCodes: string[] }
+  | { status: 'ok'; backupCodes: string[]; cookie: string | null }
   | { status: 'not-enabled' }
   | { status: 'invalid-password' }
+  | { status: 'locked'; retryAfter: number }
   | { status: 'server-error' };
 
 export const regenerateBackupCodes = async (
   env: Env,
   request: Request,
   userId: string,
-  input: DisableInput,
+  input: StepUpInput,
 ): Promise<RegenerateResult> => {
-  let pepper: string;
-  try {
-    pepper = requireSecret(env, 'AUTH_PEPPER');
-  } catch {
-    return { status: 'server-error' };
-  }
-
-  const user = await createUsersQueries(env).findAuthById(userId);
-  if (!user || user.status !== 'active') return { status: 'server-error' };
-  if (!(await verifyServerAuthHash(input.authHashBytes, user.server_salt, pepper, user.auth_hash))) {
-    return { status: 'invalid-password' };
-  }
+  const stepUp = await verifyTwoFactorStepUp(env, request, userId, input);
+  if (stepUp.status !== 'ok') return stepUp;
+  const pepper = stepUp.pepper;
 
   if (!(await createUserTwoFactorQueries(env).isEnabled(userId))) return { status: 'not-enabled' };
 
@@ -44,5 +35,5 @@ export const regenerateBackupCodes = async (
     ...fingerprints,
   });
 
-  return { status: 'ok', backupCodes };
+  return { status: 'ok', backupCodes, cookie: await reissueSessionAfterFactorChange(env, request, userId) };
 };

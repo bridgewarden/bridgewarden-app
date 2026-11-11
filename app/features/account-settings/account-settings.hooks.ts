@@ -6,6 +6,15 @@ import { t } from '~/lib/i18n/en';
 
 import type { CodesResponse, DisableResponse, EnrollResponse } from './account-settings.types';
 
+const twoFactorError = (error: string, fallback: string): string => {
+  if (error === 'invalid-password') return t('settings.twoFactor.invalidPassword');
+  if (error === 'locked') return t('settings.twoFactor.locked');
+  if (error === 'rate-limited') return t('settings.twoFactor.rateLimited');
+  return fallback;
+};
+
+const ensureSession = (data: { ok: true; sessionIssued?: boolean }): boolean => data.sessionIssued !== false;
+
 type UseAccountSettingsOptions = {
   email: string;
 };
@@ -36,7 +45,7 @@ export const useAccountSettings = ({ email }: UseAccountSettingsOptions) => {
         setEnrollment({ secret: data.secret, uri: data.uri });
         setError(null);
       } else {
-        setError(t('settings.twoFactor.loadFailed'));
+        setError(twoFactorError(data.error, t('settings.twoFactor.loadFailed')));
       }
     });
   }, [enrollmentFetcher.data]);
@@ -49,9 +58,9 @@ export const useAccountSettings = ({ email }: UseAccountSettingsOptions) => {
         setCodes(data.backupCodes);
         setEnrollment(null);
         setCode('');
-        setError(null);
+        setError(ensureSession(data) ? null : t('settings.twoFactor.sessionExpired'));
       } else {
-        setError(t('settings.twoFactor.invalidCode'));
+        setError(twoFactorError(data.error, t('settings.twoFactor.invalidCode')));
       }
     });
   }, [verifyFetcher.data]);
@@ -62,9 +71,9 @@ export const useAccountSettings = ({ email }: UseAccountSettingsOptions) => {
     queueMicrotask(() => {
       if (data.ok) {
         setCodes(data.backupCodes);
-        setError(null);
+        setError(ensureSession(data) ? null : t('settings.twoFactor.sessionExpired'));
       } else {
-        setError(t('settings.twoFactor.regenerateFailed'));
+        setError(twoFactorError(data.error, t('settings.twoFactor.regenerateFailed')));
       }
     });
   }, [regenerateFetcher.data]);
@@ -74,12 +83,16 @@ export const useAccountSettings = ({ email }: UseAccountSettingsOptions) => {
     if (!data) return;
     queueMicrotask(() => {
       if (data.ok) {
+        if (!ensureSession(data)) {
+          window.location.assign('/login');
+          return;
+        }
         setCodes(null);
         setEnrollment(null);
         setDisableError(null);
         setPassword('');
       } else {
-        setDisableError(t('settings.twoFactor.disableFailed'));
+        setDisableError(twoFactorError(data.error, t('settings.twoFactor.disableFailed')));
       }
     });
   }, [disableFetcher.data]);

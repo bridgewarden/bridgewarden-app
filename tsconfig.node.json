@@ -6,6 +6,7 @@
     "playwright.config.ts",
     "e2e/**/*",
     "vitest.sequencer.ts",
+    "scripts/**/*",
     "app/lib/i18n/en.ts"
   ],
   "compilerOptions": {

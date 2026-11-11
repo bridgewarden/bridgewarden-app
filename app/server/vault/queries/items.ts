@@ -144,7 +144,7 @@ const restoreItemStatement = (db: D1Database, userId: string, itemId: string, no
     .prepare(
       `UPDATE vault_items
        SET deleted_at = NULL, rev = (SELECT vault_rev FROM users WHERE id = ?), updated_at = ?
-       WHERE id = ? AND user_id = ? AND deleted_at IS NOT NULL
+       WHERE id = ? AND user_id = ? AND deleted_at IS NOT NULL AND data_ct <> '' AND data_iv <> ''
        RETURNING ${ITEM_COLUMNS}`,
     )
     .bind(userId, now, itemId, userId);

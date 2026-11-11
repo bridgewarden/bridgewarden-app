@@ -12,7 +12,7 @@ export default defineConfig({
     }),
   ],
   test: {
-    include: ['app/**/__test__/**/*.test.ts', 'app/**/__test__/**/*.test.tsx'],
+    include: ['app/**/__test__/**/*.test.ts', 'app/**/__test__/**/*.test.tsx', 'scripts/**/__test__/**/*.test.ts'],
     globalSetup: ['./app/__test__/global-setup.ts'],
     setupFiles: ['./app/__test__/setup.ts'],
     fileParallelism: false,

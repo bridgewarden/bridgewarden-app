@@ -79,6 +79,18 @@ describe('trash lifecycle', () => {
     expect((await findVaultRev(env.DB, userId))?.vault_rev).toBe(revAfterPurge);
   });
 
+  it('does not restore a purged tombstone', async () => {
+    const userId = await createTestUser();
+    const item = await createItem(userId);
+    await trashVaultItem(testEnv(), userId, item.id);
+    await purgeVaultItem(testEnv(), userId, item.id);
+
+    const restored = await restoreVaultItem(testEnv(), userId, item.id);
+    const row = await findOwnedItem(env.DB, userId, item.id);
+    expect(restored.status).toBe('not-found');
+    expect(row).toMatchObject({ deleted_at: expect.any(Number), data_ct: '', data_iv: '' });
+  });
+
   it('returns not-found for foreign trash and restore', async () => {
     const userId = await createTestUser();
     const other = await createTestUser();

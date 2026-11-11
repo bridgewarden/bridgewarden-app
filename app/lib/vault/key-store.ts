@@ -14,6 +14,7 @@ export const setVaultKey = (key: Uint8Array): void => {
     throw new InvalidKeyMaterialError();
   }
 
+  vaultKey?.fill(0);
   vaultKey = key.slice();
   keyVersion += 1;
   notify();

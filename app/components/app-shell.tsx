@@ -1,4 +1,4 @@
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 
 import { CircleUserIcon, LockIcon, ShieldAlertIcon, ShieldIcon } from 'lucide-react';
 import { Link, useFetcher, useMatches, useNavigate } from 'react-router';
@@ -38,6 +38,7 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
   const navigate = useNavigate();
   const matches = useMatches();
   const wasSubmitting = useRef(false);
+  const logoutTimer = useRef<number | null>(null);
   const wasLocked = useRef(false);
   const hadUser = useRef(Boolean(user));
   const lockButtonRef = useRef<HTMLButtonElement>(null);
@@ -65,6 +66,16 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
     wasLocked.current = locked;
   }, [locked]);
 
+  const failSignOut = useCallback(() => {
+    if (logoutTimer.current !== null) {
+      window.clearTimeout(logoutTimer.current);
+      logoutTimer.current = null;
+    }
+    lockVault();
+    void wipeVaultDb().catch(() => undefined);
+    toast.error(t('common.signOutFailed'));
+  }, []);
+
   useEffect(() => {
     if (fetcher.state !== 'idle') {
       wasSubmitting.current = true;
@@ -72,6 +83,10 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
     }
 
     if (fetcher.data?.ok) {
+      if (logoutTimer.current !== null) {
+        window.clearTimeout(logoutTimer.current);
+        logoutTimer.current = null;
+      }
       lockVault();
       resetAutoLockPreferences();
       clearUnlockFailures();
@@ -82,19 +97,21 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
     }
 
     if (fetcher.data && !fetcher.data.ok) {
-      toast.error(t('common.signOutFailed'));
+      failSignOut();
       return;
     }
 
     if (wasSubmitting.current) {
-      toast.error(t('common.signOutFailed'));
+      failSignOut();
     }
 
     wasSubmitting.current = false;
-  }, [fetcher.data, fetcher.state, navigate]);
+  }, [failSignOut, fetcher.data, fetcher.state, navigate]);
 
   const logout = () => {
     lockVault();
+    if (logoutTimer.current !== null) window.clearTimeout(logoutTimer.current);
+    logoutTimer.current = window.setTimeout(failSignOut, 1500);
     fetcher.submit({}, { method: 'post', action: '/auth/logout', encType: 'application/json' });
   };
 

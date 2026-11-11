@@ -24,12 +24,11 @@ export async function action({ request, context }: Route.ActionArgs) {
     return data({ ok: false, error: 'invalid-input' }, { status: 400 });
   }
 
-  const identityLimit = await limitIdentity(env, 'login', input.email);
-  if (!identityLimit.allowed) return rateLimited(identityLimit.retryAfter);
-
   const result = await loginWithPassword(env, request, input);
 
   if (result.status === 'invalid-credentials') {
+    const identityLimit = await limitIdentity(env, 'login', input.email);
+    if (!identityLimit.allowed) return rateLimited(identityLimit.retryAfter);
     return data({ ok: false, error: 'invalid-credentials' }, { status: 401 });
   }
 

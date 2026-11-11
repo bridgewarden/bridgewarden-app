@@ -8,7 +8,7 @@ import { verifyServerAuthHash } from '../../../../lib/.server/verify-auth';
 import { createChallenge } from '../../../../lib/.server/challenge';
 import { completeLogin, type LoginSuccessBody } from '../../../../lib/.server/complete-login';
 import { createUsersQueries } from '../../../../lib/.server/queries/users';
-import { LOCKOUT_DURATION_MS, MAX_FAILED_LOGIN_ATTEMPTS } from '../constants/auth';
+import { LOCKOUT_DURATION_MS, MAX_FAILED_LOGIN_ATTEMPTS } from '../../../../lib/.server/constants/auth';
 import type { LoginInput } from '../login-input';
 
 export type LoginResult =

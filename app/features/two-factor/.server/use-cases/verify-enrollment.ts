@@ -5,10 +5,11 @@ import { createUserTwoFactorQueries } from '../../../../lib/.server/queries/user
 import { decryptTotpSecret } from '../../../../lib/.server/totp-crypto';
 import { verifyCode } from '../../../../lib/.server/totp';
 import { prepareBackupCodes } from '../backup-codes';
+import { reissueSessionAfterFactorChange } from '../reissue-session';
 import { createTwoFactorQueries } from '../queries/two-factor';
 
 export type VerifyEnrollmentResult =
-  | { status: 'ok'; backupCodes: string[] }
+  | { status: 'ok'; backupCodes: string[]; cookie: string | null }
   | { status: 'invalid-code' }
   | { status: 'not-pending' }
   | { status: 'server-error' };
@@ -65,5 +66,5 @@ export const verifyEnrollment = async (
   }
 
   await recordAuditEventSafe(env, { type: '2fa.enrolled', userId, createdAt: Date.now(), ...fingerprints });
-  return { status: 'ok', backupCodes };
+  return { status: 'ok', backupCodes, cookie: await reissueSessionAfterFactorChange(env, request, userId) };
 };

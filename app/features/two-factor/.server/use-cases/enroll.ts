@@ -1,17 +1,17 @@
 import { recordAuditEventSafe } from '../../../../lib/.server/audit';
-import { readConfig, requireSecret } from '../../../../lib/.server/env';
+import { readConfig } from '../../../../lib/.server/env';
 import { auditFingerprints } from '../../../../lib/.server/request-fingerprint';
 import { createUserTwoFactorQueries } from '../../../../lib/.server/queries/user-two-factor';
-import { createUsersQueries } from '../../../../lib/.server/queries/users';
 import { encryptTotpSecret } from '../../../../lib/.server/totp-crypto';
 import { buildOtpauthUri, encodeBase32, generateSecret } from '../../../../lib/.server/totp';
-import { verifyServerAuthHash } from '../../../../lib/.server/verify-auth';
-import type { DisableInput } from '../two-factor-input';
+import { verifyTwoFactorStepUp } from '../step-up';
+import type { StepUpInput } from '../two-factor-input';
 
 export type EnrollResult =
   | { status: 'ok'; secret: string; uri: string }
   | { status: 'already-enabled' }
   | { status: 'invalid-password' }
+  | { status: 'locked'; retryAfter: number }
   | { status: 'server-error' };
 
 export const beginEnrollment = async (
@@ -19,20 +19,10 @@ export const beginEnrollment = async (
   request: Request,
   userId: string,
   email: string,
-  input: DisableInput,
+  input: StepUpInput,
 ): Promise<EnrollResult> => {
-  let pepper: string;
-  try {
-    pepper = requireSecret(env, 'AUTH_PEPPER');
-  } catch {
-    return { status: 'server-error' };
-  }
-
-  const user = await createUsersQueries(env).findAuthById(userId);
-  if (!user || user.status !== 'active') return { status: 'server-error' };
-  if (!(await verifyServerAuthHash(input.authHashBytes, user.server_salt, pepper, user.auth_hash))) {
-    return { status: 'invalid-password' };
-  }
+  const stepUp = await verifyTwoFactorStepUp(env, request, userId, input);
+  if (stepUp.status !== 'ok') return stepUp;
 
   const twoFactor = createUserTwoFactorQueries(env);
   if (await twoFactor.isEnabled(userId)) return { status: 'already-enabled' };

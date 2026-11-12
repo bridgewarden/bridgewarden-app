@@ -17,6 +17,13 @@ export const en = {
   'common.offline': 'You are offline. Cached content remains available.',
   'common.backToVault': 'Back to vault',
 
+  'offline.title': 'Vault locked',
+  'offline.description':
+    'You are offline. Reconnect to sign in and unlock this device. Your encrypted vault stays on this device.',
+
+  'pwa.updateAvailable': 'A new version of Bridgewarden is ready.',
+  'pwa.reload': 'Reload',
+
   'lock.title': 'Vault locked',
   'lock.description': 'Enter your master password to unlock this device. Your cached vault stays on this device.',
   'lock.password': 'Master password',

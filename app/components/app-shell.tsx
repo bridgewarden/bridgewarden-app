@@ -5,6 +5,7 @@ import { Link, useFetcher, useLocation, useMatches, useNavigate } from 'react-ro
 import { toast } from 'sonner';
 
 import { useAutoLock } from '~/hooks/use-auto-lock';
+import { useServiceWorker } from '~/hooks/use-service-worker';
 import { AppHeader, type AppUser } from '~/components/app-header';
 import { Alert, AlertDescription } from '~/components/ui/alert';
 import { OfflineBanner } from '~/components/offline-banner';
@@ -44,6 +45,7 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
   const protectedRoute = matches.some((match) => match.id === 'routes/protected');
   const locked = Boolean(user) && !unlocked && protectedRoute;
   useAutoLock(unlocked);
+  useServiceWorker();
 
   useEffect(() => {
     void clearSecretClipboard();

@@ -28,3 +28,5 @@ export const readThemeCookie = (cookieHeader: string | null | undefined): Theme 
 
   return DEFAULT_THEME;
 };
+
+export const PWA_THEME_COLOR = '#18181b';

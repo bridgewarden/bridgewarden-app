@@ -17,7 +17,7 @@ import { t } from './lib/i18n/en';
 import { cloudflareContext } from './lib/.server/context';
 import { createUserTwoFactorQueries } from './lib/.server/queries/user-two-factor';
 import { getSessionCached } from './lib/.server/session-cache';
-import { DEFAULT_THEME, readThemeCookie, themeClassName } from './lib/theme';
+import { DEFAULT_THEME, PWA_THEME_COLOR, readThemeCookie, themeClassName } from './lib/theme';
 import './app.css';
 
 export async function loader({ request, context }: Route.LoaderArgs) {
@@ -40,13 +40,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   return { theme: readThemeCookie(request.headers.get('cookie')), user, twoFactorEnabled };
 }
 
-export const headers = () => ({
-  'Cache-Control': 'no-store',
-  'Content-Security-Policy': "frame-ancestors 'none'",
-  'X-Frame-Options': 'DENY',
-  'Referrer-Policy': 'no-referrer',
-});
-
 export function Layout({ children }: { children: React.ReactNode }) {
   const data = useRouteLoaderData<typeof loader>('root');
   const { theme = DEFAULT_THEME, user = null, twoFactorEnabled = false } = data ?? {};
@@ -57,6 +50,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="color-scheme" content="light dark" />
+        <meta name="theme-color" content={PWA_THEME_COLOR} />
+        <link rel="manifest" href="/manifest.webmanifest" />
         <Meta />
         <Links />
       </head>

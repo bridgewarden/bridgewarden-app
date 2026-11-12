@@ -30,6 +30,7 @@ export default [
     route('app', 'routes/vault-list.tsx'),
     route('app/new', 'routes/vault-item-new.tsx'),
     route('app/edit/:itemId', 'routes/vault-item.tsx'),
+    route('app/generator', 'routes/generator.tsx'),
     route('app/trash', 'routes/vault-trash.tsx'),
     route('app/settings', 'routes/settings.tsx'),
     route('admin/users', 'routes/admin.users.tsx'),

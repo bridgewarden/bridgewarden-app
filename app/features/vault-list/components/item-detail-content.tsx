@@ -17,59 +17,60 @@ import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 import { DialogDescription, DialogTitle } from '~/components/ui/dialog';
 import { Separator } from '~/components/ui/separator';
+import { useSecretReveal } from '~/hooks/use-secret-reveal';
 import { copySecret } from '~/lib/clipboard';
 import { t } from '~/lib/i18n/en';
 import type { DecryptedItem } from '~/lib/vault/projection';
 
 import { CopyButton, Field, PasswordField, Section } from './item-detail-fields';
-
-const REVEAL_MS = 30_000;
+import { ItemTotpPanel } from './item-totp-panel';
 
 type ItemDetailContentProps = {
   item: DecryptedItem;
   onClose: () => void;
-  onLoadPassword: (id: string) => Promise<string | null>;
+  onLoadSecrets: (id: string) => Promise<{ password: string | null; totpSecret: string | null }>;
 };
 
-export const ItemDetailContent = ({ item, onClose, onLoadPassword }: ItemDetailContentProps) => {
-  const [password, setPassword] = useState<string | null>(null);
-  const [passwordLoaded, setPasswordLoaded] = useState(false);
-  const [revealed, setRevealed] = useState(false);
-  const passwordRef = useRef<string | null>(null);
+export const ItemDetailContent = ({ item, onClose, onLoadSecrets }: ItemDetailContentProps) => {
+  const [secrets, setSecrets] = useState<{ password: string | null; totpSecret: string | null }>({
+    password: null,
+    totpSecret: null,
+  });
+  const [secretsLoaded, setSecretsLoaded] = useState(false);
+  const { revealed, reveal, hide } = useSecretReveal();
+  const secretsRef = useRef<{ password: string | null; totpSecret: string | null } | null>(null);
+
+  const loadSecrets = useCallback(async () => {
+    if (secretsRef.current) return secretsRef.current;
+    const next = await onLoadSecrets(item.id);
+    secretsRef.current = next;
+    setSecrets(next);
+    setSecretsLoaded(true);
+    return next;
+  }, [item.id, onLoadSecrets]);
 
   useEffect(() => {
-    if (!revealed) return;
-    const timer = window.setTimeout(() => setRevealed(false), REVEAL_MS);
-    return () => window.clearTimeout(timer);
-  }, [revealed]);
-
-  const loadPassword = useCallback(async (): Promise<string | null> => {
-    if (passwordRef.current !== null) return passwordRef.current;
-    const next = await onLoadPassword(item.id);
-    passwordRef.current = next;
-    setPassword(next);
-    setPasswordLoaded(true);
-    return next;
-  }, [item.id, onLoadPassword]);
+    void loadSecrets();
+  }, [loadSecrets]);
 
   const revealPassword = async () => {
     if (revealed) {
-      setRevealed(false);
+      hide();
       return;
     }
-    const next = await loadPassword();
-    if (next) setRevealed(true);
+    const next = await loadSecrets();
+    if (next.password) reveal();
   };
 
   const copyPassword = async () => {
-    const next = await loadPassword();
-    if (!next) return;
-    if (await copySecret(next)) toast.success(t('vault.detail.copied', { label: t('vaultItem.password') }));
+    const next = await loadSecrets();
+    if (!next.password) return;
+    if (await copySecret(next.password)) toast.success(t('vault.detail.copied', { label: t('vaultItem.password') }));
     else toast.error(t('vault.detail.copyFailed'));
   };
 
   const updated = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(item.updatedAt));
-  const showPasswordRow = item.type === 'login' && (!passwordLoaded || password !== null);
+  const showPasswordRow = item.type === 'login' && (!secretsLoaded || secrets.password !== null);
 
   return (
     <div className="grid sm:grid-cols-[220px_1fr]">
@@ -125,7 +126,7 @@ export const ItemDetailContent = ({ item, onClose, onLoadPassword }: ItemDetailC
                 </Field>
                 {showPasswordRow ? (
                   <PasswordField
-                    password={password}
+                    password={secrets.password}
                     revealed={revealed}
                     onReveal={() => void revealPassword()}
                     onCopy={() => void copyPassword()}
@@ -133,6 +134,8 @@ export const ItemDetailContent = ({ item, onClose, onLoadPassword }: ItemDetailC
                 ) : null}
               </dl>
             </Section>
+
+            {secretsLoaded && secrets.totpSecret ? <ItemTotpPanel secret={secrets.totpSecret} /> : null}
 
             {item.urls.length > 0 ? (
               <Section icon={<LinkIcon className="size-4" aria-hidden="true" />} title={t('vault.detail.urls')}>

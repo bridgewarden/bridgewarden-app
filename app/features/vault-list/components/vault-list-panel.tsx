@@ -19,11 +19,15 @@ import { VaultListToolbar } from './vault-list-toolbar';
 export const VaultListPanel = () => {
   const flow = useVaultList();
   useVaultListInteraction(flow);
-  const loadPassword = useCallback(async (id: string) => {
+  const loadSecrets = useCallback(async (id: string) => {
     const result = await readVaultItem(id);
-    return result.status === 'ok' && result.item.payload.type === 'login'
-      ? (result.item.payload.password ?? null)
-      : null;
+    if (result.status !== 'ok' || result.item.payload.type !== 'login') {
+      return { password: null, totpSecret: null };
+    }
+    return {
+      password: result.item.payload.password ?? null,
+      totpSecret: result.item.payload.totpSecret ?? null,
+    };
   }, []);
 
   return (
@@ -105,7 +109,7 @@ export const VaultListPanel = () => {
         />
       )}
 
-      <ItemDetailDialog item={flow.detailItem} onClose={flow.closeDetail} onLoadPassword={loadPassword} />
+      <ItemDetailDialog item={flow.detailItem} onClose={flow.closeDetail} onLoadSecrets={loadSecrets} />
     </section>
   );
 };

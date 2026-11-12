@@ -1,18 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
-import { EyeIcon, EyeOffIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import { EyeIcon, EyeOffIcon, WandSparklesIcon } from 'lucide-react';
 
+import { useSecretReveal } from '~/hooks/use-secret-reveal';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
 import { Textarea } from '~/components/ui/textarea';
 import { t } from '~/lib/i18n/en';
-import { MAX_ITEM_URLS } from '~/lib/vault/limits';
 
 import type { CustomFieldForm, EditorErrors, EditorValues } from '../vault-item.types';
 import { CustomFields } from './custom-fields';
 import { FieldHint, RequiredMark } from './field-hint';
+import { PasswordGeneratorDialog } from './password-generator-dialog';
 import { TotpField } from './totp-field';
+import { UrlFields } from './url-fields';
 
 type LoginFieldsProps = {
   values: EditorValues;
@@ -50,13 +52,8 @@ export const LoginFields = ({
   onAddField,
   onRemoveField,
 }: LoginFieldsProps) => {
-  const [revealed, setRevealed] = useState(false);
-
-  useEffect(() => {
-    if (!revealed) return;
-    const timer = window.setTimeout(() => setRevealed(false), 30_000);
-    return () => window.clearTimeout(timer);
-  }, [revealed]);
+  const { revealed, reveal, hide } = useSecretReveal();
+  const [generatorOpen, setGeneratorOpen] = useState(false);
 
   return (
     <div className="space-y-5">
@@ -100,9 +97,19 @@ export const LoginFields = ({
               size="icon"
               className="size-11 shrink-0"
               aria-label={t(revealed ? 'vaultItem.hidePassword' : 'vaultItem.showPassword')}
-              onClick={() => setRevealed((current) => !current)}
+              onClick={() => (revealed ? hide() : reveal())}
             >
               {revealed ? <EyeOffIcon aria-hidden="true" /> : <EyeIcon aria-hidden="true" />}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="size-11 shrink-0"
+              aria-label={t('vaultItem.generatePassword')}
+              onClick={() => setGeneratorOpen(true)}
+            >
+              <WandSparklesIcon aria-hidden="true" />
             </Button>
           </div>
           <FieldHint id="item-password-hint">{t('vaultItem.passwordHint')}</FieldHint>
@@ -110,52 +117,13 @@ export const LoginFields = ({
         </div>
       </div>
 
-      <fieldset className="space-y-3" aria-describedby={errors.urls ? 'item-urls-error' : 'item-urls-hint'}>
-        <div className="flex items-center justify-between gap-3">
-          <legend className="text-sm font-medium">
-            {t('vaultItem.urls')} <RequiredMark />
-          </legend>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="min-h-11"
-            disabled={values.urls.filter((url) => url.trim() !== '').length >= MAX_ITEM_URLS}
-            onClick={onAddUrl}
-          >
-            <PlusIcon aria-hidden="true" />
-            {t('vaultItem.addUrl')}
-          </Button>
-        </div>
-        {values.urls.map((url, index) => (
-          <div key={index} className="flex gap-2">
-            <Input
-              aria-label={t('vaultItem.url', { index: index + 1 })}
-              aria-required={index === 0 ? 'true' : undefined}
-              aria-invalid={Boolean(errors.urls)}
-              aria-describedby={errors.urls ? 'item-urls-error' : 'item-urls-hint'}
-              className="min-h-11"
-              autoComplete="off"
-              spellCheck={false}
-              placeholder={t('vaultItem.urlPlaceholder')}
-              value={url}
-              onChange={(event) => onUrlChange(index, event.target.value)}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-11 shrink-0"
-              aria-label={t('vaultItem.removeUrl', { index: index + 1 })}
-              onClick={() => onRemoveUrl(index)}
-            >
-              <Trash2Icon aria-hidden="true" />
-            </Button>
-          </div>
-        ))}
-        <FieldHint id="item-urls-hint">{t('vaultItem.urlsHint')}</FieldHint>
-        <FieldError id="item-urls-error" message={errors.urls} />
-      </fieldset>
+      <UrlFields
+        urls={values.urls}
+        error={errors.urls}
+        onUrlChange={onUrlChange}
+        onAddUrl={onAddUrl}
+        onRemoveUrl={onRemoveUrl}
+      />
 
       <TotpField
         value={values.totpSecret}
@@ -184,6 +152,15 @@ export const LoginFields = ({
         onChange={onFieldChange}
         onAdd={onAddField}
         onRemove={onRemoveField}
+      />
+
+      <PasswordGeneratorDialog
+        open={generatorOpen}
+        onOpenChange={setGeneratorOpen}
+        onApply={(password) => {
+          onChange({ password });
+          setGeneratorOpen(false);
+        }}
       />
     </div>
   );

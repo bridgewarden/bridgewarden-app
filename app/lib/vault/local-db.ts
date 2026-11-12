@@ -3,7 +3,7 @@ import { deleteDB, openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { CachedFolder, CachedItem, OutboxEntry, StoredKeyMaterial, SyncState } from './types';
 
 export const VAULT_DB_NAME = 'bridgewarden-vault';
-export const VAULT_DB_VERSION = 2;
+export const VAULT_DB_VERSION = 3;
 
 interface VaultDatabase extends DBSchema {
   items: { key: string; value: CachedItem };
@@ -11,6 +11,7 @@ interface VaultDatabase extends DBSchema {
   keys: { key: 'active'; value: StoredKeyMaterial };
   sync: { key: 'active'; value: SyncState };
   outbox: { key: number; value: OutboxEntry };
+  meta: { key: string; value: { key: string; preferences: unknown } };
 }
 
 export class VaultDbUnavailableError extends Error {}
@@ -57,6 +58,7 @@ const openNow = async (): Promise<IDBPDatabase<VaultDatabase>> => {
         db.createObjectStore('sync', { keyPath: 'key' });
       }
       if (oldVersion < 2) db.createObjectStore('outbox', { keyPath: 'seq', autoIncrement: true });
+      if (oldVersion < 3) db.createObjectStore('meta', { keyPath: 'key' });
     },
   }).catch((error: unknown) => {
     dbPromise = null;

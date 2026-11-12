@@ -101,7 +101,7 @@ describe('vault outbox', () => {
     legacy.close();
 
     const upgraded = await openVaultDb();
-    expect([...upgraded.objectStoreNames].sort()).toEqual(['folders', 'items', 'keys', 'outbox', 'sync']);
+    expect([...upgraded.objectStoreNames].sort()).toEqual(['folders', 'items', 'keys', 'meta', 'outbox', 'sync']);
     expect(await upgraded.get('items', 'legacy')).toMatchObject({ id: 'legacy' });
     expect(await upgraded.get('folders', 'legacy-folder')).toMatchObject({ id: 'legacy-folder' });
     expect(await upgraded.get('keys', 'active')).toMatchObject({ email: 'legacy@example.com' });

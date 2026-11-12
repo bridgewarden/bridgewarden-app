@@ -8,10 +8,10 @@ import { ItemDetailContent } from './item-detail-content';
 type ItemDetailDialogProps = {
   item: DecryptedItem | null;
   onClose: () => void;
-  onLoadPassword: (id: string) => Promise<string | null>;
+  onLoadSecrets: (id: string) => Promise<{ password: string | null; totpSecret: string | null }>;
 };
 
-export const ItemDetailDialog = ({ item, onClose, onLoadPassword }: ItemDetailDialogProps) => {
+export const ItemDetailDialog = ({ item, onClose, onLoadSecrets }: ItemDetailDialogProps) => {
   const [shown, setShown] = useState<DecryptedItem | null>(item);
 
   if (item && (item.id !== shown?.id || item.rev !== shown.rev)) {
@@ -32,7 +32,7 @@ export const ItemDetailDialog = ({ item, onClose, onLoadPassword }: ItemDetailDi
             key={`${shown.id}:${shown.rev}`}
             item={shown}
             onClose={onClose}
-            onLoadPassword={onLoadPassword}
+            onLoadSecrets={onLoadSecrets}
           />
         ) : null}
       </DialogContent>

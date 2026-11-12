@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 
 import { CircleUserIcon, LockIcon, ShieldAlertIcon, ShieldIcon } from 'lucide-react';
-import { Link, useFetcher, useMatches, useNavigate } from 'react-router';
+import { Link, useFetcher, useLocation, useMatches, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 
 import { useAutoLock } from '~/hooks/use-auto-lock';
@@ -10,6 +10,7 @@ import { LockedOverlay } from '~/components/locked-overlay';
 import { ThemeControl } from '~/components/theme-control';
 import { Button } from '~/components/ui/button';
 import { Toaster } from '~/components/ui/sonner';
+import { clearSecretClipboard } from '~/lib/clipboard';
 import { t } from '~/lib/i18n/en';
 import type { Theme } from '~/lib/theme';
 import { resetAutoLockPreferences } from '~/lib/vault/auto-lock';
@@ -36,6 +37,7 @@ type AppShellProps = {
 export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellProps) => {
   const fetcher = useFetcher<{ ok: boolean; error?: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const matches = useMatches();
   const wasSubmitting = useRef(false);
   const logoutTimer = useRef<number | null>(null);
@@ -47,6 +49,10 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
   const protectedRoute = matches.some((match) => match.id === 'routes/protected');
   const locked = Boolean(user) && !unlocked && protectedRoute;
   useAutoLock(unlocked);
+
+  useEffect(() => {
+    void clearSecretClipboard();
+  }, [location.pathname]);
 
   useEffect(() => {
     if (userEmail && unlocked) void syncVault();

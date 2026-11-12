@@ -1,3 +1,4 @@
+import { clearSecretClipboard } from '../clipboard';
 import { WrongPasswordError } from '../crypto/errors';
 import { prepareLogin, unwrapLoginVault } from '../crypto/login-keys';
 import { readKeyMaterial } from './key-material';
@@ -11,6 +12,7 @@ let unlockAttempt = 0;
 
 const applyLock = (): void => {
   unlockAttempt += 1;
+  void clearSecretClipboard();
   clearVaultKey();
 };
 

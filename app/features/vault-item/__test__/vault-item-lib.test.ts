@@ -54,6 +54,8 @@ describe('vault item editor helpers', () => {
       }),
     ).toHaveProperty('customFields');
     expect(isValidTotpSecret('jbsw y3dp ehpk 3pxp')).toBe(true);
+    expect(isValidTotpSecret('otpauth://totp/x?secret=GEZDGNBVGY3TQOJQ&algorithm=SHA1&digits=6&period=30')).toBe(true);
+    expect(isValidTotpSecret('otpauth://totp/x?secret=GEZDGNBVGY3TQOJQ&algorithm=SHA256')).toBe(false);
   });
 
   it('round-trips item payloads and rejects oversized ciphertext', () => {

@@ -1,4 +1,5 @@
 import { t } from '~/lib/i18n/en';
+import { parseTotpSecret } from '~/lib/totp';
 import type { DecryptedItemDetail } from '~/lib/vault/item-read';
 import type { ItemPayload } from '~/lib/vault/item-payload';
 import {
@@ -31,12 +32,14 @@ export const emptyValues = (type: EditorType = 'login'): EditorValues => ({
 
 export const emptyField = (): CustomFieldForm => ({ label: '', value: '', hidden: false });
 
-export const normalizeTotpSecret = (value: string): string => value.replace(/\s+/g, '').toUpperCase();
-
 export const isValidTotpSecret = (value: string): boolean => {
-  const normalized = normalizeTotpSecret(value);
-  if (normalized === '') return true;
-  return /^[A-Z2-7]+=*$/.test(normalized) && normalized.replace(/=+$/, '').length >= 8;
+  if (value.trim() === '') return true;
+  try {
+    parseTotpSecret(value);
+    return true;
+  } catch {
+    return false;
+  }
 };
 
 export const valuesFromItem = (item: DecryptedItemDetail): EditorValues => {
@@ -75,7 +78,7 @@ export const buildPayload = (values: EditorValues): ItemPayload | null => {
     const fields = values.customFields
       .map((field) => ({ ...field, label: field.label.trim() }))
       .filter((field) => field.label !== '' || field.value !== '');
-    const totpSecret = normalizeTotpSecret(values.totpSecret);
+    const totpSecret = values.totpSecret.trim();
     return {
       type: 'login',
       name,

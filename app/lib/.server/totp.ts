@@ -1,8 +1,7 @@
 import { base32Decode, base32Encode } from '../base32';
-import { toArrayBuffer } from '../crypto/encoding';
+import { currentTotpStep, generateTotpCode, TOTP_STEP_SECONDS } from '../totp';
 
-const STEP_SECONDS = 30;
-const STEP_MS = STEP_SECONDS * 1000;
+const STEP_SECONDS = TOTP_STEP_SECONDS;
 const CODE_PATTERN = /^\d{6}$/;
 
 export type TotpVerification = {
@@ -16,37 +15,8 @@ export const decodeBase32 = (value: string): Uint8Array => base32Decode(value, u
 
 export const generateSecret = (): Uint8Array => crypto.getRandomValues(new Uint8Array(20));
 
-export const currentStep = (now = Date.now()): number => Math.floor(now / STEP_MS);
-
-const counterBytes = (step: number): Uint8Array => {
-  const buffer = new ArrayBuffer(8);
-  const view = new DataView(buffer);
-  view.setUint32(0, Math.floor(step / 2 ** 32));
-  view.setUint32(4, step >>> 0);
-
-  return new Uint8Array(buffer);
-};
-
-const hmacSha1 = async (secret: Uint8Array, data: Uint8Array): Promise<Uint8Array> => {
-  const key = await crypto.subtle.importKey('raw', toArrayBuffer(secret), { name: 'HMAC', hash: 'SHA-1' }, false, [
-    'sign',
-  ]);
-  const signature = await crypto.subtle.sign('HMAC', key, toArrayBuffer(data));
-
-  return new Uint8Array(signature);
-};
-
-export const generateCode = async (secret: Uint8Array, step: number): Promise<string> => {
-  const digest = await hmacSha1(secret, counterBytes(step));
-  const offset = digest[digest.length - 1] & 0x0f;
-  const binary =
-    ((digest[offset] & 0x7f) << 24) |
-    ((digest[offset + 1] & 0xff) << 16) |
-    ((digest[offset + 2] & 0xff) << 8) |
-    (digest[offset + 3] & 0xff);
-
-  return String(binary % 1_000_000).padStart(6, '0');
-};
+export const currentStep = currentTotpStep;
+export const generateCode = generateTotpCode;
 
 const codesEqual = (left: string, right: string): boolean => {
   if (left.length !== right.length) return false;

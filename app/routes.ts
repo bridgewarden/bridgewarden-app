@@ -28,6 +28,8 @@ export default [
   route('api/folders/:id', 'routes/api.folders.$id.ts'),
   layout('routes/protected.tsx', [
     route('app', 'routes/vault-list.tsx'),
+    route('app/new', 'routes/vault-item-new.tsx'),
+    route('app/edit/:itemId', 'routes/vault-item.tsx'),
     route('app/trash', 'routes/vault-trash.tsx'),
     route('app/settings', 'routes/settings.tsx'),
     route('admin/users', 'routes/admin.users.tsx'),

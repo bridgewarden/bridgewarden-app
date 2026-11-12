@@ -1,10 +1,24 @@
 import { z } from 'zod';
 
-const name = z.string().trim().min(1).max(200);
-const username = z.string().max(254);
-const password = z.string().max(1024);
+import {
+  MAX_ITEM_CUSTOM_FIELDS,
+  MAX_ITEM_NAME_LENGTH,
+  MAX_ITEM_NOTE_BYTES,
+  MAX_ITEM_NOTES_LENGTH,
+  MAX_ITEM_PASSWORD_LENGTH,
+  MAX_ITEM_URLS,
+  MAX_ITEM_USERNAME_LENGTH,
+  utf8ByteLength,
+} from './limits';
+
+const name = z.string().trim().min(1).max(MAX_ITEM_NAME_LENGTH);
+const username = z.string().max(MAX_ITEM_USERNAME_LENGTH);
+const password = z.string().max(MAX_ITEM_PASSWORD_LENGTH);
 const url = z.string().max(2048);
-const notes = z.string().max(50_000);
+const notes = z.string().max(MAX_ITEM_NOTES_LENGTH);
+const noteBody = z
+  .string()
+  .refine((value) => utf8ByteLength(value) <= MAX_ITEM_NOTE_BYTES, { message: 'note body too large' });
 
 const customFieldSchema = z.strictObject({
   label: z.string().trim().min(1).max(100),
@@ -17,16 +31,16 @@ export const loginPayloadSchema = z.strictObject({
   name,
   username: username.optional(),
   password: password.optional(),
-  urls: z.array(url).max(20).optional(),
+  urls: z.array(url).max(MAX_ITEM_URLS).optional(),
   notes: notes.optional(),
   totpSecret: z.string().max(1024).optional(),
-  customFields: z.array(customFieldSchema).max(50).optional(),
+  customFields: z.array(customFieldSchema).max(MAX_ITEM_CUSTOM_FIELDS).optional(),
 });
 
 export const notePayloadSchema = z.strictObject({
   type: z.literal('note'),
   name,
-  body: z.string().max(50_000),
+  body: noteBody,
 });
 
 export const folderPayloadSchema = z.strictObject({ name });

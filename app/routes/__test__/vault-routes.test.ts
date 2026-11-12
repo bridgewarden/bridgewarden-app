@@ -7,6 +7,7 @@ import { createTestUser } from '../../__test__/fixtures';
 import { resetDatabase } from '../../__test__/reset-database';
 import { toBase64Url } from '../../lib/base64-url';
 import { cloudflareContext } from '../../lib/.server/context';
+import { MAX_ITEM_CIPHERTEXT_BYTES } from '../../lib/vault/limits';
 import { createSession, destroySessionToken, type CreatedSession } from '../../lib/.server/session';
 import { action as createAction } from '../api.vault.items';
 import { action as updateAction } from '../api.vault.items.$id';
@@ -238,7 +239,7 @@ describe('vault item create route', () => {
         await invoke(createAction, '/api/vault/items', {
           method: 'POST',
           cookie,
-          body: itemBody({ dataCt: toBase64Url(new Uint8Array(65_537)) }),
+          body: itemBody({ dataCt: toBase64Url(new Uint8Array(MAX_ITEM_CIPHERTEXT_BYTES + 1)) }),
         }),
       ),
     ).toBe(400);
@@ -270,7 +271,7 @@ describe('vault item create route', () => {
     const exact = await invoke(createAction, '/api/vault/items', {
       method: 'POST',
       cookie,
-      body: itemBody({ dataCt: toBase64Url(new Uint8Array(65_536)) }),
+      body: itemBody({ dataCt: toBase64Url(new Uint8Array(MAX_ITEM_CIPHERTEXT_BYTES)) }),
     });
     expect(statusOf(exact)).toBe(201);
   });

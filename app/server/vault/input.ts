@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { fromBase64Url } from '../../lib/base64-url';
 import { IV_BYTES } from '../../lib/crypto/contract';
+import { MAX_ITEM_CIPHERTEXT_BASE64_LENGTH, MAX_ITEM_CIPHERTEXT_BYTES } from '../../lib/vault/limits';
 import { encodeBase64 } from '../../lib/crypto/encoding';
 import {
   MAX_FOLDER_CIPHERTEXT_BYTES,
@@ -11,9 +12,7 @@ import {
   type VaultItemInput,
 } from './types';
 
-const MAX_CIPHERTEXT_BYTES = 64 * 1024;
-
-const base64UrlField = z.string().min(1).max(90_000);
+const base64UrlField = z.string().min(1).max(MAX_ITEM_CIPHERTEXT_BASE64_LENGTH);
 
 const itemSchema = z.strictObject({
   type: z.enum(['login', 'note']),
@@ -30,7 +29,7 @@ const updateSchema = itemSchema.extend({ rev: z.number().int().min(0) });
 const decodeCiphertext = (value: string): string | null => {
   try {
     const bytes = fromBase64Url(value);
-    return bytes.length > 0 && bytes.length <= MAX_CIPHERTEXT_BYTES ? encodeBase64(bytes) : null;
+    return bytes.length > 0 && bytes.length <= MAX_ITEM_CIPHERTEXT_BYTES ? encodeBase64(bytes) : null;
   } catch {
     return null;
   }

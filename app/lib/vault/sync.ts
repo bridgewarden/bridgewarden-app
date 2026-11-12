@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { MAX_ITEM_CIPHERTEXT_BASE64_LENGTH } from './limits';
 import { applyVaultDelta, getSyncState, setSyncState } from './cache';
 import { readKeyMaterial } from './key-material';
 import { isUnlocked } from './key-store';
@@ -19,7 +20,7 @@ const itemSchema = z.strictObject({
   type: z.enum(['login', 'note']),
   folderId: z.string().min(1).max(64).nullable(),
   favorite: z.boolean(),
-  dataCt: z.string().max(90_000),
+  dataCt: z.string().max(MAX_ITEM_CIPHERTEXT_BASE64_LENGTH),
   dataIv: z.string().max(64),
   dataVersion: z.number().int().min(1),
   rev: z.number().int().min(0),

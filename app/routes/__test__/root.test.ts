@@ -18,16 +18,32 @@ const load = (cookie?: string) =>
 
 describe('root loader', () => {
   it('returns the theme from the cookie', async () => {
-    await expect(load('bw_theme=dark')).resolves.toEqual({ theme: 'dark', user: null, twoFactorEnabled: false });
-    await expect(load('bw_theme=light')).resolves.toEqual({ theme: 'light', user: null, twoFactorEnabled: false });
+    await expect(load('bw_theme=dark')).resolves.toEqual({
+      theme: 'dark',
+      user: null,
+      twoFactorEnabled: false,
+    });
+    await expect(load('bw_theme=light')).resolves.toEqual({
+      theme: 'light',
+      user: null,
+      twoFactorEnabled: false,
+    });
   });
 
   it('defaults to system without a cookie', async () => {
-    await expect(load()).resolves.toEqual({ theme: 'system', user: null, twoFactorEnabled: false });
+    await expect(load()).resolves.toEqual({
+      theme: 'system',
+      user: null,
+      twoFactorEnabled: false,
+    });
   });
 
   it('ignores a malformed cookie instead of failing the request', async () => {
-    await expect(load('bw_theme=%E0%A4%A')).resolves.toEqual({ theme: 'system', user: null, twoFactorEnabled: false });
+    await expect(load('bw_theme=%E0%A4%A')).resolves.toEqual({
+      theme: 'system',
+      user: null,
+      twoFactorEnabled: false,
+    });
   });
 
   it('returns only the public user fields for a valid session', async () => {

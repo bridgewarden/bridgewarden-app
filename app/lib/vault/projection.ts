@@ -1,9 +1,8 @@
-import { storedToStandardBase64 } from '../base64-url';
-import { ENVELOPE_ALGORITHM } from '../crypto/contract';
-import { openItem, type SealedEnvelope } from '../crypto/envelope';
+import { openItem } from '../crypto/envelope';
 import { getAllCachedFolders, getAllCachedItems } from './cache';
 import { parseFolderPayload, parseItemPayload } from './item-payload';
 import { getVaultKey } from './key-store';
+import { cachedEnvelope } from './sealed-envelope';
 import type { CachedFolder, CachedItem } from './types';
 
 export type DecryptedItem = {
@@ -32,20 +31,10 @@ export type VaultProjection = {
 
 const CONCURRENCY = 8;
 
-const envelope = (ciphertext: string, iv: string, version: number): SealedEnvelope => ({
-  v: version as SealedEnvelope['v'],
-  alg: ENVELOPE_ALGORITHM,
-  ct: ciphertext,
-  iv,
-});
-
 const decryptFolder = async (folder: CachedFolder, key: Uint8Array): Promise<DecryptedFolder | null> => {
   try {
     const payload = parseFolderPayload(
-      await openItem(
-        envelope(storedToStandardBase64(folder.nameCt), storedToStandardBase64(folder.nameIv), folder.dataVersion),
-        key,
-      ),
+      await openItem(cachedEnvelope(folder.nameCt, folder.nameIv, folder.dataVersion), key),
     );
     return payload ? { id: folder.id, name: payload.name, rev: folder.rev } : null;
   } catch {
@@ -61,10 +50,7 @@ const decryptItem = async (
   try {
     const payload = parseItemPayload(
       item.type,
-      await openItem(
-        envelope(storedToStandardBase64(item.dataCt), storedToStandardBase64(item.dataIv), item.dataVersion),
-        key,
-      ),
+      await openItem(cachedEnvelope(item.dataCt, item.dataIv, item.dataVersion), key),
     );
     if (!payload) return null;
 
@@ -103,6 +89,26 @@ const mapLimit = async <T, R>(values: T[], limit: number, task: (value: T) => Pr
 
   await Promise.all(Array.from({ length: Math.min(limit, values.length) }, worker));
   return results;
+};
+
+export const readVaultFolders = async (): Promise<DecryptedFolder[]> => {
+  const key = getVaultKey();
+  if (!key) return [];
+
+  try {
+    const cachedFolders = await getAllCachedFolders();
+    return (
+      await mapLimit(
+        cachedFolders.filter((folder) => folder.deletedAt === null),
+        CONCURRENCY,
+        (folder) => decryptFolder(folder, key),
+      )
+    )
+      .filter((folder): folder is DecryptedFolder => folder !== null)
+      .sort((left, right) => left.name.localeCompare(right.name));
+  } finally {
+    key.fill(0);
+  }
 };
 
 export const readVaultProjection = async (): Promise<VaultProjection> => {

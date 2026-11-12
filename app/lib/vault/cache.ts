@@ -33,6 +33,11 @@ export const getAllCachedFolders = async (): Promise<CachedFolder[]> => {
   return db.getAll('folders');
 };
 
+export const getCachedItem = async (id: string): Promise<CachedItem | undefined> => {
+  const db = await openVaultDb();
+  return db.get('items', id);
+};
+
 export const getSyncState = async (): Promise<SyncState> => {
   const db = await openVaultDb();
   return (await db.get('sync', 'active')) ?? { key: 'active', serverRev: 0, cursor: null };

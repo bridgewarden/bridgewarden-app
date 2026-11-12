@@ -3,6 +3,7 @@ import { getAllCachedFolders, getAllCachedItems } from './cache';
 import { parseFolderPayload, parseItemPayload } from './item-payload';
 import { getVaultKey } from './key-store';
 import { cachedEnvelope } from './sealed-envelope';
+import { isRestorableTombstone } from './trash-count';
 import type { CachedFolder, CachedItem } from './types';
 
 export type DecryptedItem = {
@@ -22,6 +23,7 @@ export type DecryptedItem = {
 };
 
 export type DecryptedFolder = { id: string; name: string; rev: number };
+export type TrashedItem = DecryptedItem & { deletedAt: number };
 
 export type VaultProjection = {
   items: DecryptedItem[];
@@ -106,6 +108,32 @@ export const readVaultFolders = async (): Promise<DecryptedFolder[]> => {
     )
       .filter((folder): folder is DecryptedFolder => folder !== null)
       .sort((left, right) => left.name.localeCompare(right.name));
+  } finally {
+    key.fill(0);
+  }
+};
+
+export const readVaultTrash = async (): Promise<TrashedItem[]> => {
+  const key = getVaultKey();
+  if (!key) return [];
+
+  try {
+    const [cachedItems, cachedFolders] = await Promise.all([getAllCachedItems(), getAllCachedFolders()]);
+    const decryptedFolders = (
+      await mapLimit(
+        cachedFolders.filter((folder) => folder.deletedAt === null),
+        CONCURRENCY,
+        (folder) => decryptFolder(folder, key),
+      )
+    ).filter((folder): folder is DecryptedFolder => folder !== null);
+    const folderNames = new Map(decryptedFolders.map((folder) => [folder.id, folder.name]));
+    const tombstones = cachedItems.filter(isRestorableTombstone);
+    const decrypted = await mapLimit(tombstones, CONCURRENCY, (item) => decryptItem(item, key, folderNames));
+
+    return decrypted
+      .map((item, index) => (item ? { ...item, deletedAt: tombstones[index]!.deletedAt! } : null))
+      .filter((item): item is TrashedItem => item !== null)
+      .sort((left, right) => right.deletedAt - left.deletedAt);
   } finally {
     key.fill(0);
   }

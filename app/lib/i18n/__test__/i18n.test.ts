@@ -20,6 +20,8 @@ describe('copy catalog', () => {
     expect(t('vault.count', { count: 1 })).toBe('1 item');
     expect(t('vault.count', { count: 4 })).toBe('4 items');
     expect(t('common.close')).toBe('Close');
+    expect(t('trash.count', { count: 1 })).toBe('1 item');
+    expect(t('trash.count', { count: 2 })).toBe('2 items');
   });
 
   it('throws in strict mode for a missing key', () => {

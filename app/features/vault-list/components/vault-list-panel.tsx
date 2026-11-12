@@ -4,10 +4,10 @@ import { PlusIcon } from 'lucide-react';
 
 import { Link } from 'react-router';
 
-import { Alert, AlertDescription } from '~/components/ui/alert';
 import { Button } from '~/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
-import { Skeleton } from '~/components/ui/skeleton';
+import { EmptyState } from '~/components/empty-state';
+import { InlineError } from '~/components/inline-error';
+import { SkeletonList } from '~/components/skeleton-list';
 import { t } from '~/lib/i18n/en';
 import { readVaultItem } from '~/lib/vault/item-read';
 
@@ -49,15 +49,10 @@ export const VaultListPanel = () => {
 
       <VaultListToolbar filters={flow.filters} folders={flow.folders} onChange={flow.updateFilters} />
 
-      {flow.status === 'offline' ? (
-        <Alert role="status">
-          <AlertDescription>{t('vault.offline')}</AlertDescription>
-        </Alert>
-      ) : null}
       {flow.status === 'error' || flow.status === 'degraded' ? (
-        <Alert variant="destructive">
-          <AlertDescription className="flex flex-wrap items-center gap-3">
-            <span>{t('vault.syncError')}</span>
+        <InlineError
+          message={t('vault.syncError')}
+          action={
             <Button
               type="button"
               variant="outline"
@@ -68,36 +63,28 @@ export const VaultListPanel = () => {
             >
               {flow.refreshing ? t('vault.retrying') : t('vault.retry')}
             </Button>
-          </AlertDescription>
-        </Alert>
+          }
+        />
       ) : null}
       {flow.skipped > 0 ? (
         <p className="text-sm text-muted-foreground">{t('vault.skipped', { count: flow.skipped })}</p>
       ) : null}
 
       {flow.status === 'loading' ? (
-        <div role="status" className="space-y-2" aria-busy="true" aria-label={t('vault.loading')}>
-          {Array.from({ length: 5 }, (_, index) => (
-            <Skeleton key={index} className="h-16 w-full" />
-          ))}
-        </div>
+        <SkeletonList label={t('vault.loading')} />
       ) : flow.items.length === 0 && flow.status === 'ready' ? (
-        <Card>
-          <CardHeader>
-            <CardTitle role="heading" aria-level={2}>
-              {t('vault.empty.title')}
-            </CardTitle>
-            <CardDescription>{t('vault.empty.description')}</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <EmptyState
+          title={t('vault.empty.title')}
+          description={t('vault.empty.description')}
+          action={
             <Button className="min-h-11" asChild>
               <Link to="/app/new" prefetch="render">
                 <PlusIcon aria-hidden="true" />
                 {t('vault.createFirst')}
               </Link>
             </Button>
-          </CardContent>
-        </Card>
+          }
+        />
       ) : flow.visibleItems.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t('vault.noMatches')}</p>
       ) : (

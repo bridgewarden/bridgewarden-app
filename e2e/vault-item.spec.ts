@@ -1,8 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { en } from '../app/lib/i18n/en';
+import { totpCode } from './totp';
 import { queryD1 } from './d1';
 import { signIn, unlockVault } from './fixtures';
+
+test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
 
 const openCreate = async (page: Page) => {
   await page.goto('/login');
@@ -206,4 +209,50 @@ test('resolves stale updates by copy and reload', async ({ page, browser }) => {
   await second.getByRole('button', { name: en['vaultItem.conflictReload'] }).click();
   await expect(second.getByLabel(en['vaultItem.name'])).toHaveValue(`${name} C`);
   await secondContext.close();
+});
+
+test('renders an item TOTP and hides revealed passwords on timeout', async ({ page }) => {
+  const fixedNow = new Date('2026-01-01T00:00:00Z');
+  const secret = 'JBSWY3DPEHPK3PXP';
+  const expected = totpCode(secret, Math.floor(fixedNow.getTime() / 30_000));
+
+  await page.goto('/login');
+  await signIn(page);
+  await expect(page).toHaveURL(/\/app$/);
+  await page.getByRole('link', { name: en['vault.newItem'] }).click();
+  await page.getByLabel(en['vaultItem.name']).fill('TOTP login');
+  await page.getByLabel(en['vaultItem.username']).fill('totp@example.com');
+  await page.getByLabel(/^Password/).fill('totp-password');
+  await page.getByLabel('URL 1', { exact: true }).fill('https://example.com');
+  await page.getByLabel(en['vaultItem.totpSecret'], { exact: true }).fill(secret);
+  await page.getByRole('button', { name: en['vaultItem.save'] }).click();
+  await expect(page).toHaveURL(/\/app$/);
+
+  await page.clock.install({ time: fixedNow });
+  await page.getByRole('button', { name: /TOTP login/ }).focus();
+  await page.keyboard.press('Enter');
+  const code = page.getByRole('dialog').getByText(`${expected.slice(0, 3)} ${expected.slice(3)}`);
+  await expect(code).toBeVisible();
+  const copyTotpLabel = en['vault.detail.copyField'].replace('{field}', en['vault.detail.totp']);
+  await page.getByRole('button', { name: copyTotpLabel }).click();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(expected);
+
+  await page.getByRole('button', { name: en['vaultItem.showPassword'] }).click();
+  await expect(page.getByRole('dialog').getByText('totp-password')).toBeVisible();
+  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await expect(page.getByRole('dialog').getByText('totp-password')).toBeHidden();
+
+  await page.getByRole('button', { name: en['vaultItem.showPassword'] }).click();
+  await expect(page.getByRole('dialog').getByText('totp-password')).toBeVisible();
+  await page.clock.fastForward(31_000);
+  await expect(page.getByRole('dialog').getByText('totp-password')).toBeHidden();
+  await expect
+    .poll(
+      async () =>
+        (await page
+          .getByRole('dialog')
+          .getByText(/\d{3} \d{3}/)
+          .textContent()) ?? '',
+    )
+    .not.toBe(`${expected.slice(0, 3)} ${expected.slice(3)}`);
 });

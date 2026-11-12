@@ -33,6 +33,12 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
     },
     {
+      name: 'generator',
+      testMatch: /generator\.spec\.ts/,
+      dependencies: ['auth'],
+      use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
+    },
+    {
       name: 'vault-item',
       testMatch: /vault-item\.spec\.ts/,
       dependencies: ['vault-list'],

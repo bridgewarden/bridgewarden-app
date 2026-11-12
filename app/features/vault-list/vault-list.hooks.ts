@@ -2,26 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 
 import { toast } from 'sonner';
 
-import { ENVELOPE_VERSION } from '~/lib/crypto/contract';
-import { sealItem } from '~/lib/crypto/envelope';
 import { t } from '~/lib/i18n/en';
-import { parseItemPayload } from '~/lib/vault/item-payload';
-import { getVaultKey } from '~/lib/vault/key-store';
-import { enqueueOutbox, flushOutbox, subscribeOutboxEvents } from '~/lib/vault/outbox';
+import { subscribeOutboxEvents } from '~/lib/vault/outbox';
 import { readVaultProjection, type DecryptedFolder, type DecryptedItem } from '~/lib/vault/projection';
 import { getSyncStatus, subscribeSyncStatus, syncVault } from '~/lib/vault/sync';
-import type { CachedItem } from '~/lib/vault/types';
 
 import { DEFAULT_FILTERS, filterAndSortItems, type VaultListFilters } from './vault-list.lib';
 
-export type VaultListStatus = 'loading' | 'ready' | 'offline' | 'degraded' | 'error';
-
-export type CreateItemInput = {
-  name: string;
-  type: 'login' | 'note';
-  folderId: string | null;
-  favorite: boolean;
-};
+type VaultListStatus = 'loading' | 'ready' | 'offline' | 'degraded' | 'error';
 
 export const useVaultList = () => {
   const [items, setItems] = useState<DecryptedItem[]>([]);
@@ -93,60 +81,6 @@ export const useVaultList = () => {
     setActiveIndex(0);
   }, []);
 
-  const createItem = useCallback(
-    async (input: CreateItemInput) => {
-      const key = getVaultKey();
-      if (!key) throw new Error('vault is locked');
-
-      try {
-        const payload = parseItemPayload(
-          input.type,
-          input.type === 'login' ? { type: 'login', name: input.name } : { type: 'note', name: input.name, body: '' },
-        );
-        if (!payload) throw new Error('invalid item payload');
-        const sealed = await sealItem(payload, key);
-        const id = crypto.randomUUID();
-        const now = Date.now();
-        const optimistic: CachedItem = {
-          id,
-          type: input.type,
-          folderId: input.folderId,
-          favorite: input.favorite,
-          dataCt: sealed.ct,
-          dataIv: sealed.iv,
-          dataVersion: ENVELOPE_VERSION,
-          rev: 0,
-          deletedAt: null,
-          createdAt: now,
-          updatedAt: now,
-        };
-
-        await enqueueOutbox({
-          kind: 'item.create',
-          id,
-          idempotencyId: id,
-          entity: 'item',
-          optimistic,
-          previous: null,
-          payload: {
-            type: input.type,
-            folderId: input.folderId,
-            favorite: input.favorite,
-            dataCt: sealed.ct,
-            dataIv: sealed.iv,
-            dataVersion: ENVELOPE_VERSION,
-          },
-          queuedAt: now,
-        });
-        await load();
-        void flushOutbox();
-      } finally {
-        key.fill(0);
-      }
-    },
-    [load],
-  );
-
   const detailItem = detailId ? (items.find((item) => item.id === detailId) ?? null) : null;
   const status: VaultListStatus = !loaded
     ? 'loading'
@@ -157,6 +91,7 @@ export const useVaultList = () => {
         : syncStatus === 'degraded'
           ? 'degraded'
           : 'ready';
+
   const closeDetail = useCallback(() => setDetailId(null), []);
 
   return {
@@ -173,7 +108,90 @@ export const useVaultList = () => {
     detailItem,
     openDetail: setDetailId,
     closeDetail,
-    createItem,
     retry: load,
   };
+};
+
+type VaultListInteractionInput = {
+  activeIndex: number;
+  detailItem: DecryptedItem | null;
+  visibleItems: DecryptedItem[];
+  setActiveIndex: (index: number) => void;
+  openDetail: (id: string) => void;
+};
+
+const isFormTarget = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) return false;
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLSelectElement ||
+    target instanceof HTMLTextAreaElement ||
+    target.isContentEditable
+  );
+};
+
+const isInteractiveTarget = (target: EventTarget | null): boolean =>
+  target instanceof HTMLElement &&
+  Boolean(target.closest('button, a, [role="button"], [role="checkbox"], [role="combobox"]'));
+
+const row = (id: string) => document.querySelector<HTMLButtonElement>(`[data-vault-item="${CSS.escape(id)}"]`);
+
+export const useVaultListInteraction = ({
+  activeIndex,
+  detailItem,
+  visibleItems,
+  setActiveIndex,
+  openDetail,
+}: VaultListInteractionInput) => {
+  const lastScrolled = useRef(-1);
+  const hadDetail = useRef(false);
+
+  useEffect(() => {
+    if (hadDetail.current && !detailItem) row(visibleItems[activeIndex]?.id ?? '')?.focus();
+    hadDetail.current = Boolean(detailItem);
+  }, [activeIndex, detailItem, visibleItems]);
+
+  useEffect(() => {
+    if (detailItem || lastScrolled.current === activeIndex) return;
+    const active = visibleItems[activeIndex];
+    if (!active) return;
+    lastScrolled.current = activeIndex;
+    row(active.id)?.scrollIntoView({ block: 'nearest' });
+  }, [activeIndex, detailItem, visibleItems]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (detailItem || isFormTarget(event.target) || event.defaultPrevented) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest('[role="combobox"], [role="listbox"], [role="option"]'))
+        return;
+      if (event.key === 'Enter' && isInteractiveTarget(target)) return;
+      const count = visibleItems.length;
+      if (count === 0) return;
+
+      if (event.key === 'j' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        const next = Math.min(activeIndex + 1, count - 1);
+        setActiveIndex(next);
+        const nextItem = visibleItems[next];
+        if (nextItem) requestAnimationFrame(() => row(nextItem.id)?.focus());
+      } else if (event.key === 'k' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        const next = Math.max(activeIndex - 1, 0);
+        setActiveIndex(next);
+        const nextItem = visibleItems[next];
+        if (nextItem) requestAnimationFrame(() => row(nextItem.id)?.focus());
+      } else if (event.key === 'Enter') {
+        const active = visibleItems[activeIndex];
+        if (active) {
+          event.preventDefault();
+          openDetail(active.id);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activeIndex, detailItem, openDetail, setActiveIndex, visibleItems]);
 };

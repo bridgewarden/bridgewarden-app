@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFetcher } from 'react-router';
 
-import { prepareLogin } from '../../lib/crypto/login-keys';
 import { rewrapPassword } from '../../lib/crypto/password-change';
 import { storeKeyMaterial } from '../../lib/vault/key-material';
 import type { VaultKeyMaterial } from '../../lib/vault/types';
@@ -93,6 +92,7 @@ export const usePasswordChange = (password: PasswordSettings, email: string) => 
     startedRef.current = false;
 
     try {
+      const { prepareLogin } = await import('../../lib/crypto/login-keys');
       const current = await prepareLogin(currentPassword, password.kdfSalt, password.kdfIterations);
       currentRef.current = current;
       prepareFetcher.submit(

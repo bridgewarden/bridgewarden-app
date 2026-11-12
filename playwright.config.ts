@@ -15,6 +15,12 @@ export default defineConfig({
   projects: [
     { name: 'smoke', testMatch: /smoke\.spec\.ts/, use: { ...devices['Desktop Chrome'] } },
     {
+      name: 'a11y-public',
+      testMatch: /a11y-public\.spec\.ts/,
+      dependencies: ['smoke'],
+      use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
+    },
+    {
       name: 'setup',
       testMatch: /setup\.spec\.ts/,
       dependencies: ['smoke'],
@@ -27,10 +33,41 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
     },
     {
+      name: 'keyboard',
+      testMatch: /keyboard\.spec\.ts/,
+      dependencies: ['auth'],
+      retries: 0,
+      use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
+    },
+    {
       name: 'vault-list',
       testMatch: /vault-list\.spec\.ts/,
       dependencies: ['auth'],
       use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
+    },
+    {
+      name: 'pwa',
+      testMatch: /pwa\.spec\.ts/,
+      dependencies: ['auth'],
+      retries: 0,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: 'http://localhost:8788',
+        trace: 'off',
+        screenshot: 'off',
+      },
+    },
+    {
+      name: 'performance',
+      testMatch: /performance\.spec\.ts/,
+      dependencies: ['auth'],
+      retries: 0,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: 'http://localhost:8788',
+        trace: 'off',
+        screenshot: 'off',
+      },
     },
     {
       name: 'generator',
@@ -42,6 +79,13 @@ export default defineConfig({
       name: 'vault-item',
       testMatch: /vault-item\.spec\.ts/,
       dependencies: ['vault-list'],
+      use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
+    },
+    {
+      name: 'security',
+      testMatch: /security\.spec\.ts/,
+      dependencies: ['vault-item'],
+      retries: 0,
       use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
     },
     {
@@ -61,6 +105,13 @@ export default defineConfig({
       name: 'two-factor',
       testMatch: /two-factor\.spec\.ts/,
       dependencies: ['vault-item'],
+      retries: 0,
+      use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
+    },
+    {
+      name: 'a11y-app',
+      testMatch: /a11y-app\.spec\.ts/,
+      dependencies: ['two-factor'],
       retries: 0,
       use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
     },
@@ -93,11 +144,20 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
     },
   ],
-  webServer: {
-    command: 'E2E=1 pnpm dev --port 8787 --strictPort',
-    env: { APP_ORIGIN: 'http://localhost:8787' },
-    url: 'http://localhost:8787/health',
-    reuseExistingServer: false,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command: 'E2E=1 pnpm dev --port 8787 --strictPort',
+      env: { APP_ORIGIN: 'http://localhost:8787' },
+      url: 'http://localhost:8787/health',
+      reuseExistingServer: false,
+      timeout: 120_000,
+    },
+    {
+      command: 'pnpm preview --port 8788 --strictPort',
+      env: { APP_ORIGIN: 'http://localhost:8788', E2E: '1' },
+      url: 'http://localhost:8788/health',
+      reuseExistingServer: false,
+      timeout: 180_000,
+    },
+  ],
 });

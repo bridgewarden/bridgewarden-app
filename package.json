@@ -8,8 +8,8 @@
   },
   "scripts": {
     "dev": "NODE_ENV=development react-router dev",
-    "build": "react-router build && node scripts/strip-build-secrets.ts",
-    "preview": "pnpm build && node scripts/prepare-preview-secrets.ts && vite preview",
+    "build": "react-router build && node scripts/strip-build-secrets.ts && node scripts/generate-service-worker.ts && node scripts/check-sonner-csp-hash.ts && node scripts/check-bundle-budget.ts",
+    "preview": "pnpm build && node scripts/preview.ts",
     "deploy": "pnpm build && wrangler deploy",
     "typecheck": "wrangler types && react-router typegen && tsc -b",
     "lint": "eslint .",
@@ -23,7 +23,7 @@
     "db:migrate:remote": "wrangler d1 migrations apply bridgewarden-db --remote",
     "db:reset:local": "rm -rf .wrangler/state/v3/d1 && pnpm db:migrate:local",
     "postinstall": "wrangler types",
-    "test:e2e": "pnpm db:migrate:e2e && playwright test",
+    "test:e2e": "node scripts/test-e2e.ts",
     "db:migrate:e2e": "wrangler d1 migrations apply bridgewarden-db --local --persist-to .wrangler/e2e"
   },
   "dependencies": {
@@ -43,6 +43,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@cloudflare/vite-plugin": "^1.67.0",
     "@cloudflare/vitest-plugin": "^1.5.1",
     "@eslint/js": "^10.0.1",

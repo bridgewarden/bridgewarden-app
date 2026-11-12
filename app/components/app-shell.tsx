@@ -5,13 +5,13 @@ import { Link, useFetcher, useLocation, useMatches, useNavigate } from 'react-ro
 import { toast } from 'sonner';
 
 import { useAutoLock } from '~/hooks/use-auto-lock';
+import { useServiceWorker } from '~/hooks/use-service-worker';
 import { AppHeader, type AppUser } from '~/components/app-header';
 import { Alert, AlertDescription } from '~/components/ui/alert';
 import { OfflineBanner } from '~/components/offline-banner';
 import { LockedOverlay } from '~/components/locked-overlay';
 import { Toaster } from '~/components/ui/sonner';
 import { clearSecretClipboard } from '~/lib/clipboard';
-import { subscribeOutboxEvents } from '~/lib/vault/outbox';
 import { getTrashCount, refreshTrashCount, resetTrashCount, subscribeTrashCount } from '~/lib/vault/trash-count';
 import { t } from '~/lib/i18n/en';
 import type { Theme } from '~/lib/theme';
@@ -19,7 +19,6 @@ import { resetAutoLockPreferences } from '~/lib/vault/auto-lock';
 import { isUnlocked, subscribeKeyState } from '~/lib/vault/key-store';
 import { wipeVaultDb } from '~/lib/vault/local-db';
 import { clearUnlockFailures, lockVault, unlockVault } from '~/lib/vault/lock';
-import { syncVault } from '~/lib/vault/sync';
 
 const lockedSnapshot = () => false;
 
@@ -46,16 +45,33 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
   const protectedRoute = matches.some((match) => match.id === 'routes/protected');
   const locked = Boolean(user) && !unlocked && protectedRoute;
   useAutoLock(unlocked);
+  useServiceWorker();
 
   useEffect(() => {
     void clearSecretClipboard();
   }, [location.pathname]);
 
   useEffect(() => {
-    if (userEmail && unlocked) void syncVault().then(() => refreshTrashCount());
+    if (userEmail && unlocked) {
+      void import('~/lib/vault/background-sync')
+        .then(({ runVaultSync }) => runVaultSync())
+        .then(() => refreshTrashCount())
+        .catch(() => undefined);
+    }
   }, [unlocked, userEmail]);
 
-  useEffect(() => subscribeOutboxEvents(() => void refreshTrashCount()), []);
+  useEffect(() => {
+    let active = true;
+    let unsubscribe: () => void = () => undefined;
+    void import('~/lib/vault/background-sync').then(({ subscribeOutbox }) => {
+      if (!active) return;
+      unsubscribe = subscribeOutbox(() => void refreshTrashCount());
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (!unlocked || !user) resetTrashCount();

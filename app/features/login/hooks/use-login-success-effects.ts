@@ -1,7 +1,6 @@
 import { useEffect, useRef, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 import type { NavigateFunction } from 'react-router';
 
-import { unwrapLoginVault } from '~/lib/crypto/login-keys';
 import { t } from '~/lib/i18n/en';
 import { storeKeyMaterial } from '~/lib/vault/key-material';
 import { clearVaultKey, setVaultKey } from '~/lib/vault/key-store';
@@ -68,6 +67,7 @@ export const useLoginSuccessEffects = (options: LoginSuccessEffectsOptions) => {
 
     void (async () => {
       try {
+        const { unwrapLoginVault } = await import('~/lib/crypto/login-keys');
         const vaultKey = await unwrapLoginVault(data.vaultKeyWrapped, data.vaultKeyWrapIv, wrapKey);
         setVaultKey(vaultKey);
         vaultKey.fill(0);
@@ -132,6 +132,7 @@ export const useLoginSuccessEffects = (options: LoginSuccessEffectsOptions) => {
 
     void (async () => {
       try {
+        const { unwrapLoginVault } = await import('~/lib/crypto/login-keys');
         const vaultKey = await unwrapLoginVault(data.vaultKeyWrapped, data.vaultKeyWrapIv, wrapKey);
         setVaultKey(vaultKey);
         vaultKey.fill(0);

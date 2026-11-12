@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFetcher } from 'react-router';
 
-import { prepareLogin, type PreloginResponse } from '~/lib/crypto/login-keys';
+import type { PreloginResponse } from '~/lib/crypto/login-keys';
 import { t } from '~/lib/i18n/en';
 
 import type { CodesResponse, DisableResponse, EnrollResponse } from './account-settings.types';
@@ -134,6 +134,7 @@ export const useAccountSettings = ({ email }: UseAccountSettingsOptions) => {
 
       void Promise.resolve().then(async () => {
         try {
+          const { prepareLogin } = await import('~/lib/crypto/login-keys');
           const prepared = await prepareLogin(submittedPassword, data.kdfSalt, data.kdfIterations);
           prepared.wrapKey.fill(0);
           const target =

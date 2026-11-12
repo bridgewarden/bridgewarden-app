@@ -1,6 +1,5 @@
 import { useEffect, useRef, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 
-import { prepareLogin } from '~/lib/crypto/login-keys';
 import { t } from '~/lib/i18n/en';
 import { clearVaultKey } from '~/lib/vault/key-store';
 
@@ -55,6 +54,7 @@ export const useLoginRequestEffects = (options: LoginRequestEffectsOptions) => {
       passwordRef.current = '';
 
       try {
+        const { prepareLogin } = await import('~/lib/crypto/login-keys');
         const prepared = await prepareLogin(submittedPassword, data.kdfSalt, data.kdfIterations);
         wrapKeyRef.current?.fill(0);
         wrapKeyRef.current = prepared.wrapKey;

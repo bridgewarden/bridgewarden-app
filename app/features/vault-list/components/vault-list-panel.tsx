@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { lazy, Suspense, useCallback } from 'react';
 
 import { PlusIcon } from 'lucide-react';
 
@@ -12,9 +12,12 @@ import { t } from '~/lib/i18n/en';
 import { readVaultItem } from '~/lib/vault/item-read';
 
 import { useVaultList, useVaultListInteraction } from '../vault-list.hooks';
-import { ItemDetailDialog } from './item-detail-dialog';
 import { VaultListRows } from './vault-list-rows';
 import { VaultListToolbar } from './vault-list-toolbar';
+
+const ItemDetailDialog = lazy(() =>
+  import('./item-detail-dialog').then((module) => ({ default: module.ItemDetailDialog })),
+);
 
 export const VaultListPanel = () => {
   const flow = useVaultList();
@@ -96,7 +99,11 @@ export const VaultListPanel = () => {
         />
       )}
 
-      <ItemDetailDialog item={flow.detailItem} onClose={flow.closeDetail} onLoadSecrets={loadSecrets} />
+      {flow.detailItem ? (
+        <Suspense fallback={null}>
+          <ItemDetailDialog item={flow.detailItem} onClose={flow.closeDetail} onLoadSecrets={loadSecrets} />
+        </Suspense>
+      ) : null}
     </section>
   );
 };

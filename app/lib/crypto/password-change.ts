@@ -2,7 +2,6 @@ import { standardToBase64Url, toBase64Url } from '../base64-url';
 import { DEFAULT_KDF_ITERATIONS, SALT_BYTES } from './contract';
 import { encodeBase64 } from './encoding';
 import { deriveAuthHash, deriveMasterKey, deriveWrapKey } from './kdf';
-import { unwrapLoginVault } from './login-keys';
 import { wrapVaultKey } from './vault-key';
 
 export type PasswordKeyMaterial = {
@@ -26,6 +25,7 @@ export const rewrapPassword = async (
   newPassword: string,
   current: Pick<PasswordKeyMaterial, 'vaultKeyWrapped' | 'vaultKeyWrapIv'>,
 ): Promise<{ currentAuthHash: string; request: PasswordChangeRequest }> => {
+  const { unwrapLoginVault } = await import('./login-keys');
   const vaultKey = await unwrapLoginVault(current.vaultKeyWrapped, current.vaultKeyWrapIv, currentWrapKey);
   let newMasterKey: Uint8Array | null = null;
   let newWrapKey: Uint8Array | null = null;

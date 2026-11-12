@@ -1,7 +1,4 @@
 import { clearSecretClipboard } from '../clipboard';
-import { WrongPasswordError } from '../crypto/errors';
-import { prepareLogin, unwrapLoginVault } from '../crypto/login-keys';
-import { readKeyMaterial } from './key-material';
 import { clearVaultKey, getKeyVersion, isUnlocked, setVaultKey } from './key-store';
 import type { UnlockResult } from './types';
 
@@ -64,40 +61,17 @@ export const unlockVault = async (password: string): Promise<UnlockResult> => {
   if (isUnlocked()) return { status: 'ok' };
   if (hasExceededUnlockAttempts()) return { status: 'locked-out' };
   if (!password) return { status: 'invalid' };
+
   const attempt = ++unlockAttempt;
   const version = getKeyVersion();
+  const { performUnlock } = await import('./unlock-vault');
 
-  let material;
-  try {
-    material = await readKeyMaterial();
-  } catch {
-    return { status: 'unavailable' };
-  }
-  if (!material) return { status: 'unavailable' };
-
-  let prepared;
-  try {
-    prepared = await prepareLogin(password, material.kdfSalt, material.kdfIterations);
-  } catch {
-    return { status: 'unavailable' };
-  }
-
-  try {
-    const vaultKey = await unwrapLoginVault(material.vaultKeyWrapped, material.vaultKeyWrapIv, prepared.wrapKey);
-    if (attempt !== unlockAttempt || version !== getKeyVersion()) {
-      vaultKey.fill(0);
-      return { status: 'unavailable' };
-    }
-    setVaultKey(vaultKey);
-    vaultKey.fill(0);
-    clearUnlockFailures();
-    return { status: 'ok' };
-  } catch (error) {
-    if (!(error instanceof WrongPasswordError)) return { status: 'unavailable' };
-    const failures = readFailures() + 1;
-    writeFailures(failures);
-    return { status: failures >= MAX_UNLOCK_FAILURES ? 'locked-out' : 'invalid' };
-  } finally {
-    prepared.wrapKey.fill(0);
-  }
+  return performUnlock(password, {
+    readFailures,
+    writeFailures,
+    clearFailures: clearUnlockFailures,
+    isCurrent: () => attempt === unlockAttempt && version === getKeyVersion(),
+    setKey: setVaultKey,
+    maxFailures: MAX_UNLOCK_FAILURES,
+  });
 };

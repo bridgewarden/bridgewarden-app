@@ -150,7 +150,9 @@ test('creates the first admin through the wizard and locks setup', async ({ page
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Vault');
 
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bridgewarden');
+  await expect(page).toHaveURL(/\/app$/);
+  await unlockVault(page);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Vault');
 
   await page.goto('/app/trash');
   await unlockVault(page);

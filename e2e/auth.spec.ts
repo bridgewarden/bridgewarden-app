@@ -14,7 +14,7 @@ const signIn = async (page: Page) => {
 
 test('unauthenticated home redirects to login', async ({ page }) => {
   await page.goto('/');
-  await expect(page).toHaveURL(/\/login\?next=%2F$/);
+  await expect(page).toHaveURL(/\/login\?next=%2Fapp$/);
   await expect(page.getByRole('button', { name: en['common.lock'] })).toBeDisabled();
 });
 

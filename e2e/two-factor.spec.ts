@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { en } from '../app/lib/i18n/en';
+import { expectNoSeriousA11yViolations } from './a11y';
 import { E2E_ADMIN, waitForHydration } from './fixtures';
 import { nextStepCode, totpCode } from './totp';
 
@@ -81,6 +82,7 @@ test('logs in with a backup code', async ({ page }) => {
 
 test('logs in with TOTP', async ({ page }) => {
   await openChallenge(page);
+  await expectNoSeriousA11yViolations(page, 'two-factor challenge');
   await page.getByLabel(en['login.totpCode']).fill(nextStepCode(secret));
   await page.getByRole('button', { name: en['login.verifyCode'] }).click();
 

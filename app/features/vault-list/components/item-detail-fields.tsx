@@ -50,12 +50,12 @@ export const Field = ({
   children: React.ReactNode;
   actions?: React.ReactNode;
 }) => (
-  <div className="flex items-start justify-between gap-3 px-3 py-2.5">
-    <div className="min-w-0">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="mt-0.5 text-sm break-all">{children}</dd>
-    </div>
-    {actions ? <div className="flex shrink-0 items-center">{actions}</div> : null}
+  <div className="px-3 py-2.5">
+    <dt className="text-xs text-muted-foreground">{label}</dt>
+    <dd className="mt-0.5 flex items-start justify-between gap-3 text-sm">
+      <span className="min-w-0 break-all">{children}</span>
+      {actions ? <span className="flex shrink-0 items-center">{actions}</span> : null}
+    </dd>
   </div>
 );
 

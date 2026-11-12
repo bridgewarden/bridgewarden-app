@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { ArrowLeftIcon, SaveIcon, Trash2Icon } from 'lucide-react';
 import { Link } from 'react-router';
 
-import { Alert, AlertDescription } from '~/components/ui/alert';
 import { Button } from '~/components/ui/button';
-import { Skeleton } from '~/components/ui/skeleton';
+import { InlineError } from '~/components/inline-error';
+import { SkeletonList } from '~/components/skeleton-list';
 import { t } from '~/lib/i18n/en';
 
 import { useUnsavedGuard, useVaultItemEditor } from '../hooks';
@@ -20,13 +20,7 @@ export const VaultItemEditor = ({ itemId }: VaultItemEditorProps) => {
   const blocker = useUnsavedGuard(flow.dirty, flow.saving || flow.deleting);
 
   if (flow.status === 'loading') {
-    return (
-      <div role="status" aria-busy="true" aria-label={t('vaultItem.loading')} className="space-y-4">
-        <Skeleton className="h-10 w-56" />
-        <Skeleton className="h-36 w-full" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
+    return <SkeletonList label={t('vaultItem.loading')} rows={4} />;
   }
 
   if (flow.status === 'locked') return null;
@@ -34,17 +28,17 @@ export const VaultItemEditor = ({ itemId }: VaultItemEditorProps) => {
   if (flow.status === 'missing' || flow.status === 'error') {
     return (
       <section className="space-y-4">
-        <Alert variant="destructive">
-          <AlertDescription>
-            {t(flow.status === 'missing' ? 'vaultItem.notFound' : 'vaultItem.loadFailed')}
-          </AlertDescription>
-        </Alert>
-        <Button variant="outline" className="min-h-11" asChild>
-          <Link to="/app">
-            <ArrowLeftIcon aria-hidden="true" />
-            {t('vaultItem.back')}
-          </Link>
-        </Button>
+        <InlineError
+          message={t(flow.status === 'missing' ? 'vaultItem.notFound' : 'vaultItem.loadFailed')}
+          action={
+            <Button variant="outline" className="min-h-11" asChild>
+              <Link to="/app">
+                <ArrowLeftIcon aria-hidden="true" />
+                {t('vaultItem.back')}
+              </Link>
+            </Button>
+          }
+        />
         {flow.status === 'error' ? (
           <Button variant="outline" className="min-h-11" onClick={() => void flow.retry()}>
             {t('vault.retry')}
@@ -55,7 +49,7 @@ export const VaultItemEditor = ({ itemId }: VaultItemEditorProps) => {
   }
 
   return (
-    <section className="mx-auto w-full max-w-3xl space-y-6">
+    <section className="mx-auto w-full max-w-3xl space-y-6 max-sm:-mx-4 max-sm:-my-8 max-sm:min-h-0 max-sm:flex-1 max-sm:bg-background max-sm:p-4">
       <Button variant="ghost" size="sm" className="min-h-11 px-2" asChild>
         <Link to="/app">
           <ArrowLeftIcon aria-hidden="true" />

@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 
-import { CircleUserIcon, LockIcon, ShieldAlertIcon, ShieldIcon } from 'lucide-react';
+import { ShieldAlertIcon } from 'lucide-react';
 import { Link, useFetcher, useLocation, useMatches, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 
 import { useAutoLock } from '~/hooks/use-auto-lock';
+import { AppHeader, type AppUser } from '~/components/app-header';
 import { Alert, AlertDescription } from '~/components/ui/alert';
+import { OfflineBanner } from '~/components/offline-banner';
 import { LockedOverlay } from '~/components/locked-overlay';
-import { ThemeControl } from '~/components/theme-control';
-import { Button } from '~/components/ui/button';
 import { Toaster } from '~/components/ui/sonner';
 import { clearSecretClipboard } from '~/lib/clipboard';
+import { subscribeOutboxEvents } from '~/lib/vault/outbox';
+import { getTrashCount, refreshTrashCount, resetTrashCount, subscribeTrashCount } from '~/lib/vault/trash-count';
 import { t } from '~/lib/i18n/en';
 import type { Theme } from '~/lib/theme';
 import { resetAutoLockPreferences } from '~/lib/vault/auto-lock';
@@ -18,12 +20,6 @@ import { isUnlocked, subscribeKeyState } from '~/lib/vault/key-store';
 import { wipeVaultDb } from '~/lib/vault/local-db';
 import { clearUnlockFailures, lockVault, unlockVault } from '~/lib/vault/lock';
 import { syncVault } from '~/lib/vault/sync';
-
-type AppUser = {
-  displayName: string | null;
-  email: string;
-  role: 'admin' | 'member';
-};
 
 const lockedSnapshot = () => false;
 
@@ -45,6 +41,7 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
   const hadUser = useRef(Boolean(user));
   const lockButtonRef = useRef<HTMLButtonElement>(null);
   const unlocked = useSyncExternalStore(subscribeKeyState, isUnlocked, lockedSnapshot);
+  const trashCount = useSyncExternalStore(subscribeTrashCount, getTrashCount, () => 0);
   const userEmail = user?.email;
   const protectedRoute = matches.some((match) => match.id === 'routes/protected');
   const locked = Boolean(user) && !unlocked && protectedRoute;
@@ -55,8 +52,14 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
   }, [location.pathname]);
 
   useEffect(() => {
-    if (userEmail && unlocked) void syncVault();
+    if (userEmail && unlocked) void syncVault().then(() => refreshTrashCount());
   }, [unlocked, userEmail]);
+
+  useEffect(() => subscribeOutboxEvents(() => void refreshTrashCount()), []);
+
+  useEffect(() => {
+    if (!unlocked || !user) resetTrashCount();
+  }, [unlocked, user]);
 
   useEffect(() => {
     if (!user) {
@@ -138,55 +141,19 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
           </AlertDescription>
         </Alert>
       ) : null}
-      <header inert={locked} className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
-        <div className="mx-auto flex min-h-16 w-full max-w-5xl items-center gap-1 px-4">
-          <Link to="/" className="mr-auto flex min-h-11 min-w-0 items-center gap-2 rounded-md px-1 font-semibold">
-            <ShieldIcon className="size-5 shrink-0" aria-hidden="true" />
-            <span className="truncate">{t('app.name')}</span>
-          </Link>
-          <Button
-            ref={lockButtonRef}
-            variant="ghost"
-            size="icon"
-            className="size-11 shrink-0"
-            disabled={!user || !unlocked}
-            aria-label={t('common.lock')}
-            onClick={lockVault}
-          >
-            <LockIcon className="size-5" aria-hidden="true" />
-          </Button>
-          <ThemeControl theme={theme} />
-          {user ? (
-            <>
-              {user.role === 'admin' ? (
-                <Button variant="ghost" size="sm" className="min-h-11" asChild>
-                  <Link to="/admin/users">
-                    <span className="hidden sm:inline">{t('adminUsers.nav')}</span>
-                  </Link>
-                </Button>
-              ) : null}
-              <Button variant="ghost" size="sm" className="min-h-11" asChild>
-                <Link to="/app/settings">
-                  <span className="hidden sm:inline">{t('common.settings')}</span>
-                </Link>
-              </Button>
-              <span className="hidden max-w-32 truncate text-sm text-muted-foreground sm:inline">
-                {user.displayName ?? user.email}
-              </span>
-              <Button variant="ghost" className="min-h-11" disabled={fetcher.state !== 'idle'} onClick={logout}>
-                {t('common.signOut')}
-              </Button>
-            </>
-          ) : (
-            <Button variant="ghost" size="icon" className="size-11 shrink-0" asChild>
-              <Link to="/login" aria-label={t('common.signIn')}>
-                <CircleUserIcon className="size-5" aria-hidden="true" />
-              </Link>
-            </Button>
-          )}
-        </div>
-      </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+      <AppHeader
+        theme={theme}
+        user={user}
+        locked={locked}
+        unlocked={unlocked}
+        busy={fetcher.state !== 'idle'}
+        trashCount={trashCount}
+        lockButtonRef={lockButtonRef}
+        onLock={lockVault}
+        onLogout={logout}
+      />
+      <OfflineBanner />
+      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-8">
         {locked ? (
           <LockedOverlay signingOut={fetcher.state !== 'idle'} onUnlock={unlockVault} onSignOut={logout} />
         ) : (

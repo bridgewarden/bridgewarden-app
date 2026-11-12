@@ -5,6 +5,8 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  Link,
+  useLocation,
   useRouteLoaderData,
   type ShouldRevalidateFunctionArgs,
 } from 'react-router';
@@ -74,13 +76,15 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  const location = useLocation();
   let title = t('errors.title');
   let details = t('errors.generic.description');
   let stack: string | undefined;
+  const notFound = isRouteErrorResponse(error) && error.status === 404;
 
   if (isRouteErrorResponse(error)) {
-    title = error.status === 404 ? t('errors.notFound.title') : t('errors.title');
-    details = error.status === 404 ? t('errors.notFound.description') : error.statusText || details;
+    title = notFound ? t('errors.notFound.title') : t('errors.title');
+    details = error.status === 404 ? t('errors.notFound.description') : t('errors.generic.description');
   } else if (import.meta.env.DEV && error instanceof Error) {
     details = error.message;
     stack = error.stack;
@@ -95,6 +99,20 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
           <code>{stack}</code>
         </pre>
       ) : null}
+      <div className="flex flex-wrap gap-2 pt-2">
+        {!notFound ? (
+          <Link
+            className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm"
+            to={location.pathname}
+            reloadDocument
+          >
+            {t('common.retry')}
+          </Link>
+        ) : null}
+        <Link className="inline-flex min-h-11 items-center rounded-md border px-3 text-sm" to="/app">
+          {t('common.backToVault')}
+        </Link>
+      </div>
     </section>
   );
 }

@@ -45,6 +45,19 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
     },
     {
+      name: 'vault-trash',
+      testMatch: /vault-trash\.spec\.ts/,
+      dependencies: ['vault-item'],
+      use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
+    },
+    {
+      name: 'responsive',
+      testMatch: /responsive\.spec\.ts/,
+      dependencies: ['vault-trash'],
+      retries: 0,
+      use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
+    },
+    {
       name: 'two-factor',
       testMatch: /two-factor\.spec\.ts/,
       dependencies: ['vault-item'],

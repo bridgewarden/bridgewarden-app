@@ -2,16 +2,17 @@ import { CopyIcon, RefreshCwIcon } from 'lucide-react';
 import { Link } from 'react-router';
 import { toast } from 'sonner';
 
+import { InlineError } from '~/components/inline-error';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
 import { useGenerator } from '~/hooks/use-generator';
 import { copySecret } from '~/lib/clipboard';
+import type { GeneratorOptions, Strength } from '~/lib/generator';
+import { t } from '~/lib/i18n/en';
 
 import { PassphraseControls } from './generator-passphrase-controls';
 import { PasswordControls } from './generator-password-controls';
-import type { GeneratorOptions, Strength } from '~/lib/generator';
-import { t } from '~/lib/i18n/en';
 
 const STRENGTH_KEY: Record<
   Strength,
@@ -117,11 +118,7 @@ export const GeneratorPanel = ({ onApply, showStandaloneLink = false }: Generato
         </div>
       </div>
 
-      {error ? (
-        <p role="alert" className="text-sm text-destructive">
-          {t('generator.error.policy')}
-        </p>
-      ) : null}
+      {error ? <InlineError message={t('generator.error.policy')} /> : null}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         {showStandaloneLink ? (

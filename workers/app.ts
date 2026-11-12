@@ -7,17 +7,37 @@ const requestHandler = createRequestHandler(() => import('virtual:react-router/s
 
 export default {
   async fetch(request, env, ctx) {
+    const requestId = crypto.randomUUID();
     const context = new RouterContextProvider();
     context.set(cloudflareContext, { env, ctx });
 
-    return requestHandler(request, context);
+    try {
+      return await requestHandler(request, context);
+    } catch (error) {
+      console.error('request.failed', {
+        requestId,
+        method: request.method,
+        path: new URL(request.url).pathname,
+        error: error instanceof Error ? error.name : typeof error,
+      });
+      return new Response('Internal Server Error', {
+        status: 500,
+        headers: {
+          'content-type': 'text/plain; charset=utf-8',
+          'cache-control': 'no-store',
+          'x-request-id': requestId,
+        },
+      });
+    }
   },
 
   scheduled(_controller, env, ctx) {
     ctx.waitUntil(
       runScheduledPurge(env)
         .then(() => undefined)
-        .catch(() => console.warn('vault.purge_failed')),
+        .catch((error: unknown) =>
+          console.warn('vault.purge_failed', { error: error instanceof Error ? error.name : typeof error }),
+        ),
     );
   },
 } satisfies ExportedHandler<Env>;

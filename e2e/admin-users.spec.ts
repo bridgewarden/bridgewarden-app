@@ -1,10 +1,9 @@
 import { expect, test } from '@playwright/test';
 
 import { en } from '../app/lib/i18n/en';
-import { E2E_ADMIN, unlockVault, waitForHydration } from './fixtures';
+import { E2E_ADMIN, E2E_MEMBER, unlockVault, waitForHydration } from './fixtures';
 
-const MEMBER_EMAIL = 'member@example.com';
-const MEMBER_PASSWORD = 'member master password 123';
+const { email: MEMBER_EMAIL, password: MEMBER_PASSWORD } = E2E_MEMBER;
 
 test('admin invites a member, member sets up, admin disables them', async ({ browser, page }) => {
   await page.goto('/login');
@@ -44,10 +43,24 @@ test('admin invites a member, member sets up, admin disables them', async ({ bro
   const memberRow = page.getByRole('row', { name: new RegExp(MEMBER_EMAIL) });
   await expect(memberRow).toBeVisible();
   const roleSelect = memberRow.getByLabel(`${en['adminUsers.role']} — ${MEMBER_EMAIL}`);
+  const roleResponse = page.waitForResponse(
+    (response) => response.url().includes('/role') && response.request().method() !== 'GET',
+  );
   await roleSelect.selectOption('admin');
+  await roleResponse;
   await expect(roleSelect).toHaveValue('admin');
-  await page.waitForLoadState('networkidle');
+  const revokeResponse = page.waitForResponse(
+    (response) => response.url().includes('/revoke') && response.request().method() !== 'GET',
+  );
+  await memberRow.getByRole('button', { name: en['adminUsers.revokeSessions'] }).click();
+  await revokeResponse;
+  await member.goto('/app');
+  await expect(member).toHaveURL(/\/login/);
+  const disableResponse = page.waitForResponse(
+    (response) => response.url().includes('/disable') && response.request().method() !== 'GET',
+  );
   await memberRow.getByRole('button', { name: en['adminUsers.disable'] }).click();
+  await disableResponse;
   await expect(memberRow.getByRole('button', { name: en['adminUsers.enable'] })).toBeVisible();
 
   await member.goto('/app');

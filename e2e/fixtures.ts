@@ -8,6 +8,11 @@ export const E2E_ADMIN = {
   password: 'correct horse battery staple',
 };
 
+export const E2E_MEMBER = {
+  email: 'member@example.com',
+  password: 'member master password 123',
+};
+
 export const waitForHydration = async (page: Page) => {
   await page.waitForLoadState('networkidle');
   await page.waitForFunction(() =>
@@ -28,4 +33,11 @@ export const unlockVault = async (page: Page, password = E2E_ADMIN.password) => 
   await page.getByLabel(en['lock.password']).fill(password);
   await page.getByRole('button', { name: en['lock.submit'] }).click();
   await expect(page.getByRole('heading', { name: en['lock.title'] })).toBeHidden();
+};
+
+export const toBase64Url = (value: string) => value.replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+
+export const openNewItem = async (page: Page) => {
+  await page.getByRole('link', { name: en['vault.newItem'] }).click();
+  await expect(page).toHaveURL(/\/app\/new$/);
 };

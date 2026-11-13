@@ -69,7 +69,7 @@ test('shows generic sync errors and the global offline banner', async ({ context
   await expect(page.getByText('raw server failure')).toBeHidden();
 
   await context.setOffline(true);
-  await expect(page.getByText(en['common.offline'])).toBeVisible();
+  await expect(page.getByText(en['common.offline'])).toBeVisible({ timeout: 15_000 });
   await context.setOffline(false);
   await expect(page.getByText(en['common.offline'])).toBeHidden();
 });

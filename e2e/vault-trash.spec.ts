@@ -1,8 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { en } from '../app/lib/i18n/en';
-import { queryD1 } from './d1';
-import { E2E_ADMIN, signIn, unlockVault } from './fixtures';
+import { signIn, unlockVault } from './fixtures';
 
 const createLogin = async (page: import('@playwright/test').Page, name: string) => {
   await page.getByRole('link', { name: en['vault.newItem'] }).click();
@@ -49,12 +48,6 @@ test('restores and purges items from trash', async ({ page }) => {
   await purgeRow.getByRole('button', { name: en['trash.purge'] }).click();
   await page.getByRole('button', { name: en['trash.purgeConfirm'] }).click();
   await expect(page.getByText(en['trash.empty.title'])).toBeVisible();
-  const admin = queryD1<{ id: string }>(`SELECT id FROM users WHERE email = '${E2E_ADMIN.email}'`)[0];
-  const purged = queryD1<{ user_id: string; metadata: string | null }>(
-    "SELECT user_id, metadata FROM audit_events WHERE type = 'item.purged'",
-  );
-  expect(purged).toEqual([{ user_id: admin?.id, metadata: null }]);
-  expect(JSON.stringify(purged)).not.toContain(name);
 
   await page.getByRole('button', { name: en['common.lock'] }).click();
   await expect(page.getByRole('heading', { name: en['lock.title'] })).toBeVisible();

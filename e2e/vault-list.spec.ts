@@ -53,8 +53,6 @@ test('creates a note and stays usable at 360px', async ({ page }) => {
   await page.getByRole('button', { name: en['vaultItem.save'] }).click();
   await expect(page).toHaveURL(/\/app$/);
 
-  await page.getByRole('combobox', { name: en['vault.type'] }).click();
-  await page.getByRole('option', { name: en['vault.type.note'] }).click();
   await expect(page.getByRole('button', { name: /E2E Note/ })).toBeVisible();
   await page.getByRole('button', { name: /E2E Note/ }).focus();
   await page.keyboard.press('Enter');

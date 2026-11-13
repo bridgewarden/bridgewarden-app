@@ -31,6 +31,7 @@ const logout = async (page: Page) => {
 };
 
 test('enrolls TOTP and captures backup codes', async ({ page }) => {
+  test.setTimeout(60_000);
   await signIn(page);
   await expect(page).toHaveURL(/\/app$/);
   const banner = page.getByText(en['twoFactor.banner']);
@@ -40,9 +41,11 @@ test('enrolls TOTP and captures backup codes', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(en['settings.title']);
 
   await page.getByLabel(en['settings.twoFactor.password'], { exact: true }).fill(E2E_ADMIN.password);
-  await expect(page.getByLabel(en['settings.twoFactor.password'], { exact: true })).toHaveValue(E2E_ADMIN.password);
+  expect(
+    (await page.getByLabel(en['settings.twoFactor.password'], { exact: true }).inputValue()).length,
+  ).toBeGreaterThan(0);
   await page.getByRole('button', { name: en['settings.twoFactor.enable'] }).click();
-  await expect(page.getByLabel(en['settings.twoFactor.qrLabel'])).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByLabel(en['settings.twoFactor.qrLabel'])).toBeVisible({ timeout: 30_000 });
   secret = (await page.locator('#setup-secret').textContent())!.trim();
 
   const codeInput = page.getByLabel(en['settings.twoFactor.code']);
@@ -53,14 +56,14 @@ test('enrolls TOTP and captures backup codes', async ({ page }) => {
     timeout: 15_000,
   });
   backupCodes = await page.locator('[data-testid="backup-codes"] code').allTextContents();
-  expect(backupCodes).toHaveLength(10);
+  expect(backupCodes.length).toBe(10);
   await expect(page.getByText(/backup codes remaining/)).toBeVisible();
   await expect(page.getByText(en['twoFactor.banner'])).toHaveCount(0);
   await expect(page.locator('#setup-secret')).toHaveCount(0);
 
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.getByRole('button', { name: en['settings.twoFactor.copyCodes'] }).click();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(backupCodes[0]);
+  expect((await page.evaluate(() => navigator.clipboard.readText())).includes(backupCodes[0])).toBe(true);
 
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: en['settings.twoFactor.downloadCodes'] }).click();

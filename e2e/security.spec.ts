@@ -22,6 +22,7 @@ test('sets hardening headers and a unique nonce on every document', async ({ req
   expect(first.headers()['referrer-policy']).toBe('no-referrer');
   expect(first.headers()['permissions-policy']).toBe('camera=(), microphone=(), geolocation=()');
   expect(first.headers()['cache-control']).toBe('no-store');
+  expect(first.headers()['x-request-id']).toBeTruthy();
   expect(first.headers()['strict-transport-security']).toBeUndefined();
   expect(head.headers()['content-security-policy']).toContain("script-src 'self' 'nonce-");
 

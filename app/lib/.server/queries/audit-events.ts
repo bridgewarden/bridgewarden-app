@@ -1,21 +1,4 @@
-import { z } from 'zod';
-
 import { getDatabase } from '../db';
-
-const metadataSchema = z.strictObject({
-  targetUserId: z.string().min(1).max(64).optional(),
-  invitationId: z.string().min(1).max(64).optional(),
-});
-
-const safeMetadata = (raw: string | null | undefined): string | null => {
-  if (raw === null || raw === undefined) return null;
-  try {
-    const parsed = metadataSchema.safeParse(JSON.parse(raw));
-    return parsed.success ? JSON.stringify(parsed.data) : null;
-  } catch {
-    return null;
-  }
-};
 
 export type AuditEvent = {
   type: string;
@@ -38,7 +21,7 @@ export const insertAuditEvent = (db: D1Database, event: AuditEvent): Promise<D1R
       event.type,
       event.ipHash ?? null,
       event.uaHash ?? null,
-      safeMetadata(event.metadata),
+      event.metadata ?? null,
       event.createdAt,
     )
     .run();

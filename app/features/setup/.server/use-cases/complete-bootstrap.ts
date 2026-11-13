@@ -3,7 +3,7 @@ import { recordAuditEventSafe } from '../../../../lib/.server/audit';
 import { createUsersQueries } from '../../../../lib/.server/queries/users';
 import { readConfig } from '../../../../lib/.server/env';
 import { requireSecret } from '../../../../lib/.server/env';
-import { fingerprintRequest } from '../../../../lib/.server/request-fingerprint';
+import { auditFingerprints, fingerprintRequest } from '../../../../lib/.server/request-fingerprint';
 import { createSession, destroySessionToken } from '../../../../lib/.server/session';
 import type { SetupInput } from '../setup-input';
 
@@ -71,7 +71,12 @@ export const completeBootstrap = async (
     return { status: 'exists' };
   }
 
-  await recordAuditEventSafe(env, { type: 'bootstrap.created', userId: id, createdAt });
+  await recordAuditEventSafe(env, {
+    type: 'bootstrap.created',
+    userId: id,
+    createdAt,
+    ...(request ? await auditFingerprints(env, request) : {}),
+  });
 
   return { status: 'created', cookie: session.cookie };
 };

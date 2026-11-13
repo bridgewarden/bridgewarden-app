@@ -1,6 +1,6 @@
 import { recordAuditEventSafe } from '../../../../lib/.server/audit';
 import { requireSecret } from '../../../../lib/.server/env';
-import { fingerprintRequest } from '../../../../lib/.server/request-fingerprint';
+import { auditFingerprints } from '../../../../lib/.server/request-fingerprint';
 import {
   consumeChallenge,
   deleteChallenge,
@@ -22,10 +22,8 @@ export type ChallengeResult =
 
 export const verifyChallenge = async (env: Env, request: Request, input: ChallengeInput): Promise<ChallengeResult> => {
   let pepper: string;
-  let sessionSecret: string;
   try {
     pepper = requireSecret(env, 'AUTH_PEPPER');
-    sessionSecret = requireSecret(env, 'SESSION_SECRET');
   } catch {
     return { status: 'server-error' };
   }
@@ -41,7 +39,7 @@ export const verifyChallenge = async (env: Env, request: Request, input: Challen
     return { status: 'invalid-challenge' };
   }
 
-  const fingerprints = await fingerprintRequest(request, sessionSecret);
+  const fingerprints = await auditFingerprints(env, request);
   const fail = async (): Promise<ChallengeResult> => {
     const invalidated = await recordChallengeFailure(env, challenge);
     await recordAuditEventSafe(env, {

@@ -66,13 +66,11 @@ jobs:
 
       - run: pnpm test:e2e
 
-      - name: Upload Playwright artifacts
+      - name: Upload smoke failure artifacts
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-artifacts
-          path: |
-            playwright-report/
-            test-results/
+          name: playwright-smoke-artifacts
+          path: test-results/smoke
           retention-days: 7
           if-no-files-found: ignore

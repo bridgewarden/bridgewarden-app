@@ -2,7 +2,7 @@ import { standardToBase64Url } from '../base64-url';
 import { recordAuditEventSafe } from './audit';
 import { createUsersQueries } from './queries/users';
 import { requireSecret } from './env';
-import { fingerprintRequest } from './request-fingerprint';
+import { auditFingerprints, fingerprintRequest } from './request-fingerprint';
 import { createSession, type CreatedSession } from './session';
 
 export type LoginSuccessBody = {
@@ -67,7 +67,7 @@ export const completeLogin = async (
     type: 'login.succeeded',
     userId: row.id,
     createdAt: Date.now(),
-    ...fingerprints,
+    ...(await auditFingerprints(env, request)),
   });
 
   return { status: 'ok', body, cookie: session.cookie };

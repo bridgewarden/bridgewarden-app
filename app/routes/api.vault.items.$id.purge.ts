@@ -27,9 +27,10 @@ export async function action({ request, context, params }: Route.ActionArgs) {
   if (!parsePurgeInput(mutation.value))
     return data({ ok: false, error: 'invalid-input' }, { status: 400, headers: NO_STORE });
 
-  const result = await purgeVaultItem(env, user.id, params.id);
+  const result = await purgeVaultItem(env, user.id, params.id, request);
   if (result.status === 'not-found') return data({ ok: false, error: 'not-found' }, { status: 404, headers: NO_STORE });
   if (result.status === 'server-error')
     return data({ ok: false, error: 'server-error' }, { status: 500, headers: NO_STORE });
+
   return data({ ok: true, item: result.item }, { headers: NO_STORE });
 }

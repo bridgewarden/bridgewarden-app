@@ -1,3 +1,5 @@
+import { recordAuditEventSafe } from '../../lib/.server/audit';
+import { auditFingerprints } from '../../lib/.server/request-fingerprint';
 import { createVaultQueries } from './queries';
 import type { VaultItemRow } from './queries/items';
 import { toItemResponse, type VaultItemResponse } from './transport';
@@ -8,6 +10,9 @@ export const PURGE_MAX_BATCHES = 100;
 
 export type TrashResult =
   { status: 'ok'; item: VaultItemResponse } | { status: 'not-found' } | { status: 'server-error' };
+
+export type PurgeResult =
+  { status: 'ok'; item: VaultItemResponse; purged: boolean } | { status: 'not-found' } | { status: 'server-error' };
 
 type Transition = (
   vault: ReturnType<typeof createVaultQueries>,
@@ -44,20 +49,35 @@ export const restoreVaultItem = async (env: Env, userId: string, itemId: string)
   return result;
 };
 
-export const purgeVaultItem = async (env: Env, userId: string, itemId: string): Promise<TrashResult> => {
+export const purgeVaultItem = async (
+  env: Env,
+  userId: string,
+  itemId: string,
+  request?: Request,
+): Promise<PurgeResult> => {
   const vault = createVaultQueries(env);
 
   try {
     const results = await vault.purgeItem(userId, itemId);
     const row = results[1]?.results?.[0] as VaultItemRow | undefined;
-    if (row) return { status: 'ok', item: toItemResponse(row) };
+    if (row) {
+      if (request) {
+        await recordAuditEventSafe(env, {
+          type: 'item.purged',
+          userId,
+          createdAt: Date.now(),
+          ...(await auditFingerprints(env, request)),
+        });
+      }
+      return { status: 'ok', item: toItemResponse(row), purged: true };
+    }
   } catch {
     return { status: 'server-error' };
   }
 
   const current = await vault.findOwnedItem(userId, itemId);
   if (!current || current.deleted_at === null) return { status: 'not-found' };
-  return { status: 'ok', item: toItemResponse(current) };
+  return { status: 'ok', item: toItemResponse(current), purged: false };
 };
 
 export const purgeExpiredItems = async (env: Env, now = Date.now()): Promise<number> => {

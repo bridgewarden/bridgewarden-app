@@ -504,6 +504,10 @@ describe('vault trash routes', () => {
         }),
       ),
     ).toBe(200);
+    const audit = await env.DB.prepare("SELECT type FROM audit_events WHERE type = 'item.purged'").first<{
+      type: string;
+    }>();
+    expect(audit).toEqual({ type: 'item.purged' });
     expect(
       statusOf(
         await invoke(purgeAction, `/api/vault/items/${item.id}/purge`, {
@@ -514,6 +518,10 @@ describe('vault trash routes', () => {
         }),
       ),
     ).toBe(200);
+    const count = await env.DB.prepare("SELECT COUNT(*) AS count FROM audit_events WHERE type = 'item.purged'").first<{
+      count: number;
+    }>();
+    expect(count?.count).toBe(1);
   });
 
   it('rejects foreign origins, foreign items, and unsupported methods', async () => {

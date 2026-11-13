@@ -17,6 +17,6 @@ export const fingerprintRequest = async (request: Request, secret: string): Prom
 };
 
 export const auditFingerprints = async (env: Env, request: Request): Promise<RequestFingerprints> => {
-  const secret = readConfig(env, 'SESSION_SECRET');
+  const secret = readConfig(env, 'AUTH_PEPPER');
   return secret ? fingerprintRequest(request, secret) : { uaHash: null, ipHash: null };
 };

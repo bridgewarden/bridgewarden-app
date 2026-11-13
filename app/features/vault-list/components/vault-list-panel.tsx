@@ -14,6 +14,7 @@ import { readVaultItem } from '~/lib/vault/item-read';
 import { useVaultList, useVaultListInteraction } from '../vault-list.hooks';
 import { VaultListRows } from './vault-list-rows';
 import { VaultListToolbar } from './vault-list-toolbar';
+import { VaultSearchDialog } from './vault-search-dialog';
 
 const ItemDetailDialog = lazy(() =>
   import('./item-detail-dialog').then((module) => ({ default: module.ItemDetailDialog })),
@@ -42,12 +43,15 @@ export const VaultListPanel = () => {
             {t('vault.count', { count: flow.visibleItems.length })} · {t('vault.keyboard')}
           </p>
         </div>
-        <Button className="min-h-11" asChild>
-          <Link to="/app/new" prefetch="render">
-            <PlusIcon aria-hidden="true" />
-            {t('vault.newItem')}
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <VaultSearchDialog items={flow.items} disabled={flow.detailItem !== null} onOpenItem={flow.openDetail} />
+          <Button className="min-h-11" asChild>
+            <Link to="/app/new" prefetch="render">
+              <PlusIcon aria-hidden="true" />
+              {t('vault.newItem')}
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <VaultListToolbar filters={flow.filters} folders={flow.folders} onChange={flow.updateFilters} />

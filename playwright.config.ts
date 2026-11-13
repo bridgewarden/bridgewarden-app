@@ -82,6 +82,13 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
     },
     {
+      name: 'vault-search',
+      testMatch: /vault-search\.spec\.ts/,
+      dependencies: ['auth'],
+      retries: 0,
+      use: { ...devices['Desktop Chrome'], trace: 'off', screenshot: 'off' },
+    },
+    {
       name: 'security',
       testMatch: /security\.spec\.ts/,
       dependencies: ['vault-item'],

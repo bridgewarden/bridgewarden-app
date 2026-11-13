@@ -15,6 +15,16 @@ test('core vault surfaces and dialogs are accessible', async ({ page }) => {
   await expect(page.getByRole('heading', { name: en['vault.title'], level: 1, exact: true })).toBeVisible();
   await expectNoSeriousA11yViolations(page, 'vault list');
 
+  if ((await page.getByRole('listitem').count()) === 0) {
+    await page.getByRole('link', { name: en['vault.newItem'] }).click();
+    await page.getByLabel(en['vaultItem.name']).fill(`A11y item ${Date.now()}`);
+    await page.getByLabel(en['vaultItem.username']).fill('a11y@example.com');
+    await page.getByLabel(/^Password/).fill('a11y password');
+    await page.getByLabel('URL 1', { exact: true }).fill('https://example.com');
+    await page.getByRole('button', { name: en['vaultItem.save'] }).click();
+    await expect(page).toHaveURL(/\/app$/);
+  }
+
   const firstItem = page.getByRole('listitem').first().getByRole('button');
   await firstItem.focus();
   await page.keyboard.press('Enter');

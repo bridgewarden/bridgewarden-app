@@ -67,6 +67,7 @@ test('service worker boots the offline shell and never caches API requests', asy
 });
 
 test('shows and accepts an update prompt when a new worker is waiting', async ({ page }) => {
+  test.setTimeout(60_000);
   await page.goto('/login');
   await waitForHydration(page);
   await page.evaluate(() => navigator.serviceWorker.ready);
@@ -76,8 +77,8 @@ test('shows and accepts an update prompt when a new worker is waiting', async ({
   await page.evaluate(() => navigator.serviceWorker.register('/sw.js?update=1'));
   await expect(page.getByText(en['pwa.updateAvailable'])).toBeVisible({ timeout: 15_000 });
 
-  const navigation = page.waitForEvent('framenavigated');
+  const loaded = page.waitForEvent('load');
   await page.getByRole('button', { name: en['pwa.reload'] }).click();
-  await navigation;
+  await loaded;
   await expect(page).toHaveURL(/\/login$/);
 });

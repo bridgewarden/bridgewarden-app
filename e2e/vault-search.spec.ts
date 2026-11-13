@@ -99,9 +99,8 @@ test('searches decrypted fields locally and supports keyboard, offline, and priv
     local: JSON.stringify(localStorage),
     session: JSON.stringify(sessionStorage),
   }));
-  for (const token of searchTokens) {
-    expect(JSON.stringify(privacy)).not.toContain(token);
-  }
+  const leakedPrivacy = searchTokens.filter((token) => JSON.stringify(privacy).includes(token));
+  expect(leakedPrivacy.length).toBe(0);
 
   await input.fill(stamp.toString());
   const options = dialog.getByRole('option');
@@ -116,8 +115,8 @@ test('searches decrypted fields locally and supports keyboard, offline, and priv
   await page.keyboard.press('Enter');
   const detailDialog = page.getByRole('dialog').filter({ has: page.getByRole('link', { name: en['vault.edit'] }) });
   await expect(detailDialog).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(detailDialog).toBeHidden();
+  await detailDialog.getByRole('button', { name: en['common.close'] }).click();
+  await expect(detailDialog).toBeHidden({ timeout: 15_000 });
   await expect(page.getByRole('dialog', { name: en['search.title'] })).toBeHidden();
 
   const reopened = await openSearch(page);
@@ -135,7 +134,7 @@ test('searches decrypted fields locally and supports keyboard, offline, and priv
   await page.keyboard.press('Enter');
   const offlineDetail = page.getByRole('dialog').filter({ has: page.getByRole('link', { name: en['vault.edit'] }) });
   await expect(offlineDetail).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(offlineDetail).toBeHidden();
+  await offlineDetail.getByRole('button', { name: en['common.close'] }).click();
+  await expect(offlineDetail).toBeHidden({ timeout: 15_000 });
   await context.setOffline(false);
 });

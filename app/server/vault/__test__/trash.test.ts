@@ -128,6 +128,11 @@ describe('scheduled purge', () => {
     expect(await runScheduledPurge(testEnv(), now)).toBe(1001);
     expect(log).toHaveBeenCalledWith('vault.purge', 1001);
     log.mockRestore();
+    const audits = await env.DB.prepare("SELECT user_id, metadata FROM audit_events WHERE type = 'vault.purge'").all<{
+      user_id: string;
+      metadata: string | null;
+    }>();
+    expect(audits.results).toEqual([{ user_id: userId, metadata: null }]);
     expect(await findOwnedItem(env.DB, userId, 'recent')).not.toBeNull();
     const expired = await findOwnedItem(env.DB, userId, 'expired-1');
     expect(expired).toMatchObject({ deleted_at: expect.any(Number), data_ct: '', data_iv: '' });
@@ -142,5 +147,65 @@ describe('scheduled purge', () => {
     if (afterTrash.status === 'ok') {
       expect(afterTrash.items.some((row) => row.id === 'expired-1' && row.dataCt === '')).toBe(true);
     }
+  });
+
+  it('does not audit an empty cleanup run', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    expect(await runScheduledPurge(testEnv(), Date.now())).toBe(0);
+    log.mockRestore();
+
+    const count = await env.DB.prepare("SELECT COUNT(*) AS count FROM audit_events WHERE type = 'vault.purge'").first<{
+      count: number;
+    }>();
+    expect(count?.count).toBe(0);
+  });
+
+  it('deduplicates purge audit per user across item and folder cleanup', async () => {
+    const userId = await createTestUser();
+    const old = Date.now() - TRASH_RETENTION_MS - 1;
+    await env.DB.prepare(
+      `INSERT INTO vault_items (id, user_id, type, favorite, data_ct, data_iv, data_version, rev, deleted_at, created_at, updated_at)
+       VALUES ('old-item', ?, 'login', 0, 'Y3Q=', 'aXY=', 1, 1, ?, 1, 1)`,
+    )
+      .bind(userId, old)
+      .run();
+    await env.DB.prepare(
+      `INSERT INTO folders (id, user_id, name_ct, name_iv, data_version, rev, deleted_at, created_at, updated_at)
+       VALUES ('old-folder', ?, 'bmFtZQ==', 'aXY=', 1, 1, ?, 1, 1)`,
+    )
+      .bind(userId, old)
+      .run();
+
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    expect(await runScheduledPurge(testEnv(), Date.now())).toBe(2);
+    log.mockRestore();
+
+    const audits = await env.DB.prepare("SELECT user_id, metadata FROM audit_events WHERE type = 'vault.purge'").all<{
+      user_id: string;
+      metadata: string | null;
+    }>();
+    expect(audits.results).toEqual([{ user_id: userId, metadata: null }]);
+  });
+
+  it('keeps cleanup successful when the audit insert fails', async () => {
+    const userId = await createTestUser();
+    const old = Date.now() - TRASH_RETENTION_MS - 1;
+    await env.DB.prepare(
+      `INSERT INTO vault_items (id, user_id, type, favorite, data_ct, data_iv, data_version, rev, deleted_at, created_at, updated_at)
+       VALUES ('audit-fail', ?, 'login', 0, 'Y3Q=', 'aXY=', 1, 1, ?, 1, 1)`,
+    )
+      .bind(userId, old)
+      .run();
+    await env.DB.prepare(
+      "CREATE TRIGGER fail_audit BEFORE INSERT ON audit_events BEGIN SELECT RAISE(ABORT, 'fail'); END",
+    ).run();
+
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    expect(await runScheduledPurge(testEnv(), Date.now())).toBe(1);
+    log.mockRestore();
+    warn.mockRestore();
+    await env.DB.prepare('DROP TRIGGER fail_audit').run();
+    expect(await findOwnedItem(env.DB, userId, 'audit-fail')).toMatchObject({ data_ct: '' });
   });
 });

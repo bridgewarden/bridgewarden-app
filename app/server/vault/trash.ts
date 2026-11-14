@@ -1,4 +1,4 @@
-import { recordAuditEventSafe } from '../../lib/.server/audit';
+import { recordAuditEventSafe, recordAuditEventsSafe } from '../../lib/.server/audit';
 import { auditFingerprints } from '../../lib/.server/request-fingerprint';
 import { createVaultQueries } from './queries';
 import type { VaultItemRow } from './queries/items';
@@ -7,6 +7,7 @@ import { toItemResponse, type VaultItemResponse } from './transport';
 export const TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 export const PURGE_BATCH_SIZE = 1000;
 export const PURGE_MAX_BATCHES = 100;
+export const PURGE_AUDIT_BATCH_SIZE = 100;
 
 export type TrashResult =
   { status: 'ok'; item: VaultItemResponse } | { status: 'not-found' } | { status: 'server-error' };
@@ -80,23 +81,32 @@ export const purgeVaultItem = async (
   return { status: 'ok', item: toItemResponse(current), purged: false };
 };
 
-export const purgeExpiredItems = async (env: Env, now = Date.now()): Promise<number> => {
+export const purgeExpiredItems = async (env: Env, now = Date.now()): Promise<{ count: number; userIds: string[] }> => {
   const vault = createVaultQueries(env);
   const cutoff = now - TRASH_RETENTION_MS;
   let total = 0;
+  const affectedUsers = new Set<string>();
 
   for (let batch = 0; batch < PURGE_MAX_BATCHES; batch += 1) {
     const items = await vault.deleteExpiredItemsBatch(cutoff, PURGE_BATCH_SIZE);
     const folders = await vault.deleteExpiredFoldersBatch(cutoff, PURGE_BATCH_SIZE);
-    total += items + folders;
-    if (items < PURGE_BATCH_SIZE && folders < PURGE_BATCH_SIZE) break;
+    total += items.changes + folders.changes;
+    for (const userId of [...items.userIds, ...folders.userIds]) affectedUsers.add(userId);
+    if (items.changes < PURGE_BATCH_SIZE && folders.changes < PURGE_BATCH_SIZE) break;
   }
 
-  return total;
+  return { count: total, userIds: [...affectedUsers] };
 };
 
 export const runScheduledPurge = async (env: Env, now = Date.now()): Promise<number> => {
-  const count = await purgeExpiredItems(env, now);
+  const { count, userIds } = await purgeExpiredItems(env, now);
+  const createdAt = Date.now();
+  for (let index = 0; index < userIds.length; index += PURGE_AUDIT_BATCH_SIZE) {
+    const events = userIds
+      .slice(index, index + PURGE_AUDIT_BATCH_SIZE)
+      .map((userId) => ({ type: 'vault.purge', userId, createdAt }));
+    await recordAuditEventsSafe(env, events);
+  }
   console.log('vault.purge', count);
   return count;
 };

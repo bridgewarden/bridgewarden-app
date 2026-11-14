@@ -112,7 +112,7 @@ export const useLoginSuccessEffects = (options: LoginSuccessEffectsOptions) => {
           setChallengeToken(null);
           setChallengeCode('');
           setChallengeError(null);
-          setFormError(t('login.challengeExpired'));
+          setFormError(t(data.error === 'locked' ? 'login.twoFactorLocked' : 'login.challengeExpired'));
         } else {
           setChallengeError(t('login.invalidChallengeCode'));
         }

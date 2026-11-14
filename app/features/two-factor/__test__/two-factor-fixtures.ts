@@ -13,6 +13,7 @@ export const twoFactorEnv = (overrides: Record<string, unknown> = {}) =>
     DB: env.DB,
     KV_SESSIONS: env.KV_SESSIONS,
     AUTH_PEPPER: TEST_PEPPER,
+    RATE_LIMITER_IDENTITY: env.RATE_LIMITER_IDENTITY,
     SESSION_SECRET: TEST_SESSION_SECRET,
     TOTP_ENC_KEY: TEST_TOTP_KEY,
     TOTP_ISSUER: TEST_ISSUER,

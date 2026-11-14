@@ -216,42 +216,57 @@ export const findStepUpState = (db: D1Database, id: string): Promise<StepUpState
     .bind(id)
     .first<StepUpStateRow>();
 
-const NEXT_STEP_UP_COUNT = `CASE
-  WHEN step_up_locked_until IS NOT NULL AND step_up_locked_until <= ? THEN 1
-  ELSE step_up_failed_count + 1
-END`;
+type FailureDomain = 'step_up' | 'two_factor';
 
-export const recordStepUpFailure = (
+const failureColumn = (domain: FailureDomain, suffix: 'failed_count' | 'locked_until') => `${domain}_${suffix}`;
+
+const nextFailureCount = (domain: FailureDomain) => {
+  const count = failureColumn(domain, 'failed_count');
+  const locked = failureColumn(domain, 'locked_until');
+  return `CASE
+  WHEN ${locked} IS NOT NULL AND ${locked} <= ? THEN 1
+  ELSE ${count} + 1
+END`;
+};
+
+const recordFailure = (
   db: D1Database,
+  domain: FailureDomain,
   id: string,
   now: number,
   maxAttempts: number,
   durationMs: number,
-): Promise<{ failed_count: number; locked_until: number | null } | null> =>
-  db
+): Promise<{ failed_count: number; locked_until: number | null } | null> => {
+  const count = failureColumn(domain, 'failed_count');
+  const locked = failureColumn(domain, 'locked_until');
+  const next = nextFailureCount(domain);
+  return db
     .prepare(
       `UPDATE users
-       SET step_up_failed_count = ${NEXT_STEP_UP_COUNT},
-           step_up_locked_until = CASE
-             WHEN (${NEXT_STEP_UP_COUNT}) >= ? THEN ?
+       SET ${count} = ${next},
+           ${locked} = CASE
+             WHEN (${next}) >= ? THEN ?
              ELSE NULL
            END,
            updated_at = ?
        WHERE id = ?
          AND status = 'active'
-         AND (step_up_locked_until IS NULL OR step_up_locked_until <= ?)
-       RETURNING step_up_failed_count AS failed_count, step_up_locked_until AS locked_until`,
+         AND (${locked} IS NULL OR ${locked} <= ?)
+       RETURNING ${count} AS failed_count, ${locked} AS locked_until`,
     )
     .bind(now, now, maxAttempts, now + durationMs, now, id, now)
     .first<{ failed_count: number; locked_until: number | null }>();
+};
 
-export const resetStepUpFailures = (db: D1Database, id: string, now: number): Promise<D1Result> =>
-  db
+const resetFailures = (db: D1Database, domain: FailureDomain, id: string, now: number): Promise<D1Result> => {
+  const count = failureColumn(domain, 'failed_count');
+  const locked = failureColumn(domain, 'locked_until');
+  return db
     .prepare(
       `UPDATE users
-       SET step_up_failed_count = 0,
-           step_up_locked_until = CASE
-             WHEN step_up_locked_until IS NOT NULL AND step_up_locked_until > ? THEN step_up_locked_until
+       SET ${count} = 0,
+           ${locked} = CASE
+             WHEN ${locked} IS NOT NULL AND ${locked} > ? THEN ${locked}
              ELSE NULL
            END,
            updated_at = ?
@@ -259,6 +274,24 @@ export const resetStepUpFailures = (db: D1Database, id: string, now: number): Pr
     )
     .bind(now, now, id)
     .run();
+};
+
+export const recordStepUpFailure = (db: D1Database, id: string, now: number, maxAttempts: number, durationMs: number) =>
+  recordFailure(db, 'step_up', id, now, maxAttempts, durationMs);
+
+export const resetStepUpFailures = (db: D1Database, id: string, now: number): Promise<D1Result> =>
+  resetFailures(db, 'step_up', id, now);
+
+export const recordTwoFactorFailure = (
+  db: D1Database,
+  id: string,
+  now: number,
+  maxAttempts: number,
+  durationMs: number,
+) => recordFailure(db, 'two_factor', id, now, maxAttempts, durationMs);
+
+export const resetTwoFactorFailures = (db: D1Database, id: string, now: number): Promise<D1Result> =>
+  resetFailures(db, 'two_factor', id, now);
 
 export const findPasswordKdfById = (
   db: D1Database,
@@ -300,7 +333,8 @@ export const rotatePassword = (
            kdf_salt = ?, kdf_iterations = ?, vault_key_wrapped = ?, vault_key_wrap_iv = ?,
            session_version = session_version + 1,
            failed_login_count = 0, locked_until = NULL,
-           step_up_failed_count = 0, step_up_locked_until = NULL, updated_at = ?
+           step_up_failed_count = 0, step_up_locked_until = NULL,
+           two_factor_failed_count = 0, two_factor_locked_until = NULL, updated_at = ?
        WHERE id = ? AND status = 'active' AND auth_hash = ? AND server_salt = ?`,
     )
     .bind(
@@ -373,7 +407,8 @@ export const resetRecovery = (
            recovery_auth_hash = ?, recovery_server_salt = ?,
            session_version = session_version + 1,
            failed_login_count = 0, locked_until = NULL,
-           step_up_failed_count = 0, step_up_locked_until = NULL, updated_at = ?
+           step_up_failed_count = 0, step_up_locked_until = NULL,
+           two_factor_failed_count = 0, two_factor_locked_until = NULL, updated_at = ?
        WHERE id = ? AND status = 'active'
          AND recovery_auth_hash = ? AND recovery_server_salt = ?`,
     )
@@ -455,6 +490,9 @@ export const createUsersQueries = (env: Env) => {
     findSessionUser: (id: string) => findSessionUserById(db, id),
     findLoginCompletion: (id: string) => findLoginCompletionById(db, id),
     findStepUpState: (id: string) => findStepUpState(db, id),
+    recordTwoFactorFailure: (id: string, now: number, maxAttempts: number, durationMs: number) =>
+      recordTwoFactorFailure(db, id, now, maxAttempts, durationMs),
+    resetTwoFactorFailures: (id: string, now: number) => resetTwoFactorFailures(db, id, now),
     recordStepUpFailure: (id: string, now: number, maxAttempts: number, durationMs: number) =>
       recordStepUpFailure(db, id, now, maxAttempts, durationMs),
     resetStepUpFailures: (id: string, now: number) => resetStepUpFailures(db, id, now),

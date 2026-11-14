@@ -14,6 +14,8 @@ export type ChallengeUserRow = {
   totp_secret_ct: string;
   totp_secret_iv: string;
   last_totp_step: number;
+  two_factor_failed_count: number;
+  two_factor_locked_until: number | null;
 };
 
 export const findTwoFactorEnabled = async (db: D1Database, userId: string): Promise<boolean> => {
@@ -33,7 +35,8 @@ export const findEnrollment = (db: D1Database, userId: string): Promise<Enrollme
 export const findChallengeUser = (db: D1Database, userId: string): Promise<ChallengeUserRow | null> =>
   db
     .prepare(
-      `SELECT u.id, u.status, t.enabled, t.totp_secret_ct, t.totp_secret_iv, t.last_totp_step
+      `SELECT u.id, u.status, u.two_factor_failed_count, u.two_factor_locked_until,
+              t.enabled, t.totp_secret_ct, t.totp_secret_iv, t.last_totp_step
        FROM users u JOIN user_2fa t ON t.user_id = u.id WHERE u.id = ?`,
     )
     .bind(userId)

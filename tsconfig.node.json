@@ -7,7 +7,8 @@
     "e2e/**/*",
     "vitest.sequencer.ts",
     "scripts/**/*",
-    "app/lib/i18n/en.ts"
+    "app/lib/i18n/en.ts",
+    "app/constants/setup-state.ts"
   ],
   "compilerOptions": {
     "composite": true,

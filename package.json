@@ -21,7 +21,7 @@
     "cf-typegen": "wrangler types",
     "db:migrate:local": "wrangler d1 migrations apply bridgewarden-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply bridgewarden-db --remote",
-    "db:reset:local": "rm -rf .wrangler/state/v3/d1 && pnpm db:migrate:local",
+    "db:reset:local": "rm -rf .wrangler/state/v3/d1 .wrangler/state/v3/kv && pnpm db:migrate:local",
     "postinstall": "wrangler types",
     "test:e2e": "node scripts/test-e2e.ts",
     "db:migrate:e2e": "wrangler d1 migrations apply bridgewarden-db --local --persist-to .wrangler/e2e"

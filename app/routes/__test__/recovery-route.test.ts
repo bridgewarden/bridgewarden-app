@@ -7,6 +7,7 @@ import { createFixtureSession, createPasswordFixture } from '../../__test__/pass
 import { resetDatabase } from '../../__test__/reset-database';
 import { cloudflareContext } from '../../lib/.server/context';
 import { destroySessionToken } from '../../lib/.server/session';
+import { invalidateSetupState } from '../../lib/.server/setup-guard';
 import { prepareRecoveryReset } from '../../lib/crypto/recovery-reset';
 import { action as lookupAction } from '../auth-recover-lookup';
 import { action as resetAction } from '../auth-recover-reset';
@@ -47,6 +48,7 @@ beforeEach(async () => {
   vi.spyOn(env.RATE_LIMITER_IP, 'limit').mockResolvedValue({ success: true });
   vi.spyOn(env.RATE_LIMITER_IDENTITY, 'limit').mockResolvedValue({ success: true });
   await resetDatabase();
+  await invalidateSetupState(testEnv());
 });
 
 describe('recovery lookup route', () => {

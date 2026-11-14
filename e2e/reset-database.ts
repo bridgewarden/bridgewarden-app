@@ -1,38 +1,13 @@
 import { execFileSync } from 'node:child_process';
 
+import { SETUP_STATE_KEY } from '../app/constants/setup-state';
+
 const persistTo = '.wrangler/e2e';
 
 const wrangler = (args: string[], capture = false) =>
   execFileSync('pnpm', ['exec', 'wrangler', ...args], {
     stdio: capture ? ['ignore', 'pipe', 'pipe'] : 'pipe',
   });
-
-const deleteSessions = () => {
-  try {
-    const output = wrangler(
-      ['kv', 'key', 'list', '--binding', 'KV_SESSIONS', '--local', '--persist-to', persistTo],
-      true,
-    ).toString();
-    const keys = JSON.parse(output) as { name: string }[];
-
-    for (const key of keys) {
-      wrangler([
-        'kv',
-        'key',
-        'delete',
-        '--binding',
-        'KV_SESSIONS',
-        '--local',
-        '--persist-to',
-        persistTo,
-        '--key',
-        key.name,
-      ]);
-    }
-  } catch {
-    // Local KV may not exist before the first test run.
-  }
-};
 
 export const resetE2eDatabase = () => {
   wrangler(['d1', 'migrations', 'apply', 'bridgewarden-db', '--local', '--persist-to', persistTo]);
@@ -56,5 +31,19 @@ export const resetE2eDatabase = () => {
     '--command',
     'DELETE FROM users',
   ]);
-  deleteSessions();
+  try {
+    wrangler([
+      'kv',
+      'key',
+      'delete',
+      SETUP_STATE_KEY,
+      '--binding',
+      'KV_SESSIONS',
+      '--local',
+      '--persist-to',
+      persistTo,
+    ]);
+  } catch {
+    // The setup cache is absent on a fresh E2E state directory.
+  }
 };

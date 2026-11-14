@@ -88,9 +88,8 @@ export const purgeExpiredItems = async (env: Env, now = Date.now()): Promise<num
   for (let batch = 0; batch < PURGE_MAX_BATCHES; batch += 1) {
     const items = await vault.deleteExpiredItemsBatch(cutoff, PURGE_BATCH_SIZE);
     const folders = await vault.deleteExpiredFoldersBatch(cutoff, PURGE_BATCH_SIZE);
-    const changes = (items.meta.changes ?? 0) + (folders.meta.changes ?? 0);
-    total += changes;
-    if ((items.meta.changes ?? 0) < PURGE_BATCH_SIZE && (folders.meta.changes ?? 0) < PURGE_BATCH_SIZE) break;
+    total += items + folders;
+    if (items < PURGE_BATCH_SIZE && folders < PURGE_BATCH_SIZE) break;
   }
 
   return total;

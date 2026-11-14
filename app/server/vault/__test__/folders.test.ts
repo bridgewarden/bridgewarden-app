@@ -175,12 +175,13 @@ describe('folder bounds', () => {
     await env.DB.prepare('UPDATE users SET vault_rev = 500 WHERE id = ?').bind(userId).run();
 
     expect((await createFolder(testEnv(), userId, folderInput())).status).toBe('limit');
+    expect((await findVaultRev(env.DB, userId))?.vault_rev).toBe(500);
 
     const old = Date.now() - 31 * 24 * 60 * 60 * 1000;
     await env.DB.prepare('UPDATE folders SET deleted_at = ? WHERE id = ?').bind(old, 'folder-1').run();
     const { runScheduledPurge } = await import('../trash');
     await runScheduledPurge(testEnv(), Date.now());
-    expect(await findAnyOwnedFolder(env.DB, userId, 'folder-1')).toBeNull();
+    expect(await findAnyOwnedFolder(env.DB, userId, 'folder-1')).toMatchObject({ name_ct: '', name_iv: '' });
   });
 
   it('keeps item writes closed when the folder is already tombstoned', async () => {

@@ -168,13 +168,34 @@ export const batchRestoreItem = (db: D1Database, userId: string, itemId: string,
 export const batchPurgeItem = (db: D1Database, userId: string, itemId: string, now: number): Promise<D1Result[]> =>
   db.batch([incrementVaultRevIfItemUnpurged(db, userId, itemId), purgeItemStatement(db, userId, itemId, now)]);
 
-export const deleteExpiredItemsBatch = (db: D1Database, cutoff: number, limit: number): Promise<D1Result> =>
-  db
+export const deleteExpiredItemsBatch = async (db: D1Database, cutoff: number, limit: number): Promise<number> => {
+  const rows = await db
     .prepare(
-      `DELETE FROM vault_items
-       WHERE id IN (
-         SELECT id FROM vault_items WHERE deleted_at IS NOT NULL AND deleted_at < ? LIMIT ?
-       )`,
+      `SELECT id FROM vault_items
+       WHERE deleted_at IS NOT NULL AND deleted_at < ? AND data_ct <> ''
+       LIMIT ?`,
     )
     .bind(cutoff, limit)
-    .run();
+    .all<{ id: string }>();
+  const ids = rows.results.map((row) => row.id);
+  if (ids.length === 0) return 0;
+  const encoded = JSON.stringify(ids);
+  const results = await db.batch([
+    db
+      .prepare(
+        `UPDATE users SET vault_rev = vault_rev + 1
+         WHERE id IN (
+           SELECT DISTINCT user_id FROM vault_items WHERE id IN (SELECT value FROM json_each(?))
+         )`,
+      )
+      .bind(encoded),
+    db
+      .prepare(
+        `UPDATE vault_items
+         SET data_ct = '', data_iv = '', rev = (SELECT vault_rev FROM users WHERE id = vault_items.user_id)
+         WHERE id IN (SELECT value FROM json_each(?))`,
+      )
+      .bind(encoded),
+  ]);
+  return results[1]?.meta.changes ?? 0;
+};

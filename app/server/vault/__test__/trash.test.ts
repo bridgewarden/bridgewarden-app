@@ -8,6 +8,7 @@ import { encodeBase64 } from '../../../lib/crypto/encoding';
 import { createVaultItem } from '../items';
 import { findOwnedItem } from '../queries/items';
 import { findVaultRev } from '../queries/rev';
+import { readVaultDelta } from '../sync';
 import { purgeVaultItem, restoreVaultItem, runScheduledPurge, TRASH_RETENTION_MS, trashVaultItem } from '../trash';
 import type { VaultItemInput } from '../types';
 
@@ -128,6 +129,18 @@ describe('scheduled purge', () => {
     expect(log).toHaveBeenCalledWith('vault.purge', 1001);
     log.mockRestore();
     expect(await findOwnedItem(env.DB, userId, 'recent')).not.toBeNull();
-    expect(await findOwnedItem(env.DB, userId, 'expired-1')).toBeNull();
+    const expired = await findOwnedItem(env.DB, userId, 'expired-1');
+    expect(expired).toMatchObject({ deleted_at: expect.any(Number), data_ct: '', data_iv: '' });
+    const delta = await readVaultDelta(testEnv(), userId, 0, null);
+    expect(delta.status).toBe('ok');
+    if (delta.status === 'ok') {
+      expect(delta.items.some((row) => row.id === 'expired-1' && row.deletedAt !== null)).toBe(true);
+    }
+    expect((await findVaultRev(env.DB, userId))?.vault_rev).toBe(1004);
+    const afterTrash = await readVaultDelta(testEnv(), userId, 1002, null);
+    expect(afterTrash.status).toBe('ok');
+    if (afterTrash.status === 'ok') {
+      expect(afterTrash.items.some((row) => row.id === 'expired-1' && row.dataCt === '')).toBe(true);
+    }
   });
 });

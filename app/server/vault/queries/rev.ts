@@ -1,3 +1,6 @@
+import { MAX_ACTIVE_FOLDERS, MAX_FOLDER_ROWS, MAX_ITEM_BYTES } from '../types';
+import { ITEM_QUOTA_SQL, itemQuotaBind } from './quota';
+
 export type VaultRevRow = { vault_rev: number };
 
 export const findVaultRev = (db: D1Database, userId: string): Promise<VaultRevRow | null> =>
@@ -11,17 +14,19 @@ export const incrementVaultRevForNewItem = (
   userId: string,
   folderId: string | null,
   itemId: string,
+  newBytes: number,
 ): D1PreparedStatement =>
   db
     .prepare(
       `UPDATE users SET vault_rev = vault_rev + 1
        WHERE id = ?
          AND NOT EXISTS (SELECT 1 FROM vault_items WHERE id = ?)
+         ${ITEM_QUOTA_SQL}
          AND (? IS NULL OR EXISTS (
            SELECT 1 FROM folders WHERE id = ? AND user_id = ? AND deleted_at IS NULL
          ))`,
     )
-    .bind(userId, itemId, folderId, folderId, userId);
+    .bind(userId, itemId, ...itemQuotaBind(userId, newBytes), folderId, folderId, userId);
 
 export const incrementVaultRevIfItem = (
   db: D1Database,
@@ -29,6 +34,7 @@ export const incrementVaultRevIfItem = (
   itemId: string,
   itemRev: number,
   folderId: string | null,
+  newBytes: number,
 ): D1PreparedStatement =>
   db
     .prepare(
@@ -38,11 +44,24 @@ export const incrementVaultRevIfItem = (
            SELECT 1 FROM vault_items
            WHERE id = ? AND user_id = ? AND rev = ? AND deleted_at IS NULL
          )
+         AND (SELECT COALESCE(SUM(LENGTH(data_ct)), 0) FROM vault_items WHERE user_id = ? AND id <> ?) + ? <= ?
          AND (? IS NULL OR EXISTS (
            SELECT 1 FROM folders WHERE id = ? AND user_id = ? AND deleted_at IS NULL
          ))`,
     )
-    .bind(userId, itemId, userId, itemRev, folderId, folderId, userId);
+    .bind(
+      userId,
+      itemId,
+      userId,
+      itemRev,
+      userId,
+      itemId,
+      newBytes,
+      (MAX_ITEM_BYTES * 4) / 3,
+      folderId,
+      folderId,
+      userId,
+    );
 
 export const incrementVaultRevIfItemLive = (db: D1Database, userId: string, itemId: string): D1PreparedStatement =>
   db
@@ -82,9 +101,12 @@ export const incrementVaultRevForNewFolder = (db: D1Database, userId: string, fo
   db
     .prepare(
       `UPDATE users SET vault_rev = vault_rev + 1
-       WHERE id = ? AND NOT EXISTS (SELECT 1 FROM folders WHERE id = ?)`,
+       WHERE id = ?
+         AND NOT EXISTS (SELECT 1 FROM folders WHERE id = ?)
+         AND (SELECT COUNT(*) FROM folders WHERE user_id = ? AND deleted_at IS NULL) < ?
+         AND (SELECT COUNT(*) FROM folders WHERE user_id = ?) < ?`,
     )
-    .bind(userId, folderId);
+    .bind(userId, folderId, userId, MAX_ACTIVE_FOLDERS, userId, MAX_FOLDER_ROWS);
 
 export const incrementVaultRevIfFolderActive = (
   db: D1Database,

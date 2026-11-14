@@ -42,6 +42,7 @@ export async function action({ request, context, params }: Route.ActionArgs) {
   if (!input) return data({ ok: false, error: 'invalid-input' }, { status: 400, headers: NO_STORE });
 
   const result = await updateVaultItem(env, user.id, params.id, input);
+  if (result.status === 'limit') return data({ ok: false, error: 'limit' }, { status: 409, headers: NO_STORE });
   if (result.status === 'not-found') return notFound();
   if (result.status === 'server-error')
     return data({ ok: false, error: 'server-error' }, { status: 500, headers: NO_STORE });

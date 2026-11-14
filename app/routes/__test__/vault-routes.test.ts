@@ -187,6 +187,19 @@ describe('vault item create route', () => {
     expect(headersOf(result).get('retry-after')).toBeTruthy();
   });
 
+  it('rate limits authenticated creates by identity', async () => {
+    const userId = await createTestUser();
+    const cookie = await cookieFor(userId);
+    vi.spyOn(env.RATE_LIMITER_IDENTITY, 'limit').mockResolvedValueOnce({ success: false });
+
+    const result = await invoke(createAction, '/api/vault/items', {
+      method: 'POST',
+      cookie,
+      body: itemBody(),
+    });
+    expect(statusOf(result)).toBe(429);
+  });
+
   it('creates an item, rejects body user_id, and enforces payload limits', async () => {
     const userId = await createTestUser();
     const cookie = await cookieFor(userId);

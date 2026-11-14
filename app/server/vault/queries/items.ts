@@ -6,6 +6,8 @@ import {
   incrementVaultRevIfItemLive,
   incrementVaultRevIfItemUnpurged,
 } from './rev';
+import { MAX_ITEM_BYTES } from '../types';
+import { ITEM_QUOTA_SQL, itemQuotaBind, type ItemUsage } from './quota';
 
 export type VaultItemRow = {
   id: string;
@@ -45,6 +47,7 @@ export const insertItemStatement = (
       SELECT ?, ?, ?, ?, ?, ?, ?, ?, vault_rev, NULL, ?, ?
       FROM users WHERE id = ?
         AND NOT EXISTS (SELECT 1 FROM vault_items WHERE id = ?)
+        ${ITEM_QUOTA_SQL}
         AND (? IS NULL OR EXISTS (
           SELECT 1 FROM folders WHERE id = ? AND user_id = ? AND deleted_at IS NULL
         ))
@@ -63,6 +66,7 @@ export const insertItemStatement = (
       now,
       userId,
       id,
+      ...itemQuotaBind(userId, input.dataCt.length),
       input.folderId,
       input.folderId,
       userId,
@@ -82,6 +86,7 @@ export const updateItemStatement = (
        SET type = ?, folder_id = ?, favorite = ?, data_ct = ?, data_iv = ?, data_version = ?,
            rev = (SELECT vault_rev FROM users WHERE id = ?), updated_at = ?
        WHERE id = ? AND user_id = ? AND rev = ? AND deleted_at IS NULL
+         AND (SELECT COALESCE(SUM(LENGTH(data_ct)), 0) FROM vault_items WHERE user_id = ? AND id <> ?) + ? <= ?
          AND (? IS NULL OR EXISTS (
            SELECT 1 FROM folders WHERE id = ? AND user_id = ? AND deleted_at IS NULL
          ))
@@ -99,6 +104,10 @@ export const updateItemStatement = (
       itemId,
       userId,
       expectedRev,
+      userId,
+      itemId,
+      input.dataCt.length,
+      (MAX_ITEM_BYTES * 4) / 3,
       input.folderId,
       input.folderId,
       userId,
@@ -112,7 +121,7 @@ export const batchCreateItem = (
   now: number,
 ): Promise<D1Result[]> =>
   db.batch([
-    incrementVaultRevForNewItem(db, userId, input.folderId, id),
+    incrementVaultRevForNewItem(db, userId, input.folderId, id, input.dataCt.length),
     insertItemStatement(db, id, userId, input, now),
   ]);
 
@@ -125,7 +134,7 @@ export const batchUpdateItem = (
   now: number,
 ): Promise<D1Result[]> =>
   db.batch([
-    incrementVaultRevIfItem(db, userId, itemId, expectedRev, input.folderId),
+    incrementVaultRevIfItem(db, userId, itemId, expectedRev, input.folderId, input.dataCt.length),
     updateItemStatement(db, userId, itemId, expectedRev, input, now),
   ]);
 
@@ -198,4 +207,18 @@ export const deleteExpiredItemsBatch = async (db: D1Database, cutoff: number, li
       .bind(encoded),
   ]);
   return results[1]?.meta.changes ?? 0;
+};
+
+export const findItemUsage = async (db: D1Database, userId: string): Promise<ItemUsage | null> => {
+  const row = await db
+    .prepare(
+      `SELECT
+         SUM(CASE WHEN deleted_at IS NULL THEN 1 ELSE 0 END) AS active,
+         COUNT(*) AS rows,
+         COALESCE(SUM(LENGTH(data_ct)), 0) AS bytes
+       FROM vault_items WHERE user_id = ?`,
+    )
+    .bind(userId)
+    .first<{ active: number; rows: number; bytes: number }>();
+  return row ? { active: row.active ?? 0, rows: row.rows ?? 0, bytes: row.bytes } : null;
 };

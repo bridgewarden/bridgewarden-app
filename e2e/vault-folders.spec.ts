@@ -110,9 +110,15 @@ test('renames and deletes folders through the authenticated API', async ({ page,
     headers: { origin: baseURL! },
   });
   expect(remove.status()).toBe(200);
+  const deleted = queryD1<{ deleted_at: number | null }>(`SELECT deleted_at FROM folders WHERE id = '${folderB.id}'`);
+  expect(deleted[0]?.deleted_at).not.toBeNull();
 
+  const syncAfterDelete = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === '/api/vault' && response.request().method() === 'GET',
+  );
   await page.reload();
   await unlockVault(page);
+  await syncAfterDelete;
   await openFolderFilter(page);
   await expect(page.getByRole('option', { name: second, exact: true })).toHaveCount(1);
   await page.keyboard.press('Escape');

@@ -1,5 +1,5 @@
 import { incrementVaultRevForNewFolder, incrementVaultRevIfFolderActive } from './rev';
-import type { VaultFolderInput } from '../types';
+import type { PurgeBatchResult, VaultFolderInput } from '../types';
 import { MAX_ACTIVE_FOLDERS, MAX_FOLDER_ROWS } from '../types';
 
 export type VaultFolderRow = {
@@ -150,7 +150,11 @@ export const batchRenameFolder = (
 export const batchDeleteFolder = (db: D1Database, userId: string, folderId: string, now: number): Promise<D1Result[]> =>
   db.batch(deleteFolderStatements(db, userId, folderId, now));
 
-export const deleteExpiredFoldersBatch = async (db: D1Database, cutoff: number, limit: number): Promise<number> => {
+export const deleteExpiredFoldersBatch = async (
+  db: D1Database,
+  cutoff: number,
+  limit: number,
+): Promise<PurgeBatchResult> => {
   const rows = await db
     .prepare(
       `SELECT id FROM folders
@@ -159,25 +163,31 @@ export const deleteExpiredFoldersBatch = async (db: D1Database, cutoff: number, 
     )
     .bind(cutoff, limit)
     .all<{ id: string }>();
-  const ids = rows.results.map((row) => row.id);
-  if (ids.length === 0) return 0;
+  const selected = rows.results ?? [];
+  const ids = selected.map((row) => row.id);
+  if (ids.length === 0) return { changes: 0, userIds: [] };
   const encoded = JSON.stringify(ids);
   const results = await db.batch([
     db
       .prepare(
         `UPDATE users SET vault_rev = vault_rev + 1
          WHERE id IN (
-           SELECT DISTINCT user_id FROM folders WHERE id IN (SELECT value FROM json_each(?))
+           SELECT DISTINCT user_id FROM folders
+           WHERE id IN (SELECT value FROM json_each(?))
+             AND deleted_at IS NOT NULL AND deleted_at < ? AND name_ct <> ''
          )`,
       )
-      .bind(encoded),
+      .bind(encoded, cutoff),
     db
       .prepare(
         `UPDATE folders
          SET name_ct = '', name_iv = '', rev = (SELECT vault_rev FROM users WHERE id = folders.user_id)
-         WHERE id IN (SELECT value FROM json_each(?))`,
+         WHERE id IN (SELECT value FROM json_each(?))
+           AND deleted_at IS NOT NULL AND deleted_at < ? AND name_ct <> ''
+         RETURNING user_id`,
       )
-      .bind(encoded),
+      .bind(encoded, cutoff),
   ]);
-  return results[1]?.meta.changes ?? 0;
+  const erased = (results[1]?.results ?? []) as { user_id: string }[];
+  return { changes: results[1]?.meta.changes ?? 0, userIds: [...new Set(erased.map((row) => row.user_id))] };
 };

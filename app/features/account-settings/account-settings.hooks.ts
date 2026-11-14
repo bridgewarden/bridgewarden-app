@@ -10,6 +10,7 @@ const twoFactorError = (error: string, fallback: string): string => {
   if (error === 'invalid-password') return t('settings.twoFactor.invalidPassword');
   if (error === 'locked') return t('settings.twoFactor.locked');
   if (error === 'rate-limited') return t('settings.twoFactor.rateLimited');
+  if (error === 'not-pending') return t('settings.twoFactor.enrollmentExpired');
   return fallback;
 };
 
@@ -60,6 +61,10 @@ export const useAccountSettings = ({ email }: UseAccountSettingsOptions) => {
         setCode('');
         setError(ensureSession(data) ? null : t('settings.twoFactor.sessionExpired'));
       } else {
+        if (data.error === 'not-pending') {
+          setEnrollment(null);
+          setCode('');
+        }
         setError(twoFactorError(data.error, t('settings.twoFactor.invalidCode')));
       }
     });

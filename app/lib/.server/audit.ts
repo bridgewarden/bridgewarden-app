@@ -31,3 +31,16 @@ export const recordAuditEventSafe = async (env: Env, event: AuditEvent): Promise
     return false;
   }
 };
+
+export const recordAuditEventsSafe = async (env: Env, events: AuditEvent[]): Promise<boolean> => {
+  if (events.length === 0) return true;
+  try {
+    await createAuditEventsQueries(env).insertMany(
+      events.map((event) => ({ ...event, metadata: safeMetadata(event.metadata) })),
+    );
+    return true;
+  } catch {
+    console.warn('auth.audit_failed', events.length);
+    return false;
+  }
+};

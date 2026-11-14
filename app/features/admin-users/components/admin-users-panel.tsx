@@ -189,7 +189,16 @@ export const AdminUsersPanel = ({ data }: AdminUsersPanelProps) => {
         </CardContent>
       </Card>
 
-      {data.invitations.length > 0 ? <AdminPendingCard invitations={data.invitations} /> : null}
+      {data.invitations.length > 0 ? (
+        <AdminPendingCard
+          invitations={data.invitations}
+          disabled={flow.invitationMutation.state !== 'idle'}
+          error={
+            flow.invitationMutation.data && !flow.invitationMutation.data.ok ? flow.invitationMutation.data.error : null
+          }
+          onRevoke={flow.revokeInvitation}
+        />
+      ) : null}
     </section>
   );
 };

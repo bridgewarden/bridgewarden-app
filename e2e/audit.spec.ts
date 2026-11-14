@@ -25,7 +25,8 @@ test('records the required audit events without sensitive metadata', () => {
   expectAuditEvent(events, '2fa.failed', { userId: adminId });
   expectAuditEvent(events, '2fa.disabled', { userId: adminId });
 
-  expectAuditEvent(events, 'admin.invitation_created', { userId: adminId, count: 1 });
+  expectAuditEvent(events, 'admin.invitation_created', { userId: adminId });
+  expectAuditEvent(events, 'admin.invitation_revoked', { userId: adminId, count: 1 });
   expectAuditEvent(events, 'admin.role_changed', { userId: adminId });
   expectAuditEvent(events, 'admin.sessions_revoked', { userId: adminId, count: 1 });
   expectAuditEvent(events, 'admin.user_disabled', { userId: adminId, count: 1 });

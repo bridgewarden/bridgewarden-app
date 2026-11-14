@@ -66,4 +66,18 @@ test('admin invites a member, member sets up, admin disables them', async ({ bro
   await member.goto('/app');
   await expect(member).toHaveURL(/\/login\?next=/);
   await memberContext.close();
+
+  const revokeEmail = `pending-revoke-${Date.now()}@example.com`;
+  await page.getByLabel(en['adminUsers.email']).fill(revokeEmail);
+  await page.getByLabel(en['adminUsers.displayName']).fill('Pending Revoke');
+  await page.getByRole('button', { name: en['adminUsers.createInvitation'] }).click();
+  await expect(page.getByLabel(en['adminUsers.setupLink'])).toBeVisible();
+  const revokeInvitationResponse = page.waitForResponse(
+    (response) => response.url().includes('/invitations/') && response.request().method() !== 'GET',
+  );
+  await expect(page.getByText(revokeEmail)).toBeVisible();
+  await page.getByRole('button', { name: `${en['adminUsers.revokeInvitation']} — ${revokeEmail}` }).click();
+  await revokeInvitationResponse;
+  await expect(page.getByRole('heading', { name: en['adminUsers.pendingTitle'] })).toBeHidden();
+  await expect(page.getByText(revokeEmail)).toBeHidden();
 });

@@ -4,6 +4,8 @@ Zero-knowledge password manager for personal and family use, deployed entirely o
 One React Router v8 Worker (SSR) serves the UI and the API; D1 stores ciphertext, KV stores
 sessions.
 
+Security boundaries and accepted trade-offs live in [`docs/threat-model.md`](docs/threat-model.md).
+
 Product requirements live in [`.agent/prd/PRD.md`](.agent/prd/PRD.md). Working rules for agents
 and humans live in [`AGENTS.md`](AGENTS.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md).
 

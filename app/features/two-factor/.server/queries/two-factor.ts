@@ -1,4 +1,5 @@
 import { getDatabase } from '../../../../lib/.server/db';
+import { PENDING_ENROLLMENT_TTL_MS } from '../constants/enrollment';
 
 export const deleteTwoFactorData = (db: D1Database, userId: string): Promise<D1Result[]> =>
   db.batch([
@@ -46,21 +47,24 @@ export const completeEnrollment = async (
   step: number,
   now: number,
   codeHashes: string[],
+  pendingCutoff = now - PENDING_ENROLLMENT_TTL_MS,
 ): Promise<boolean> => {
-  const pending = `EXISTS (SELECT 1 FROM user_2fa WHERE user_id = ? AND enabled = 0)`;
+  const pending = `EXISTS (SELECT 1 FROM user_2fa WHERE user_id = ? AND enabled = 0 AND updated_at > ?)`;
   const results = await db.batch([
-    db.prepare(`DELETE FROM backup_codes WHERE user_id = ? AND ${pending}`).bind(userId, userId),
+    db.prepare(`DELETE FROM backup_codes WHERE user_id = ? AND ${pending}`).bind(userId, userId, pendingCutoff),
     ...codeHashes.map((hash) =>
       db
         .prepare(
           `INSERT INTO backup_codes (id, user_id, code_hash, used_at, created_at)
            SELECT ?, ?, ?, NULL, ? WHERE ${pending}`,
         )
-        .bind(crypto.randomUUID(), userId, hash, now, userId),
+        .bind(crypto.randomUUID(), userId, hash, now, userId, pendingCutoff),
     ),
     db
-      .prepare('UPDATE user_2fa SET enabled = 1, last_totp_step = ?, updated_at = ? WHERE user_id = ? AND enabled = 0')
-      .bind(step, now, userId),
+      .prepare(
+        'UPDATE user_2fa SET enabled = 1, last_totp_step = ?, updated_at = ? WHERE user_id = ? AND enabled = 0 AND updated_at > ?',
+      )
+      .bind(step, now, userId, pendingCutoff),
   ]);
 
   return results.at(-1)?.meta.changes === 1;
@@ -73,7 +77,7 @@ export const createTwoFactorQueries = (env: Env) => {
     replace: (userId: string, hashes: string[], now: number) => replaceBackupCodes(db, userId, hashes, now),
     consume: (userId: string, hash: string, now: number) => consumeBackupCodeHash(db, userId, hash, now),
     countRemaining: (userId: string) => countRemainingBackupCodesForUser(db, userId),
-    completeEnrollment: (userId: string, step: number, now: number, hashes: string[]) =>
-      completeEnrollment(db, userId, step, now, hashes),
+    completeEnrollment: (userId: string, step: number, now: number, hashes: string[], pendingCutoff?: number) =>
+      completeEnrollment(db, userId, step, now, hashes, pendingCutoff),
   };
 };

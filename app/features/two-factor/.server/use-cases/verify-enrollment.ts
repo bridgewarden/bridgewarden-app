@@ -7,6 +7,7 @@ import { verifyCode } from '../../../../lib/.server/totp';
 import { prepareBackupCodes } from '../backup-codes';
 import { reissueSessionAfterFactorChange } from '../reissue-session';
 import { createTwoFactorQueries } from '../queries/two-factor';
+import { PENDING_ENROLLMENT_TTL_MS } from '../constants/enrollment';
 
 export type VerifyEnrollmentResult =
   | { status: 'ok'; backupCodes: string[]; cookie: string | null }
@@ -29,7 +30,12 @@ export const verifyEnrollment = async (
 
   const twoFactor = createUserTwoFactorQueries(env);
   const row = await twoFactor.findEnrollment(userId);
+  const now = Date.now();
   if (!row || row.enabled === 1) return { status: 'not-pending' };
+  if (now - row.updated_at > PENDING_ENROLLMENT_TTL_MS) {
+    await twoFactor.deletePending(userId, now - PENDING_ENROLLMENT_TTL_MS);
+    return { status: 'not-pending' };
+  }
 
   let verification;
   try {
@@ -59,7 +65,13 @@ export const verifyEnrollment = async (
   }
 
   try {
-    const enabled = await createTwoFactorQueries(env).completeEnrollment(userId, verification.step, Date.now(), hashes);
+    const enabled = await createTwoFactorQueries(env).completeEnrollment(
+      userId,
+      verification.step,
+      Date.now(),
+      hashes,
+      Date.now() - PENDING_ENROLLMENT_TTL_MS,
+    );
     if (!enabled) return { status: 'not-pending' };
   } catch {
     return { status: 'server-error' };

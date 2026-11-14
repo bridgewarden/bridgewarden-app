@@ -271,6 +271,7 @@ export const en = {
   'settings.twoFactor.disableFailed': 'Two-factor could not be disabled. Check your password and try again.',
   'settings.twoFactor.loadFailed': 'Enrollment could not start. Try again.',
   'settings.twoFactor.invalidCode': 'That code is not valid. Try the current code.',
+  'settings.twoFactor.enrollmentExpired': 'This setup expired. Start enrollment again.',
   'settings.twoFactor.invalidPassword': 'That master password is not correct.',
   'settings.twoFactor.locked': 'Too many failed attempts. Try again later or sign in again.',
   'settings.twoFactor.rateLimited': 'Too many attempts. Try again later.',

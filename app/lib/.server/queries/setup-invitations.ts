@@ -64,7 +64,8 @@ export const upsertInvitation = async (db: D1Database, input: NewInvitation): Pr
          expires_at = excluded.expires_at,
          consumed_at = NULL,
          created_at = excluded.created_at
-       WHERE setup_invitations.consumed_at IS NULL`,
+       WHERE setup_invitations.consumed_at IS NULL
+          OR NOT EXISTS (SELECT 1 FROM users WHERE users.email = excluded.email)`,
     )
     .bind(
       input.id,
@@ -91,11 +92,14 @@ export const findValidInvitation = (
     .bind(tokenHash, now)
     .first<SetupInvitationRow>();
 
-export const listPendingInvitations = (db: D1Database, now: number): Promise<SetupInvitationRow[]> =>
+export const listPendingInvitations = (db: D1Database, now: number): Promise<PendingInvitationRow[]> =>
   db
-    .prepare('SELECT * FROM setup_invitations WHERE consumed_at IS NULL AND expires_at > ? ORDER BY created_at DESC')
+    .prepare(
+      `SELECT id, email, display_name, role, expires_at, created_at
+       FROM setup_invitations WHERE consumed_at IS NULL AND expires_at > ? ORDER BY created_at DESC`,
+    )
     .bind(now)
-    .all<SetupInvitationRow>()
+    .all<PendingInvitationRow>()
     .then((result) => result.results ?? []);
 
 export const revokeInvitation = (db: D1Database, id: string, now: number): Promise<D1Result> =>
@@ -160,5 +164,6 @@ export const createSetupInvitationQueries = (env: Env) => {
     findValid: (hash: string, now: number) => findValidInvitation(db, hash, now),
     listPending: (now: number) => listPendingInvitations(db, now),
     accept: (hash: string, now: number, user: InvitedUser) => acceptInvitation(db, hash, now, user),
+    revoke: (id: string, now: number) => revokeInvitation(db, id, now),
   };
 };

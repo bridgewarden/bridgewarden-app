@@ -13,3 +13,6 @@ const ERROR_KEYS: Record<string, MessageKey> = {
 };
 
 export const adminErrorMessage = (code: string) => t(ERROR_KEYS[code] ?? 'adminUsers.error.serverError');
+
+export const adminInvitationErrorMessage = (code: string) =>
+  code === 'not-found' ? t('adminUsers.error.invitationNotFound') : adminErrorMessage(code);

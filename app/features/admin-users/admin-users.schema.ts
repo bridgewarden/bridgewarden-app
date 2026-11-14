@@ -9,3 +9,4 @@ export const inviteSchema = z.strictObject({
 export const roleSchema = z.strictObject({ role: z.enum(['admin', 'member']) });
 
 export const userIdSchema = z.string().trim().min(1).max(64);
+export const invitationIdSchema = z.uuid();

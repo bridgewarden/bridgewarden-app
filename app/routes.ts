@@ -36,6 +36,7 @@ export default [
     route('app/settings', 'routes/settings.tsx'),
     route('admin/users', 'routes/admin.users.tsx'),
     route('admin/users/invite', 'routes/admin.users.invite.tsx'),
+    route('admin/users/invitations/:invitationId/revoke', 'routes/admin.users.invitations.$invitationId.revoke.tsx'),
     route('admin/users/:userId/disable', 'routes/admin.users.$userId.disable.tsx'),
     route('admin/users/:userId/enable', 'routes/admin.users.$userId.enable.tsx'),
     route('admin/users/:userId/revoke', 'routes/admin.users.$userId.revoke.tsx'),

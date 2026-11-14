@@ -3,7 +3,7 @@ import { data } from 'react-router';
 import type { Route } from './+types/api.vault.items';
 import { cloudflareContext } from '~/lib/.server/context';
 import { readMutationJson } from '~/lib/.server/json-action';
-import { limitIp, rateLimited } from '~/lib/.server/rate-limit';
+import { limitIdentity, limitIp, rateLimited } from '~/lib/.server/rate-limit';
 import { requireUserApi } from '~/lib/.server/require-user';
 import { parseCreateItemInput } from '~/server/vault/input';
 import { createVaultItem } from '~/server/vault/items';
@@ -15,6 +15,8 @@ export async function action({ request, context }: Route.ActionArgs) {
   const { user } = await requireUserApi(request, env);
   const ipLimit = await limitIp(env, 'vault', request);
   if (!ipLimit.allowed) return rateLimited(ipLimit.retryAfter);
+  const identityLimit = await limitIdentity(env, 'vault', user.id);
+  if (!identityLimit.allowed) return rateLimited(identityLimit.retryAfter);
   if (request.method !== 'POST')
     return data({ ok: false, error: 'method-not-allowed' }, { status: 405, headers: NO_STORE });
 
@@ -25,6 +27,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (!input) return data({ ok: false, error: 'invalid-input' }, { status: 400, headers: NO_STORE });
 
   const result = await createVaultItem(env, user.id, input);
+  if (result.status === 'limit') return data({ ok: false, error: 'limit' }, { status: 409, headers: NO_STORE });
   if (result.status === 'not-found') return data({ ok: false, error: 'not-found' }, { status: 404, headers: NO_STORE });
   if (result.status === 'conflict') return data({ ok: false, error: 'conflict' }, { status: 409, headers: NO_STORE });
   if (result.status === 'server-error')

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { CURRENT_ENVELOPE_VERSION } from '../../lib/crypto/contract';
+
 import { fromBase64Url } from '../../lib/base64-url';
 import { IV_BYTES } from '../../lib/crypto/contract';
 import { MAX_ITEM_CIPHERTEXT_BASE64_LENGTH, MAX_ITEM_CIPHERTEXT_BYTES } from '../../lib/vault/limits';
@@ -20,7 +22,7 @@ const itemSchema = z.strictObject({
   favorite: z.boolean(),
   dataCt: base64UrlField,
   dataIv: base64UrlField,
-  dataVersion: z.number().int().min(1),
+  dataVersion: z.number().int().min(1).max(CURRENT_ENVELOPE_VERSION),
 });
 
 const createSchema = itemSchema.extend({ id: z.uuid().optional() });
@@ -87,7 +89,7 @@ export const parsePurgeInput = (value: unknown): boolean => purgeSchema.safePars
 const folderSchema = z.strictObject({
   nameCt: base64UrlField,
   nameIv: base64UrlField,
-  dataVersion: z.number().int().min(1),
+  dataVersion: z.number().int().min(1).max(CURRENT_ENVELOPE_VERSION),
 });
 
 const folderCreateSchema = folderSchema.extend({ id: z.uuid().optional() });

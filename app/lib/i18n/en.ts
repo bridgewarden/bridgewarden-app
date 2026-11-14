@@ -63,6 +63,7 @@ export const en = {
   'login.challengeCodeRequired': 'Enter a code.',
   'login.invalidChallengeCode': 'That code is not valid. Try again.',
   'login.challengeExpired': 'This challenge expired. Sign in again.',
+  'login.twoFactorLocked': 'Too many two-factor attempts. Try again later.',
   'login.back': 'Back',
   'login.unlockFailed': 'Signed in, but the vault could not be unlocked. Try again.',
 

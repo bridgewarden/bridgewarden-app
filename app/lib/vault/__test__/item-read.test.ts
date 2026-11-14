@@ -13,15 +13,16 @@ import type { CachedItem } from '../types';
 const key = () => crypto.getRandomValues(new Uint8Array(32));
 
 const item = async (payload: unknown, type: 'login' | 'note', vaultKey: Uint8Array): Promise<CachedItem> => {
-  const sealed = await sealItem(payload, vaultKey);
+  const id = crypto.randomUUID();
+  const sealed = await sealItem(payload, vaultKey, { kind: 'item', id, type });
   return {
-    id: crypto.randomUUID(),
+    id,
     type,
     folderId: null,
     favorite: true,
     dataCt: sealed.ct,
     dataIv: sealed.iv,
-    dataVersion: 1,
+    dataVersion: 2,
     rev: 1,
     deletedAt: null,
     createdAt: 1,

@@ -5,8 +5,7 @@ import { parseChallengeInput } from '~/features/two-factor/.server/challenge-inp
 import { verifyChallenge } from '~/features/two-factor/.server/use-cases/verify-challenge';
 import { cloudflareContext } from '~/lib/.server/context';
 import { readMutationJson } from '~/lib/.server/json-action';
-import { readChallenge } from '~/lib/.server/challenge';
-import { limitIdentity, limitIp, rateLimited } from '~/lib/.server/rate-limit';
+import { limitIp, rateLimited } from '~/lib/.server/rate-limit';
 
 export async function action({ request, context }: Route.ActionArgs) {
   const { env } = context.get(cloudflareContext);
@@ -25,12 +24,6 @@ export async function action({ request, context }: Route.ActionArgs) {
     return data({ ok: false, error: 'invalid-input' }, { status: 400 });
   }
 
-  const challenge = await readChallenge(env, input.challengeToken);
-  if (challenge) {
-    const identityLimit = await limitIdentity(env, '2fa-user', challenge.record.userId);
-    if (!identityLimit.allowed) return rateLimited(identityLimit.retryAfter);
-  }
-
   const result = await verifyChallenge(env, request, input);
 
   if (result.status === 'invalid-challenge') {
@@ -40,6 +33,15 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (result.status === 'invalid-code') {
     return data({ ok: false, error: 'invalid-code', challengeInvalid: result.challengeInvalid }, { status: 401 });
   }
+
+  if (result.status === 'locked') {
+    return data(
+      { ok: false, error: 'locked', challengeInvalid: true, retryAfter: result.retryAfter },
+      { status: 423, headers: { 'Retry-After': String(result.retryAfter) } },
+    );
+  }
+
+  if (result.status === 'rate-limited') return rateLimited(result.retryAfter);
 
   if (result.status === 'server-error') {
     return data({ ok: false, error: 'server-error' }, { status: 500 });

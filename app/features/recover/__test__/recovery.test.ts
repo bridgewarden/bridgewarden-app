@@ -21,7 +21,8 @@ const request = () =>
 const row = (userId: string) =>
   env.DB.prepare(
     `SELECT auth_hash, kdf_salt, vault_key_wrapped, recovery_key_wrapped, recovery_key_wrap_iv,
-      recovery_auth_hash, recovery_server_salt, session_version, step_up_failed_count, step_up_locked_until
+      recovery_auth_hash, recovery_server_salt, session_version, step_up_failed_count, step_up_locked_until,
+      two_factor_failed_count, two_factor_locked_until
     FROM users WHERE id = ?`,
   )
     .bind(userId)
@@ -71,8 +72,10 @@ describe('recovery reset', () => {
       NEW_PASSWORD,
     );
     const parsed = parseRecoveryResetInput({ email: fixture.email, ...prepared.request });
-    await env.DB.prepare('UPDATE users SET step_up_failed_count = 10, step_up_locked_until = ? WHERE id = ?')
-      .bind(Date.now() + 60_000, fixture.userId)
+    await env.DB.prepare(
+      'UPDATE users SET step_up_failed_count = 10, step_up_locked_until = ?, two_factor_failed_count = 10, two_factor_locked_until = ? WHERE id = ?',
+    )
+      .bind(Date.now() + 60_000, Date.now() + 60_000, fixture.userId)
       .run();
     const before = await row(fixture.userId);
     const result = await resetWithRecovery(testEnv(), request(), parsed!);
@@ -84,6 +87,8 @@ describe('recovery reset', () => {
     expect(after?.session_version).toBe(1);
     expect(after?.step_up_failed_count).toBe(0);
     expect(after?.step_up_locked_until).toBeNull();
+    expect(after?.two_factor_failed_count).toBe(0);
+    expect(after?.two_factor_locked_until).toBeNull();
 
     if (result.status === 'ok') {
       const token = result.cookie.match(/bw_session=([^;]+)/)?.[1];

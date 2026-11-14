@@ -47,6 +47,45 @@ describe('vault queries', () => {
     expect((await findVaultRev(env.DB, userId))?.vault_rev).toBe(1);
   });
 
+  it('does not let tombstones consume the active item quota', async () => {
+    const userId = await createTestUser();
+    for (let batch = 0; batch < 5; batch += 1) {
+      await env.DB.prepare(
+        `WITH RECURSIVE seq(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM seq WHERE n < 1000)
+         INSERT INTO vault_items (id, user_id, type, favorite, data_ct, data_iv, data_version, rev, deleted_at, created_at, updated_at)
+         SELECT 'trash-' || ? || '-' || n, ?, 'login', 0, 'Y3Q=', 'aXY=', 1, n, 1, 1, 1 FROM seq`,
+      )
+        .bind(batch, userId)
+        .run();
+    }
+    await env.DB.prepare('UPDATE users SET vault_rev = 5000 WHERE id = ?').bind(userId).run();
+
+    const result = await createVaultItem(testEnv(), userId, itemInput());
+    expect(result.status).toBe('created');
+  });
+
+  it('rejects item creation at the per-user row quota without burning a revision', async () => {
+    const userId = await createTestUser();
+    for (let batch = 0; batch < 5; batch += 1) {
+      await env.DB.prepare(
+        `WITH RECURSIVE seq(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM seq WHERE n < 1000)
+         INSERT INTO vault_items (id, user_id, type, favorite, data_ct, data_iv, data_version, rev, created_at, updated_at)
+         SELECT 'quota-' || ? || '-' || n, ?, 'login', 0, 'Y3Q=', 'aXY=', 1, n, 1, 1 FROM seq`,
+      )
+        .bind(batch, userId)
+        .run();
+    }
+    await env.DB.prepare('UPDATE users SET vault_rev = 5000 WHERE id = ?').bind(userId).run();
+
+    const result = await createVaultItem(testEnv(), userId, itemInput());
+    expect(result.status).toBe('limit');
+    expect((await findVaultRev(env.DB, userId))?.vault_rev).toBe(5000);
+    const count = await env.DB.prepare('SELECT COUNT(*) AS count FROM vault_items WHERE user_id = ?')
+      .bind(userId)
+      .first<{ count: number }>();
+    expect(count?.count).toBe(5000);
+  });
+
   it('paginates the ordered item/folder delta and resumes from the cursor', async () => {
     const userId = await createTestUser();
     await env.DB.prepare(

@@ -150,13 +150,34 @@ export const batchRenameFolder = (
 export const batchDeleteFolder = (db: D1Database, userId: string, folderId: string, now: number): Promise<D1Result[]> =>
   db.batch(deleteFolderStatements(db, userId, folderId, now));
 
-export const deleteExpiredFoldersBatch = (db: D1Database, cutoff: number, limit: number): Promise<D1Result> =>
-  db
+export const deleteExpiredFoldersBatch = async (db: D1Database, cutoff: number, limit: number): Promise<number> => {
+  const rows = await db
     .prepare(
-      `DELETE FROM folders
-       WHERE id IN (
-         SELECT id FROM folders WHERE deleted_at IS NOT NULL AND deleted_at < ? LIMIT ?
-       )`,
+      `SELECT id FROM folders
+       WHERE deleted_at IS NOT NULL AND deleted_at < ? AND name_ct <> ''
+       LIMIT ?`,
     )
     .bind(cutoff, limit)
-    .run();
+    .all<{ id: string }>();
+  const ids = rows.results.map((row) => row.id);
+  if (ids.length === 0) return 0;
+  const encoded = JSON.stringify(ids);
+  const results = await db.batch([
+    db
+      .prepare(
+        `UPDATE users SET vault_rev = vault_rev + 1
+         WHERE id IN (
+           SELECT DISTINCT user_id FROM folders WHERE id IN (SELECT value FROM json_each(?))
+         )`,
+      )
+      .bind(encoded),
+    db
+      .prepare(
+        `UPDATE folders
+         SET name_ct = '', name_iv = '', rev = (SELECT vault_rev FROM users WHERE id = folders.user_id)
+         WHERE id IN (SELECT value FROM json_each(?))`,
+      )
+      .bind(encoded),
+  ]);
+  return results[1]?.meta.changes ?? 0;
+};

@@ -17,12 +17,12 @@ const folder = async (
   vaultKey: Uint8Array,
   overrides: Partial<CachedFolder> = {},
 ): Promise<CachedFolder> => {
-  const sealed = await sealItem(payload, vaultKey);
+  const sealed = await sealItem(payload, vaultKey, { kind: 'folder', id });
   return {
     id,
     nameCt: sealed.ct,
     nameIv: sealed.iv,
-    dataVersion: 1,
+    dataVersion: 2,
     rev: 1,
     deletedAt: null,
     createdAt: 1,
@@ -38,7 +38,7 @@ const item = async (
   vaultKey: Uint8Array,
   overrides: Partial<CachedItem> = {},
 ): Promise<CachedItem> => {
-  const sealed = await sealItem(payload, vaultKey);
+  const sealed = await sealItem(payload, vaultKey, { kind: 'item', id, type });
   return {
     id,
     type,
@@ -46,7 +46,7 @@ const item = async (
     favorite: false,
     dataCt: sealed.ct,
     dataIv: sealed.iv,
-    dataVersion: 1,
+    dataVersion: 2,
     rev: 1,
     deletedAt: null,
     createdAt: 1,
@@ -104,20 +104,29 @@ describe('vault projection', () => {
   it('projects 500 rows without failing', async () => {
     const vaultKey = key();
     setVaultKey(vaultKey);
-    const sealed = await sealItem({ type: 'login', name: 'Many' }, vaultKey);
-    const rows: CachedItem[] = Array.from({ length: 500 }, (_, index) => ({
-      id: `item-${index}`,
-      type: 'login',
-      folderId: null,
-      favorite: false,
-      dataCt: sealed.ct,
-      dataIv: sealed.iv,
-      dataVersion: 1,
-      rev: index + 1,
-      deletedAt: null,
-      createdAt: 1,
-      updatedAt: 1,
-    }));
+    const rows: CachedItem[] = await Promise.all(
+      Array.from({ length: 500 }, async (_, index) => {
+        const id = `item-${index}`;
+        const sealed = await sealItem({ type: 'login', name: 'Many' }, vaultKey, {
+          kind: 'item',
+          id,
+          type: 'login',
+        });
+        return {
+          id,
+          type: 'login' as const,
+          folderId: null,
+          favorite: false,
+          dataCt: sealed.ct,
+          dataIv: sealed.iv,
+          dataVersion: 2,
+          rev: index + 1,
+          deletedAt: null,
+          createdAt: 1,
+          updatedAt: 1,
+        };
+      }),
+    );
 
     await applyVaultDelta(rows, []);
     const projection = await readVaultProjection();

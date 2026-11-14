@@ -60,7 +60,7 @@ describe('vault key wrapping', () => {
 
   it('keeps existing ciphertext readable after a password change', async () => {
     const vaultKey = generateVaultKey();
-    const item = await sealItem({ name: 'Example' }, vaultKey);
+    const item = await sealItem({ name: 'Example' }, vaultKey, { kind: 'item', id: 'item-1', type: 'login' });
 
     const firstWrapKey = await deriveWrapKey(await deriveMasterKey('first password', KDF_SALT), KDF_SALT);
     await wrapVaultKey(vaultKey, firstWrapKey);
@@ -69,7 +69,9 @@ describe('vault key wrapping', () => {
     const rewrapped = await wrapVaultKey(vaultKey, secondWrapKey);
 
     const recovered = await unwrapVaultKey(rewrapped, secondWrapKey);
-    await expect(openItem(item, recovered)).resolves.toEqual({ name: 'Example' });
+    await expect(openItem(item, recovered, { kind: 'item', id: 'item-1', type: 'login' })).resolves.toEqual({
+      name: 'Example',
+    });
 
     const legacyWrapKey = await deriveWrapKey(await deriveMasterKey('first password', KDF_SALT), KDF_SALT);
     await expect(unwrapVaultKey(rewrapped, legacyWrapKey)).rejects.toThrow(WrongPasswordError);

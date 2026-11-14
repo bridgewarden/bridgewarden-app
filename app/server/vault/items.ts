@@ -1,4 +1,5 @@
 import type { VaultCreateItemInput, VaultItemInput } from './types';
+import { exceedsItemQuota } from './queries/quota';
 import { createVaultQueries } from './queries';
 import type { VaultItemRow } from './queries/items';
 import { toItemResponse, type VaultItemResponse } from './transport';
@@ -7,6 +8,7 @@ export type CreateItemResult =
   | { status: 'created'; item: VaultItemResponse }
   | { status: 'existing'; item: VaultItemResponse }
   | { status: 'not-found' }
+  | { status: 'limit' }
   | { status: 'conflict' }
   | { status: 'server-error' };
 
@@ -14,6 +16,7 @@ export type UpdateItemResult =
   | { status: 'ok'; item: VaultItemResponse }
   | { status: 'conflict'; item: VaultItemResponse }
   | { status: 'not-found' }
+  | { status: 'limit' }
   | { status: 'server-error' };
 
 const isForeignKeyError = (error: unknown): boolean =>
@@ -40,6 +43,8 @@ export const createVaultItem = async (
           ? { status: 'existing', item: toItemResponse(existing) }
           : { status: 'conflict' };
       }
+      const usage = await vault.findItemUsage(userId);
+      if (usage && exceedsItemQuota(usage, input.dataCt.length)) return { status: 'limit' };
       return { status: 'not-found' };
     }
     inserted = results[1]?.results?.[0] as VaultItemRow | undefined;
@@ -75,7 +80,12 @@ export const updateVaultItem = async (
   if (changes !== 1) {
     if (input.folderId && !(await vault.findOwnedFolder(userId, input.folderId))) return { status: 'not-found' };
     const current = await vault.findOwnedItem(userId, itemId);
-    return current ? { status: 'conflict', item: toItemResponse(current) } : { status: 'not-found' };
+    if (!current) return { status: 'not-found' };
+    const usage = await vault.findItemUsage(userId);
+    if (usage && exceedsItemQuota(usage, input.dataCt.length, current.data_ct.length)) {
+      return { status: 'limit' };
+    }
+    return { status: 'conflict', item: toItemResponse(current) };
   }
 
   const row = updated ?? (await vault.findOwnedItem(userId, itemId));

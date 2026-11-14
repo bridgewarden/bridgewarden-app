@@ -43,7 +43,7 @@ that file before uploading the Worker, and CI does not publish build artifacts.
 pnpm dev              # Workers runtime via the Cloudflare Vite plugin
 pnpm build
 pnpm preview
-pnpm deploy
+pnpm deploy            # build, verify remote migrations, upload
 pnpm typecheck        # wrangler types + react-router typegen + tsc -b
 pnpm lint
 pnpm format
@@ -58,6 +58,13 @@ pnpm db:reset:local
 ```
 
 The app is served at `http://localhost:5173`. `/health` runs `SELECT 1` against D1.
+
+## Deploy order
+
+Run `pnpm db:migrate:remote` before `pnpm deploy`. The deploy script checks
+`wrangler d1 migrations list --remote` and refuses to upload while any local migration is pending.
+After deploy, `GET /health?schema=1` reports the expected and applied migration counts; a 503 means
+the Worker and remote schema are skewed. Never roll back below the applied schema high-water mark.
 
 `pnpm test:e2e` applies migrations to `.wrangler/e2e` before starting its own dev server on port
 8787 with isolated state, so stop any `pnpm dev` already bound to that port first. Before the first run, install

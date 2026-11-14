@@ -5,6 +5,7 @@ import { readConfig } from '../../../../lib/.server/env';
 import { requireSecret } from '../../../../lib/.server/env';
 import { auditFingerprints, fingerprintRequest } from '../../../../lib/.server/request-fingerprint';
 import { createSession, destroySessionToken } from '../../../../lib/.server/session';
+import { invalidateSetupState } from '../../../../lib/.server/setup-guard';
 import type { SetupInput } from '../setup-input';
 
 export type CompleteBootstrapResult =
@@ -71,6 +72,7 @@ export const completeBootstrap = async (
     return { status: 'exists' };
   }
 
+  await invalidateSetupState(env);
   await recordAuditEventSafe(env, {
     type: 'bootstrap.created',
     userId: id,

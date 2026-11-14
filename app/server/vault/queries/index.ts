@@ -16,6 +16,7 @@ import {
   batchUpdateItem,
   deleteExpiredItemsBatch,
   findOwnedItem,
+  findItemUsage,
   batchPurgeItem,
 } from './items';
 import { findVaultRev } from './rev';
@@ -25,6 +26,7 @@ export const createVaultQueries = (env: Env) => {
   const db = getDatabase(env);
   return {
     findVaultRev: (userId: string) => findVaultRev(db, userId),
+    findItemUsage: (userId: string) => findItemUsage(db, userId),
     findOwnedItem: (userId: string, itemId: string) => findOwnedItem(db, userId, itemId),
     findOwnedFolder: (userId: string, folderId: string) => findOwnedFolder(db, userId, folderId),
     findAnyOwnedFolder: (userId: string, folderId: string) => findAnyOwnedFolder(db, userId, folderId),

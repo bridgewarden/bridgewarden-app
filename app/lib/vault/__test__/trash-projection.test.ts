@@ -12,7 +12,7 @@ import type { CachedFolder, CachedItem } from '../types';
 const vaultKey = () => crypto.getRandomValues(new Uint8Array(32));
 
 const item = async (id: string, payload: unknown, deletedAt: number | null, key: Uint8Array, dataCt?: string) => {
-  const sealed = await sealItem(payload, key);
+  const sealed = await sealItem(payload, key, { kind: 'item', id, type: 'login' });
   return {
     id,
     type: 'login',
@@ -20,7 +20,7 @@ const item = async (id: string, payload: unknown, deletedAt: number | null, key:
     favorite: false,
     dataCt: dataCt ?? sealed.ct,
     dataIv: sealed.iv,
-    dataVersion: 1,
+    dataVersion: 2,
     rev: 1,
     deletedAt,
     createdAt: 1,
@@ -29,12 +29,12 @@ const item = async (id: string, payload: unknown, deletedAt: number | null, key:
 };
 
 const folder = async (key: Uint8Array): Promise<CachedFolder> => {
-  const sealed = await sealItem({ name: 'Work' }, key);
+  const sealed = await sealItem({ name: 'Work' }, key, { kind: 'folder', id: 'folder' });
   return {
     id: 'folder',
     nameCt: sealed.ct,
     nameIv: sealed.iv,
-    dataVersion: 1,
+    dataVersion: 2,
     rev: 1,
     deletedAt: null,
     createdAt: 1,

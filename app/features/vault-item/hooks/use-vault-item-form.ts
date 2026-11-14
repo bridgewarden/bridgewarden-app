@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { ENVELOPE_VERSION } from '~/lib/crypto/contract';
 import { sealItem } from '~/lib/crypto/envelope';
 import { readVaultItem } from '~/lib/vault/item-read';
 import { parseFolderPayload } from '~/lib/vault/item-payload';
@@ -121,14 +120,14 @@ export const useVaultItemForm = (itemId: string) => {
     try {
       const payload = parseFolderPayload({ name: name.trim() });
       if (!payload) throw new Error('invalid folder name');
-      const sealed = await sealItem(payload, key);
       const id = crypto.randomUUID();
+      const sealed = await sealItem(payload, key, { kind: 'folder', id });
       const now = Date.now();
       const optimistic: CachedFolder = {
         id,
         nameCt: sealed.ct,
         nameIv: sealed.iv,
-        dataVersion: ENVELOPE_VERSION,
+        dataVersion: sealed.v,
         rev: 0,
         deletedAt: null,
         createdAt: now,
@@ -145,7 +144,7 @@ export const useVaultItemForm = (itemId: string) => {
         payload: {
           nameCt: sealed.ct,
           nameIv: sealed.iv,
-          dataVersion: ENVELOPE_VERSION,
+          dataVersion: sealed.v,
         },
         queuedAt: now,
       });

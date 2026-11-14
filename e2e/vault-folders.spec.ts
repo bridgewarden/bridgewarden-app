@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { en } from '../app/lib/i18n/en';
 import { queryD1 } from './d1';
-import { E2E_ADMIN, openNewItem, signIn, toBase64Url, unlockVault } from './fixtures';
+import { E2E_ADMIN, openNewItem, signIn, unlockVault } from './fixtures';
 
 type FolderRow = {
   id: string;
@@ -57,6 +57,8 @@ test('renames and deletes folders through the authenticated API', async ({ page,
     `SELECT id, name_ct, name_iv, data_version, rev FROM folders WHERE user_id = (SELECT id FROM users WHERE email = '${E2E_ADMIN.email}') AND deleted_at IS NULL ORDER BY rowid DESC LIMIT 2`,
   );
   if (!folderA || !folderB) throw new Error('expected two folders');
+  expect(folderA.data_version).toBe(2);
+  expect(folderB.data_version).toBe(2);
   const folderRows = queryD1<{ name_ct: string }>(
     `SELECT name_ct FROM folders WHERE user_id = (SELECT id FROM users WHERE email = '${E2E_ADMIN.email}')`,
   );
@@ -66,17 +68,37 @@ test('renames and deletes folders through the authenticated API', async ({ page,
     expect(bytes).not.toContain(second);
   }
 
-  const rename = await page.request.patch(`/api/folders/${folderA.id}`, {
-    headers: { origin: baseURL! },
-    data: {
-      nameCt: toBase64Url(folderB.name_ct),
-      nameIv: toBase64Url(folderB.name_iv),
-      dataVersion: folderB.data_version,
-      rev: folderA.rev,
+  const rename = await page.evaluate(
+    async ({ id, rev, name }) => {
+      const keyStorePath = '/app/lib/vault/key-store.ts';
+      const envelopePath = '/app/lib/crypto/envelope.ts';
+      const [{ getVaultKey }, { sealItem }] = await Promise.all([
+        import(/* @vite-ignore */ keyStorePath),
+        import(/* @vite-ignore */ envelopePath),
+      ]);
+      const key = getVaultKey();
+      if (!key) return { status: 0, ct: '' };
+      try {
+        const sealed = await sealItem({ name }, key, { kind: 'folder', id });
+        const response = await fetch(`/api/folders/${id}`, {
+          method: 'PATCH',
+          headers: { origin: location.origin, 'content-type': 'application/json' },
+          body: JSON.stringify({
+            nameCt: sealed.ct.replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, ''),
+            nameIv: sealed.iv.replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, ''),
+            dataVersion: sealed.v,
+            rev,
+          }),
+        });
+        return { status: response.status, ct: sealed.ct };
+      } finally {
+        key.fill(0);
+      }
     },
-  });
-  expect(rename.status()).toBe(200);
-
+    { id: folderA.id, rev: folderA.rev, name: second },
+  );
+  expect(rename.status).toBe(200);
+  expect(rename.ct).not.toBe('');
   await page.reload();
   await unlockVault(page);
   await openFolderFilter(page);

@@ -3,7 +3,6 @@ import { useCallback, useRef, useState, type Dispatch, type SetStateAction } fro
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 
-import { ENVELOPE_VERSION } from '~/lib/crypto/contract';
 import { sealItem } from '~/lib/crypto/envelope';
 import { t } from '~/lib/i18n/en';
 import { getCachedItem } from '~/lib/vault/cache';
@@ -66,13 +65,13 @@ export const useVaultItemMutations = ({
         }
 
         setErrors({});
-        const sealed = await sealItem(parsed, key);
+        const id = isNew || saveAsCopy ? crypto.randomUUID() : itemId;
+        const sealed = await sealItem(parsed, key, { kind: 'item', id, type: values.type });
         if (!withinCiphertextBudget(sealed.ct)) {
           setErrors({ payload: t('vaultItem.error.payloadTooLarge') });
           return;
         }
 
-        const id = isNew || saveAsCopy ? crypto.randomUUID() : itemId;
         const previous = isNew || saveAsCopy ? undefined : await getCachedItem(itemId);
         if (!isNew && !saveAsCopy && !previous) {
           setErrors({ payload: t('vaultItem.loadFailed') });
@@ -87,7 +86,7 @@ export const useVaultItemMutations = ({
           favorite: values.favorite,
           dataCt: sealed.ct,
           dataIv: sealed.iv,
-          dataVersion: ENVELOPE_VERSION,
+          dataVersion: sealed.v,
           rev: previous?.rev ?? 0,
           deletedAt: null,
           createdAt: previous?.createdAt ?? now,
@@ -107,7 +106,7 @@ export const useVaultItemMutations = ({
             favorite: optimistic.favorite,
             dataCt: sealed.ct,
             dataIv: sealed.iv,
-            dataVersion: ENVELOPE_VERSION,
+            dataVersion: sealed.v,
             ...(!isNew && !saveAsCopy ? { rev: previous!.rev } : {}),
           },
           queuedAt: now,

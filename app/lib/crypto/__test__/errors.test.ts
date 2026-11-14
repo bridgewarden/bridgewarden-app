@@ -28,12 +28,12 @@ describe('crypto errors', () => {
     const key = randomKey();
     const wrapKey = randomKey();
     const wrapped = await wrapVaultKey(generateVaultKey(), wrapKey);
-    const sealed = await sealItem({ name: 'Example' }, key);
+    const sealed = await sealItem({ name: 'Example' }, key, { kind: 'item', id: 'item-1', type: 'login' });
     const tampered = { ...sealed, ct: mutateBase64Byte(sealed.ct) };
 
     const errors = [
       await capture(() => unwrapVaultKey(wrapped, randomKey())),
-      await capture(() => openItem(tampered, key)),
+      await capture(() => openItem(tampered, key, { kind: 'item', id: 'item-1', type: 'login' })),
       await capture(() => parseRecoveryKey('BAD')),
       await capture(() => decodeBase64('!!!!')),
     ];

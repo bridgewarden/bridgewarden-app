@@ -29,7 +29,11 @@ export const readVaultItem = async (id: string): Promise<ReadVaultItemResult> =>
 
     const payload = parseItemPayload(
       row.type,
-      await openItem(cachedEnvelope(row.dataCt, row.dataIv, row.dataVersion), key),
+      await openItem(cachedEnvelope(row.dataCt, row.dataIv, row.dataVersion), key, {
+        kind: 'item',
+        id: row.id,
+        type: row.type,
+      }),
     );
     if (!payload) return { status: 'invalid' };
 

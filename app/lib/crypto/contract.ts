@@ -2,6 +2,7 @@
 // Binary values use standard base64 with padding in storage; API transport converts them to base64url.
 // Passwords are normalized with NFKC before derivation.
 export const ENVELOPE_VERSION = 1;
+export const CURRENT_ENVELOPE_VERSION = 2;
 export const ENVELOPE_ALGORITHM = 'A256GCM';
 
 export const KDF_ALGORITHM = 'pbkdf2-sha256';

@@ -36,7 +36,10 @@ const CONCURRENCY = 8;
 const decryptFolder = async (folder: CachedFolder, key: Uint8Array): Promise<DecryptedFolder | null> => {
   try {
     const payload = parseFolderPayload(
-      await openItem(cachedEnvelope(folder.nameCt, folder.nameIv, folder.dataVersion), key),
+      await openItem(cachedEnvelope(folder.nameCt, folder.nameIv, folder.dataVersion), key, {
+        kind: 'folder',
+        id: folder.id,
+      }),
     );
     return payload ? { id: folder.id, name: payload.name, rev: folder.rev } : null;
   } catch {
@@ -52,7 +55,11 @@ const decryptItem = async (
   try {
     const payload = parseItemPayload(
       item.type,
-      await openItem(cachedEnvelope(item.dataCt, item.dataIv, item.dataVersion), key),
+      await openItem(cachedEnvelope(item.dataCt, item.dataIv, item.dataVersion), key, {
+        kind: 'item',
+        id: item.id,
+        type: item.type,
+      }),
     );
     if (!payload) return null;
 

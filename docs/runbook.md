@@ -1,5 +1,7 @@
 # Operational runbook
 
+Threat model: [`threat-model.md`](threat-model.md).
+
 ## Deploy order
 
 1. Back up or verify D1 Time Travel retention.

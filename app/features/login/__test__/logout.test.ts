@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { resetDatabase } from '../../../__test__/reset-database';
 import { createTestUser } from '../../../__test__/fixtures';
-import { createSession, SESSION_COOKIE_NAME } from '../../../lib/.server/session';
+import { createSession, hashSessionToken, SESSION_COOKIE_NAME } from '../../../lib/.server/session';
 import { logoutCurrentSession } from '../.server/use-cases/logout';
 import { testEnv } from '../../../__test__/auth-fixtures';
 
@@ -24,6 +24,7 @@ describe('logout', () => {
 
     expect(result.hadSession).toBe(true);
     expect(result.cookie).toContain('Max-Age=0');
+    expect(await env.KV_SESSIONS.get(`session:${await hashSessionToken(session.token)}`)).toBeNull();
     const audit = await env.DB.prepare('SELECT type, user_id FROM audit_events').first();
     expect(audit).toEqual({ type: 'logout', user_id: userId });
   });

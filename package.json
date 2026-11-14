@@ -10,7 +10,7 @@
     "dev": "NODE_ENV=development react-router dev",
     "build": "react-router build && node scripts/strip-build-secrets.ts && node scripts/generate-service-worker.ts && node scripts/check-sonner-csp-hash.ts && node scripts/check-bundle-budget.ts",
     "preview": "pnpm build && node scripts/preview.ts",
-    "deploy": "pnpm build && wrangler deploy",
+    "deploy": "node scripts/check-remote-migrations.ts && pnpm build && wrangler deploy",
     "typecheck": "wrangler types && react-router typegen && tsc -b",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

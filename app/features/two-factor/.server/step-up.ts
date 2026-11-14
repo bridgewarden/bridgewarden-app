@@ -38,13 +38,17 @@ export const verifyTwoFactorStepUp = async (
     lockedUntil: state.step_up_locked_until,
     now,
     maxAttempts: MAX_FAILED_LOGIN_ATTEMPTS,
-    durationMs: LOCKOUT_DURATION_MS,
-    reserveAttempt: () => users.reserveStepUpAttempt(userId, now, MAX_FAILED_LOGIN_ATTEMPTS, LOCKOUT_DURATION_MS),
     recordFailure: async () => {
-      const current = await users.findStepUpState(userId);
-      return current
-        ? { failed_count: current.step_up_failed_count, locked_until: current.step_up_locked_until }
-        : null;
+      const state = await users.recordStepUpFailure(userId, now, MAX_FAILED_LOGIN_ATTEMPTS, LOCKOUT_DURATION_MS);
+      if (state && state.failed_count >= MAX_FAILED_LOGIN_ATTEMPTS) {
+        await recordAuditEventSafe(env, {
+          type: '2fa.step_up_locked',
+          userId,
+          createdAt: now,
+          ...(await auditFingerprints(env, request)),
+        });
+      }
+      return state;
     },
     resetFailures: () => users.resetStepUpFailures(userId, Date.now()),
     onFailure: async () => {

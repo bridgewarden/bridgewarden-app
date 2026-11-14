@@ -64,8 +64,26 @@ describe('changeMasterPassword', () => {
     expect(await userSnapshot(fixture.userId)).toEqual(before);
   });
 
+  it('clears step-up failures after a successful rotation', async () => {
+    const fixture = await createPasswordFixture();
+    await env.DB.prepare('UPDATE users SET step_up_failed_count = 10, step_up_locked_until = ? WHERE id = ?')
+      .bind(Date.now() + 60_000, fixture.userId)
+      .run();
+
+    const result = await changeMasterPassword(testEnv(), fixtureRequest(), fixture.userId, await changeInput(fixture));
+    expect(result.status).toBe('ok');
+
+    const row = await env.DB.prepare('SELECT step_up_failed_count, step_up_locked_until FROM users WHERE id = ?')
+      .bind(fixture.userId)
+      .first<{ step_up_failed_count: number; step_up_locked_until: number | null }>();
+    expect(row).toEqual({ step_up_failed_count: 0, step_up_locked_until: null });
+  });
+
   it('rejects a wrong current auth hash without mutating credentials', async () => {
     const fixture = await createPasswordFixture();
+    await env.DB.prepare('UPDATE users SET step_up_failed_count = 10, step_up_locked_until = ? WHERE id = ?')
+      .bind(Date.now() + 60_000, fixture.userId)
+      .run();
     const before = await userSnapshot(fixture.userId);
     const input = await changeInput(fixture);
 

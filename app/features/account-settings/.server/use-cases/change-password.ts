@@ -40,7 +40,6 @@ export const changeMasterPassword = async (
     lockedUntil: current.locked_until,
     now,
     maxAttempts: MAX_FAILED_LOGIN_ATTEMPTS,
-    durationMs: LOCKOUT_DURATION_MS,
     recordFailure: async () => {
       const state = await users.recordFailedLogin(userId, now, MAX_FAILED_LOGIN_ATTEMPTS, LOCKOUT_DURATION_MS);
       return state ? { failed_count: state.failed_login_count, locked_until: state.locked_until } : null;

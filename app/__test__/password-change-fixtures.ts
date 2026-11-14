@@ -84,7 +84,7 @@ export const fixtureRequest = (cookie?: string, body = '{}') =>
 export const userSnapshot = async (userId: string) =>
   env.DB.prepare(
     `SELECT auth_hash, kdf_salt, vault_key_wrapped, recovery_key_wrapped, recovery_key_wrap_iv,
-      failed_login_count, locked_until FROM users WHERE id = ?`,
+      failed_login_count, locked_until, step_up_failed_count, step_up_locked_until FROM users WHERE id = ?`,
   )
     .bind(userId)
     .first<{
@@ -95,4 +95,6 @@ export const userSnapshot = async (userId: string) =>
       recovery_key_wrap_iv: string;
       failed_login_count: number;
       locked_until: number | null;
+      step_up_failed_count: number;
+      step_up_locked_until: number | null;
     }>();

@@ -1,5 +1,4 @@
-import { CopyIcon, DownloadIcon } from 'lucide-react';
-
+import { RecoveryKeyCard } from '~/components/recovery-key-card';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
@@ -13,6 +12,7 @@ type SetupRecoveryStepProps = {
     onConfirmationChange: (value: string) => void;
     onCopy: () => void;
     onDownload: () => void;
+    onBack: () => void;
     onSubmit: () => void;
   };
 };
@@ -25,52 +25,15 @@ export const SetupRecoveryStep = ({ recovery, fieldError, status, actions }: Set
       actions.onSubmit();
     }}
   >
-    <div className="space-y-2">
-      <h2 className="text-lg font-medium">{t('setup.recovery.heading')}</h2>
-      <p className="text-sm text-muted-foreground">{t('setup.recovery.description')}</p>
-    </div>
-    <div className="space-y-2">
-      <p id="setup-recovery-label" className="text-sm font-medium">
-        {t('setup.recovery.label')}
-      </p>
-      <div role="group" aria-labelledby="setup-recovery-label" className="rounded-md border bg-muted">
-        <div className="flex items-start gap-2 p-3">
-          <code id="setup-recovery-key" className="min-w-0 flex-1 font-mono text-sm break-all select-all">
-            {recovery.key}
-          </code>
-          <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={actions.onCopy}>
-            <CopyIcon aria-hidden="true" />
-            {t('setup.recovery.copy')}
-          </Button>
-        </div>
-      </div>
-      {status.copy === 'copied' ? (
-        <p role="status" aria-live="polite" className="text-sm text-muted-foreground">
-          {t('setup.recovery.copied')}
-        </p>
-      ) : null}
-      {status.copy === 'failed' ? (
-        <p role="alert" className="text-sm text-destructive">
-          {t('setup.recovery.copyFailed')}
-        </p>
-      ) : null}
-    </div>
-    <div className="space-y-2">
-      <Button type="button" variant="outline" className="min-h-11" onClick={actions.onDownload}>
-        <DownloadIcon aria-hidden="true" />
-        {t('setup.recovery.download')}
-      </Button>
-      {status.download === 'downloaded' ? (
-        <p role="status" aria-live="polite" className="text-sm text-muted-foreground">
-          {t('setup.recovery.downloaded')}
-        </p>
-      ) : null}
-      {status.download === 'failed' ? (
-        <p role="alert" className="text-sm text-destructive">
-          {t('setup.recovery.downloadFailed')}
-        </p>
-      ) : null}
-    </div>
+    <RecoveryKeyCard
+      recoveryKey={recovery.key}
+      title={t('setup.recovery.label')}
+      ariaLabel={t('setup.recovery.label')}
+      copyStatus={status.copy}
+      downloadStatus={status.download}
+      onCopy={actions.onCopy}
+      onDownload={actions.onDownload}
+    />
     <div className="space-y-2">
       <Label htmlFor="setup-recovery-confirm">{t('setup.recovery.confirmLabel')}</Label>
       <Input
@@ -91,8 +54,13 @@ export const SetupRecoveryStep = ({ recovery, fieldError, status, actions }: Set
         {t(fieldError)}
       </p>
     ) : null}
-    <Button type="submit" className="min-h-11">
-      {t('setup.recovery.continue')}
-    </Button>
+    <div className="flex flex-col-reverse gap-2 sm:flex-row">
+      <Button type="button" variant="outline" className="min-h-11 w-full sm:w-auto" onClick={actions.onBack}>
+        {t('setup.back')}
+      </Button>
+      <Button type="submit" className="min-h-11 w-full sm:flex-1">
+        {t('setup.recovery.continue')}
+      </Button>
+    </div>
   </form>
 );

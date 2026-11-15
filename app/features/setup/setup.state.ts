@@ -17,6 +17,8 @@ export const setupReducer = (state: SetupState, action: SetupAction): SetupState
       return { ...state, step: 'password', email: action.email, displayName: action.displayName, error: null };
     case 'back-to-account':
       return { ...state, step: 'account', error: null };
+    case 'back-to-password':
+      return { ...state, step: 'password', keys: null, recoveryKey: '', error: null };
     case 'keys-generated':
       return { ...state, step: 'recovery', keys: action.keys, recoveryKey: action.recoveryKey, error: null };
     case 'recovery-confirmed':

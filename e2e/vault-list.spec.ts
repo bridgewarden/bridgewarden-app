@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { en } from '../app/lib/i18n/en';
 import { signIn, unlockVault } from './fixtures';
+import { assertNoOverflow } from './layout';
 
 test('creates, filters, opens, and retains an item across lock', async ({ page }) => {
   await page.goto('/login');
@@ -57,7 +58,7 @@ test('creates a note and stays usable at 360px', async ({ page }) => {
   await page.getByRole('button', { name: /E2E Note/ }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog').getByText(en['vault.detail.body'], { exact: true })).toBeVisible();
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await assertNoOverflow(page);
 });
 
 test('queues an offline create and flushes when the connection returns', async ({ context, page }) => {

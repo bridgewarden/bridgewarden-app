@@ -17,6 +17,7 @@ export type SetupAction =
   | { type: 'account-changed'; email: string; displayName: string }
   | { type: 'account-accepted'; email: string; displayName: string }
   | { type: 'back-to-account' }
+  | { type: 'back-to-password' }
   | { type: 'keys-generated'; keys: SetupTransportMaterial; recoveryKey: string }
   | { type: 'recovery-confirmed' }
   | { type: 'two-factor-continued' }

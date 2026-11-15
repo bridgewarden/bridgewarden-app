@@ -53,6 +53,16 @@ describe('setup state machine', () => {
     expect(state.recoveryKey).toBe('');
   });
 
+  it('clears generated material when returning to the password step', () => {
+    const generated = setupReducer(initialSetupState, { type: 'keys-generated', keys, recoveryKey: 'ABCD-EFGH' });
+    const back = setupReducer(generated, { type: 'back-to-password' });
+
+    expect(back.step).toBe('password');
+    expect(back.keys).toBeNull();
+    expect(back.recoveryKey).toBe('');
+    expect(back.error).toBeNull();
+  });
+
   it('maps failures to the step that can fix them', () => {
     const generated = setupReducer(initialSetupState, { type: 'keys-generated', keys, recoveryKey: 'key' });
     const network = setupReducer(generated, { type: 'failed', error: 'network' });

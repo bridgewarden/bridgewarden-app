@@ -16,6 +16,7 @@ export const en = {
   'common.retry': 'Retry',
   'common.menu': 'Account menu',
   'common.primaryNavigation': 'Primary navigation',
+  'common.required': 'Required.',
   'common.offline': 'You are offline. Cached content remains available.',
   'common.backToVault': 'Back to vault',
 
@@ -41,6 +42,14 @@ export const en = {
   'twoFactor.enableNow': 'Enable now',
 
   'home.notice': 'Setup and vault features arrive in the next milestones.',
+
+  'password.strength': 'Password strength',
+  'password.strength.weak': 'Weak',
+  'password.strength.fair': 'Fair',
+  'password.strength.good': 'Good',
+  'password.strength.strong': 'Strong',
+  'password.hint': 'Use at least 12 characters.',
+  'password.mismatch': 'The passwords do not match.',
 
   'login.title': 'Sign in',
   'login.description': 'Unlock your vault with your master password.',
@@ -85,13 +94,6 @@ export const en = {
   'setup.password.description': 'At least 12 characters. It never leaves this browser.',
   'setup.password.label': 'Master password',
   'setup.password.confirmLabel': 'Confirm master password',
-  'setup.password.hint': 'Use at least 12 characters.',
-  'setup.password.mismatch': 'The passwords do not match.',
-  'setup.password.strength': 'Password strength',
-  'setup.password.strength.weak': 'Weak',
-  'setup.password.strength.fair': 'Fair',
-  'setup.password.strength.good': 'Good',
-  'setup.password.strength.strong': 'Strong',
   'setup.password.generating': 'Deriving keys…',
   'setup.password.continue': 'Create keys',
 

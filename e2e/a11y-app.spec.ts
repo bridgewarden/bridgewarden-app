@@ -4,6 +4,18 @@ import { en } from '../app/lib/i18n/en';
 import { expectNoSeriousA11yViolations } from './a11y';
 import { signIn, unlockVault, waitForHydration } from './fixtures';
 
+test('public auth surfaces are accessible', async ({ page }) => {
+  await page.goto('/login');
+  await waitForHydration(page);
+  await expect(page.getByLabel(en['login.email'])).toBeFocused();
+  await expectNoSeriousA11yViolations(page, 'login');
+
+  await page.goto('/recover');
+  await waitForHydration(page);
+  await expect(page.getByLabel(en['recover.email.label'])).toBeFocused();
+  await expectNoSeriousA11yViolations(page, 'recovery');
+});
+
 test('core vault surfaces and dialogs are accessible', async ({ page }) => {
   await page.goto('/login');
   await waitForHydration(page);

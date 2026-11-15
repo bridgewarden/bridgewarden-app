@@ -2,9 +2,52 @@ import { readFile } from 'node:fs/promises';
 
 import { expect, test } from '@playwright/test';
 
+import { en } from '../app/lib/i18n/en';
 import { E2E_ADMIN, waitForHydration } from './fixtures';
 
 const NEW_PASSWORD = 'recovered master password 789';
+
+test.describe.configure({ mode: 'serial' });
+
+test('recovery validates back, short password, and mismatch', async ({ page }) => {
+  await page.goto('/recover');
+  await waitForHydration(page);
+  await page.getByLabel(en['recover.email.label']).fill(E2E_ADMIN.email);
+  await page.getByRole('button', { name: en['recover.email.submit'] }).click();
+
+  await expect(page.getByRole('heading', { name: en['recover.reset.heading'], level: 2 })).toBeFocused();
+
+  const password = page.getByLabel(en['recover.password.label'], { exact: true });
+  const confirmation = page.getByLabel(en['recover.confirm.label'], { exact: true });
+  await page.getByLabel(en['recover.key.label']).fill('fake-recovery-key');
+  await password.fill('short');
+  await confirmation.fill('different');
+  await page.getByRole('button', { name: en['recover.submit'] }).click();
+
+  await expect(page.getByText(en['password.hint'])).toBeVisible();
+  await expect(page.getByRole('progressbar', { name: en['password.strength'] })).toHaveAttribute('aria-valuenow', '0');
+  await expect(page.getByText(en['password.mismatch'])).toBeVisible();
+  await expect(password).toBeFocused();
+  await expect(page.getByRole('progressbar', { name: en['password.strength'] })).toHaveAttribute(
+    'aria-valuetext',
+    'Weak',
+  );
+
+  await password.fill('long enough password 123');
+  await confirmation.fill('other password 123');
+  await page.getByRole('button', { name: en['recover.submit'] }).click();
+  await expect(confirmation).toBeFocused();
+  await expect(page.getByRole('progressbar', { name: en['password.strength'] })).toHaveAttribute('aria-valuenow', '3');
+  await expect(page.getByRole('progressbar', { name: en['password.strength'] })).toHaveAttribute(
+    'aria-valuetext',
+    'Good',
+  );
+  await expect(page.getByText(en['password.mismatch'])).toBeVisible();
+
+  await page.getByRole('button', { name: en['recover.back'] }).click();
+  await expect(page.getByLabel(en['recover.email.label'])).toHaveValue(E2E_ADMIN.email);
+  await expect(page.getByRole('heading', { name: en['recover.email.heading'], level: 2 })).toBeFocused();
+});
 
 test('recovers the vault, burns the old key, and revokes other sessions', async ({ page, browser }) => {
   let newRecoveryKey: string | undefined;
@@ -32,6 +75,17 @@ test('recovers the vault, burns the old key, and revokes other sessions', async 
     newRecoveryKey = (await page.locator('#recover-new-key').textContent())!.trim();
     expect(newRecoveryKey).toMatch(/^[A-Z0-9]{4}(-[A-Z0-9]{4}){5}-[A-Z0-9]{2}$/);
     expect(newRecoveryKey).not.toBe(recoveryKey);
+    await expect(page.getByRole('link', { name: en['common.signIn'] })).toBeVisible();
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: en['recover.success.download'] }).click();
+    const download = await downloadPromise;
+    const downloadPath = await download.path();
+    if (!downloadPath) throw new Error('recovery key download missing');
+    const downloadedKey = await readFile(downloadPath, 'utf8');
+    expect(downloadedKey).toContain(newRecoveryKey);
+    expect(downloadedKey).toContain(en['recover.success.description']);
+    expect(downloadedKey).toContain(en['recover.success.warning']);
 
     await otherPage.goto('/app');
     await expect(otherPage).toHaveURL(/\/login/);

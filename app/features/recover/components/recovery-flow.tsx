@@ -1,15 +1,13 @@
 import { useEffect, useRef } from 'react';
-import { Link } from 'react-router';
 
-import { Button } from '~/components/ui/button';
-import { Input } from '~/components/ui/input';
-import { Label } from '~/components/ui/label';
+import { AUTH_PANEL_HEADING_ID, AuthFrame } from '~/components/auth-frame';
 import { t } from '~/lib/i18n/en';
-import { MIN_MASTER_PASSWORD_LENGTH } from '~/lib/password-policy';
 
 import { useRecoveryFlow } from '../recover.hooks';
 import type { RecoveryError } from '../recover.types';
-import { RecoveryKeyPanel } from './recovery-key-panel';
+import { RecoveryEmailStep } from './recovery-email-step';
+import { RecoveryResetForm } from './recovery-reset-form';
+import { RecoverySuccessStep } from './recovery-success-step';
 
 const ERROR_KEYS: Record<
   RecoveryError,
@@ -22,145 +20,63 @@ const ERROR_KEYS: Record<
 
 export const RecoveryFlow = () => {
   const flow = useRecoveryFlow();
-  const headingRef = useRef<HTMLHeadingElement>(null);
+  const previousStep = useRef(flow.step);
 
   useEffect(() => {
-    headingRef.current?.focus();
+    if (previousStep.current === flow.step) return;
+    previousStep.current = flow.step;
+    document.getElementById(AUTH_PANEL_HEADING_ID)?.focus();
   }, [flow.step]);
 
-  const error = flow.error ? ERROR_KEYS[flow.error] : null;
-  const invalid = flow.error === 'invalid';
+  const formError = flow.error ? t(ERROR_KEYS[flow.error]) : null;
+  const panel =
+    flow.step === 'email'
+      ? { title: t('recover.email.heading') }
+      : flow.step === 'reset'
+        ? { title: t('recover.reset.heading') }
+        : { title: t('recover.success.title') };
 
   return (
-    <section aria-labelledby="recover-heading" className="mx-auto w-full max-w-md space-y-6">
-      <div className="space-y-2">
-        <h1 id="recover-heading" ref={headingRef} tabIndex={-1} className="text-2xl font-semibold">
-          {t('recover.title')}
-        </h1>
-        <p className="text-muted-foreground">{t('recover.description')}</p>
+    <AuthFrame title={t('recover.title')} description={t('recover.description')} panel={panel}>
+      <div className="space-y-4">
         <p role="status" className="sr-only">
           {flow.busy ? t('recover.busy') : ''}
         </p>
+
+        {flow.step === 'email' ? (
+          <RecoveryEmailStep
+            email={flow.email}
+            error={formError}
+            busy={flow.busy}
+            onChange={flow.changeEmail}
+            onSubmit={flow.submitEmail}
+          />
+        ) : null}
+
+        {flow.step === 'reset' ? (
+          <RecoveryResetForm
+            values={{
+              recoveryKey: flow.recoveryKey,
+              password: flow.password,
+              confirmation: flow.confirmation,
+            }}
+            errors={flow.fieldErrors}
+            formError={formError}
+            busy={flow.busy}
+            actions={{
+              onRecoveryKeyChange: flow.changeRecoveryKey,
+              onPasswordChange: flow.changePassword,
+              onConfirmationChange: flow.changeConfirmation,
+              onBack: flow.backToEmail,
+              onSubmit: flow.submitReset,
+            }}
+          />
+        ) : null}
+
+        {flow.step === 'success' ? (
+          <RecoverySuccessStep recoveryKey={flow.newRecoveryKey} sessionIssued={flow.sessionIssued} />
+        ) : null}
       </div>
-
-      {flow.step === 'email' ? (
-        <form
-          className="space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            flow.submitEmail();
-          }}
-        >
-          <div className="space-y-2">
-            <Label htmlFor="recover-email">{t('recover.email.label')}</Label>
-            <Input
-              id="recover-email"
-              type="email"
-              autoComplete="email"
-              required
-              value={flow.email}
-              aria-invalid={invalid}
-              aria-describedby={error ? 'recover-error' : undefined}
-              onChange={(event) => flow.changeEmail(event.target.value)}
-            />
-          </div>
-          {error ? (
-            <p id="recover-error" role="alert" className="text-sm text-destructive">
-              {t(error)}
-            </p>
-          ) : null}
-          <Button type="submit" className="min-h-11 w-full" disabled={flow.busy}>
-            {flow.busy ? t('recover.busy') : t('recover.email.submit')}
-          </Button>
-        </form>
-      ) : null}
-
-      {flow.step === 'reset' ? (
-        <form
-          className="space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void flow.submitReset();
-          }}
-        >
-          <div className="space-y-2">
-            <Label htmlFor="recover-key">{t('recover.key.label')}</Label>
-            <Input
-              id="recover-key"
-              autoComplete="off"
-              spellCheck={false}
-              required
-              value={flow.recoveryKey}
-              aria-invalid={invalid}
-              aria-describedby={error ? 'recover-key-hint recover-error' : 'recover-key-hint'}
-              onChange={(event) => flow.changeRecoveryKey(event.target.value)}
-            />
-            <p id="recover-key-hint" className="text-sm text-muted-foreground">
-              {t('recover.key.hint')}
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="recover-password">{t('recover.password.label')}</Label>
-            <Input
-              id="recover-password"
-              type="password"
-              autoComplete="new-password"
-              minLength={MIN_MASTER_PASSWORD_LENGTH}
-              required
-              value={flow.password}
-              aria-invalid={invalid}
-              aria-describedby={error ? 'recover-error' : undefined}
-              onChange={(event) => flow.changePassword(event.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="recover-confirm">{t('recover.confirm.label')}</Label>
-            <Input
-              id="recover-confirm"
-              type="password"
-              autoComplete="new-password"
-              minLength={MIN_MASTER_PASSWORD_LENGTH}
-              required
-              value={flow.confirmation}
-              aria-invalid={invalid}
-              aria-describedby={error ? 'recover-error' : undefined}
-              onChange={(event) => flow.changeConfirmation(event.target.value)}
-            />
-          </div>
-
-          {error ? (
-            <p id="recover-error" role="alert" className="text-sm text-destructive">
-              {t(error)}
-            </p>
-          ) : null}
-
-          <Button type="submit" className="min-h-11 w-full" disabled={flow.busy}>
-            {flow.busy ? t('recover.busy') : t('recover.submit')}
-          </Button>
-        </form>
-      ) : null}
-
-      {flow.step === 'success' ? (
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <h2 className="text-lg font-medium">{t('recover.success.title')}</h2>
-            <p className="text-sm text-muted-foreground">
-              {t(flow.sessionIssued ? 'recover.success.description' : 'recover.success.signInDescription')}
-            </p>
-          </div>
-          <RecoveryKeyPanel recoveryKey={flow.newRecoveryKey} />
-          <p role="alert" className="text-sm text-destructive">
-            {t('recover.success.warning')}
-          </p>
-          <Button asChild className="min-h-11 w-full">
-            <Link to={flow.sessionIssued ? '/app' : '/login'}>
-              {t(flow.sessionIssued ? 'recover.success.continue' : 'recover.success.signIn')}
-            </Link>
-          </Button>
-        </div>
-      ) : null}
-    </section>
+    </AuthFrame>
   );
 };

@@ -76,6 +76,10 @@ test('manual lock requires the master password and sign out revokes the session'
   await page.getByRole('button', { name: en['common.lock'] }).click();
   await expect(page.getByRole('heading', { name: en['lock.title'] })).toBeVisible();
   await expect(page.getByLabel(en['lock.password'])).toBeFocused();
+  await page.keyboard.press('Tab');
+  expect(await page.evaluate(() => Boolean(document.activeElement?.closest('[role="dialog"]')))).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('heading', { name: en['lock.title'] })).toBeVisible();
   await expect(page.getByRole('heading', { name: en['vault.title'], exact: true })).toHaveCount(0);
   await page.getByLabel(en['lock.password']).fill('wrong password');
   await page.getByRole('button', { name: en['lock.submit'] }).click();
@@ -85,6 +89,7 @@ test('manual lock requires the master password and sign out revokes the session'
   await page.getByLabel(en['lock.password']).fill(E2E_ADMIN.password);
   await page.getByRole('button', { name: en['lock.submit'] }).click();
   await expect(page.getByRole('heading', { name: en['lock.title'] })).toBeHidden();
+  await expect(page.getByRole('button', { name: en['common.lock'] })).toBeFocused();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(en['vault.title']);
 
   await page.getByRole('button', { name: en['common.lock'] }).click();

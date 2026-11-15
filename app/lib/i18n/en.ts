@@ -35,6 +35,7 @@ export const en = {
   'lock.unavailable': 'Local unlock is unavailable. Sign out and sign in again.',
   'lock.tooManyAttempts': 'Too many failed attempts. Signing out.',
   'lock.signOut': 'Sign out of this device',
+  'lock.signingOut': 'Signing out…',
 
   'twoFactor.banner': 'Two-factor authentication is not enabled. Protect your account with a second factor.',
   'twoFactor.enableNow': 'Enable now',

@@ -1,0 +1,3863 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bridgewarden — UX redesign PoC</title>
+    <style>
+      /* Hallmark · genre: modern-minimal · theme: Signal · scope: app · nav: N9 · footer: none */
+      :root {
+        color-scheme: light;
+        --paper: oklch(0.982 0.004 250);
+        --paper-2: oklch(0.958 0.006 250);
+        --surface: oklch(0.995 0.002 250);
+        --surface-2: oklch(0.972 0.005 250);
+        --ink: oklch(0.205 0.018 250);
+        --ink-2: oklch(0.44 0.016 250);
+        --ink-3: oklch(0.58 0.012 250);
+        --rule: oklch(0.89 0.009 250);
+        --rule-strong: oklch(0.81 0.012 250);
+        --accent: oklch(0.54 0.145 250);
+        --accent-2: oklch(0.46 0.14 250);
+        --accent-soft: oklch(0.94 0.025 250);
+        --accent-ink: oklch(0.99 0 0);
+        --danger: oklch(0.5 0.19 27);
+        --danger-soft: oklch(0.96 0.025 27);
+        --success: oklch(0.46 0.12 155);
+        --success-soft: oklch(0.95 0.03 155);
+        --warning: oklch(0.51 0.12 75);
+        --warning-soft: oklch(0.97 0.04 85);
+        --focus: oklch(0.62 0.16 250);
+        --radius: 6px;
+        --radius-lg: 8px;
+        --shadow: 0 1px 2px rgb(20 35 50 / 5%);
+        --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+      }
+      [data-theme='dark'] {
+        color-scheme: dark;
+        --paper: oklch(0.17 0.012 250);
+        --paper-2: oklch(0.205 0.014 250);
+        --surface: oklch(0.195 0.013 250);
+        --surface-2: oklch(0.225 0.014 250);
+        --ink: oklch(0.955 0.006 250);
+        --ink-2: oklch(0.73 0.012 250);
+        --ink-3: oklch(0.6 0.012 250);
+        --rule: oklch(0.3 0.014 250);
+        --rule-strong: oklch(0.39 0.016 250);
+        --accent: oklch(0.68 0.14 250);
+        --accent-2: oklch(0.76 0.13 250);
+        --accent-soft: oklch(0.27 0.045 250);
+        --accent-ink: oklch(0.16 0.012 250);
+        --danger: oklch(0.68 0.17 27);
+        --danger-soft: oklch(0.24 0.04 27);
+        --success: oklch(0.7 0.12 155);
+        --success-soft: oklch(0.23 0.04 155);
+        --warning: oklch(0.76 0.13 80);
+        --warning-soft: oklch(0.25 0.04 80);
+        --focus: oklch(0.74 0.14 250);
+        --shadow: 0 1px 2px rgb(0 0 0 / 25%);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        overflow-x: clip;
+      }
+      body {
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.45;
+        -webkit-font-smoothing: antialiased;
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+        color: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      :focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 2px;
+      }
+      .icon {
+        width: 16px;
+        height: 16px;
+        flex: 0 0 auto;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.7;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .mono {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+      }
+      .label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+      }
+      .muted {
+        color: var(--ink-2);
+      }
+      .small {
+        font-size: 12px;
+      }
+      .tiny {
+        font-size: 11px;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      /* Review chrome, not product */
+      .reviewbar {
+        position: relative;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        min-height: 44px;
+        padding: 6px 16px;
+        background: #111820;
+        color: #f4f6f8;
+        border-bottom: 1px solid var(--rule-strong);
+      }
+      .review-label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        opacity: 0.7;
+        white-space: nowrap;
+      }
+      .review-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px;
+        flex: 1;
+      }
+      .review-tab {
+        border: 0;
+        background: transparent;
+        color: inherit;
+        opacity: 0.58;
+        padding: 7px 9px;
+        border-radius: 4px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        white-space: nowrap;
+      }
+      .review-tab:hover {
+        opacity: 0.9;
+        background: rgb(255 255 255 / 8%);
+      }
+      .review-tab[aria-selected='true'] {
+        opacity: 1;
+        background: rgb(255 255 255 / 14%);
+      }
+      .iconbtn.mobile-only {
+        display: none;
+      }
+      .review-theme {
+        border: 1px solid rgb(255 255 255 / 28%);
+        background: transparent;
+        color: inherit;
+        border-radius: 4px;
+        min-height: 30px;
+        padding: 0 10px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+      }
+
+      /* Product chrome */
+      .appbar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: var(--paper);
+        border-bottom: 1px solid var(--rule);
+      }
+      .appbar-inner {
+        max-width: 1180px;
+        margin: 0 auto;
+        min-height: 60px;
+        padding: 0 24px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-right: 18px;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+        white-space: nowrap;
+      }
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        border: 1px solid var(--rule-strong);
+        border-radius: 5px;
+        background: var(--surface);
+        color: var(--accent);
+      }
+      .brand small {
+        display: block;
+        font-family: var(--font-mono);
+        font-size: 8px;
+        letter-spacing: 0.08em;
+        color: var(--ink-3);
+        font-weight: 500;
+      }
+      .appnav {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        min-width: 0;
+      }
+      .navlink {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 34px;
+        padding: 0 9px;
+        border-radius: 4px;
+        font-size: 13px;
+        color: var(--ink-2);
+        white-space: nowrap;
+      }
+      .navlink:hover {
+        background: var(--surface-2);
+        color: var(--ink);
+      }
+      .navlink[aria-current='page'] {
+        background: var(--accent-soft);
+        color: var(--accent-2);
+        font-weight: 600;
+      }
+      .navcount {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        padding: 1px 5px;
+        border: 1px solid var(--rule);
+        border-radius: 3px;
+      }
+      .appbar-actions {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .iconbtn {
+        display: inline-grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border: 1px solid transparent;
+        background: transparent;
+        border-radius: 5px;
+        color: var(--ink-2);
+      }
+      .iconbtn:hover {
+        background: var(--surface-2);
+        color: var(--ink);
+        border-color: var(--rule);
+      }
+      .account {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding-left: 9px;
+        border-left: 1px solid var(--rule);
+        margin-left: 4px;
+      }
+      .avatar {
+        display: grid;
+        place-items: center;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: var(--accent);
+        color: var(--accent-ink);
+        font-family: var(--font-mono);
+        font-size: 10px;
+        font-weight: 700;
+      }
+      .account-name {
+        font-size: 12px;
+        color: var(--ink-2);
+        max-width: 130px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .shell {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 28px 24px 64px;
+      }
+      .pagehead {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 22px;
+      }
+      .pagehead h1 {
+        margin: 2px 0 3px;
+        font-size: 28px;
+        line-height: 1.1;
+        letter-spacing: -0.035em;
+        font-weight: 650;
+      }
+      .pagehead p {
+        margin: 0;
+        color: var(--ink-2);
+      }
+      .pagehead-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+      .statusline {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 0 14px;
+        border-bottom: 1px solid var(--rule);
+        margin-bottom: 16px;
+      }
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--success);
+        box-shadow: 0 0 0 3px var(--success-soft);
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-height: 36px;
+        padding: 0 12px;
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--radius);
+        background: var(--surface);
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 550;
+        white-space: nowrap;
+      }
+      .btn:hover {
+        background: var(--surface-2);
+      }
+      .btn.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--accent-ink);
+      }
+      .btn.primary:hover {
+        background: var(--accent-2);
+        border-color: var(--accent-2);
+      }
+      .btn.ghost {
+        border-color: transparent;
+        background: transparent;
+        color: var(--ink-2);
+      }
+      .btn.ghost:hover {
+        background: var(--surface-2);
+        color: var(--ink);
+      }
+      .btn.danger {
+        border-color: var(--danger);
+        color: var(--danger);
+        background: transparent;
+      }
+      .btn.danger:hover {
+        background: var(--danger-soft);
+      }
+      .btn.sm {
+        min-height: 30px;
+        padding: 0 9px;
+        font-size: 12px;
+      }
+      .btn.full {
+        width: 100%;
+      }
+      .btn[disabled] {
+        opacity: 0.48;
+        cursor: not-allowed;
+      }
+      .kbd {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 22px;
+        height: 20px;
+        padding: 0 5px;
+        border: 1px solid var(--rule);
+        border-bottom-color: var(--rule-strong);
+        border-radius: 4px;
+        background: var(--surface-2);
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-3);
+      }
+
+      .input,
+      .select,
+      .textarea {
+        width: 100%;
+        min-height: 38px;
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--radius);
+        background: var(--surface);
+        padding: 0 10px;
+        color: var(--ink);
+      }
+      .textarea {
+        min-height: 92px;
+        padding: 9px 10px;
+        resize: vertical;
+      }
+      .input::placeholder,
+      .textarea::placeholder {
+        color: var(--ink-3);
+      }
+      .input:focus,
+      .select:focus,
+      .textarea:focus {
+        border-color: var(--focus);
+        outline: 2px solid color-mix(in oklch, var(--focus) 18%, transparent);
+        outline-offset: 0;
+      }
+      .field {
+        display: grid;
+        gap: 6px;
+        min-width: 0;
+      }
+      .field > label {
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .hint {
+        font-size: 11px;
+        color: var(--ink-3);
+      }
+      .error {
+        font-size: 11px;
+        color: var(--danger);
+      }
+      .invalid {
+        border-color: var(--danger) !important;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 30px;
+        padding: 0 9px;
+        border: 1px solid var(--rule);
+        border-radius: 4px;
+        background: transparent;
+        color: var(--ink-2);
+        font-size: 12px;
+      }
+      .chip:hover {
+        border-color: var(--rule-strong);
+        color: var(--ink);
+      }
+      .chip[aria-pressed='true'] {
+        background: var(--ink);
+        border-color: var(--ink);
+        color: var(--paper);
+      }
+      .chip .mono {
+        font-size: 10px;
+        opacity: 0.7;
+      }
+
+      .panel {
+        border: 1px solid var(--rule);
+        border-radius: var(--radius-lg);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+      .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 13px 14px;
+        border-bottom: 1px solid var(--rule);
+      }
+      .panel-head h2,
+      .panel-head h3 {
+        margin: 0;
+        font-size: 14px;
+        letter-spacing: -0.01em;
+      }
+      .panel-body {
+        padding: 16px;
+      }
+
+      .toolrow {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .toolrow .search {
+        position: relative;
+        flex: 1 1 220px;
+        min-width: 0;
+      }
+      .search .icon {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--ink-3);
+      }
+      .search .input {
+        padding-left: 34px;
+      }
+      .toolrow .select {
+        flex: 0 1 160px;
+        width: auto;
+        min-width: 128px;
+      }
+      .toolrow .spacer {
+        flex: 1;
+      }
+
+      .list {
+        display: grid;
+      }
+      .list-head,
+      .vault-row {
+        display: grid;
+        grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.3fr) minmax(90px, 0.8fr) 90px;
+        gap: 12px;
+        align-items: center;
+        padding: 10px 14px;
+      }
+      .list-head {
+        border-bottom: 1px solid var(--rule);
+        background: var(--surface-2);
+      }
+      .vault-row {
+        width: 100%;
+        border: 0;
+        border-bottom: 1px solid var(--rule);
+        background: transparent;
+        text-align: left;
+        color: inherit;
+        min-height: 58px;
+      }
+      .vault-row:last-child {
+        border-bottom: 0;
+      }
+      .vault-row:hover {
+        background: var(--surface-2);
+      }
+      .item-main {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+      .item-mark {
+        display: grid;
+        place-items: center;
+        width: 30px;
+        height: 30px;
+        flex: 0 0 auto;
+        border: 1px solid var(--rule);
+        border-radius: 5px;
+        background: var(--paper);
+        font-family: var(--font-mono);
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--ink-2);
+      }
+      .item-copy {
+        min-width: 0;
+      }
+      .item-name {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 600;
+        font-size: 13px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .item-sub {
+        font-size: 12px;
+        color: var(--ink-3);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 20px;
+        padding: 0 6px;
+        border: 1px solid var(--rule);
+        border-radius: 3px;
+        font-family: var(--font-mono);
+        font-size: 9px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+      }
+      .star {
+        color: var(--warning);
+      }
+      .row-end {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 4px;
+      }
+
+      .empty-inline {
+        padding: 32px 16px;
+        text-align: center;
+        color: var(--ink-2);
+      }
+
+      /* Login */
+      .public-shell {
+        min-height: calc(100vh - 44px);
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(340px, 440px);
+        align-items: center;
+        gap: 72px;
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 48px 24px;
+      }
+      .login-intro .brand {
+        margin-bottom: 48px;
+        font-size: 15px;
+      }
+      .login-intro h1 {
+        font-size: clamp(38px, 6vw, 62px);
+        line-height: 0.98;
+        letter-spacing: -0.055em;
+        font-weight: 650;
+        margin: 0 0 18px;
+        max-width: 8ch;
+      }
+      .login-intro > p {
+        max-width: 42ch;
+        font-size: 15px;
+        color: var(--ink-2);
+        margin: 0;
+      }
+      .trust-list {
+        display: grid;
+        gap: 9px;
+        margin-top: 34px;
+        padding-top: 18px;
+        border-top: 1px solid var(--rule);
+        max-width: 420px;
+      }
+      .trust-item {
+        display: flex;
+        gap: 9px;
+        align-items: flex-start;
+        color: var(--ink-2);
+        font-size: 12px;
+      }
+      .trust-item .icon {
+        color: var(--accent);
+        margin-top: 1px;
+      }
+      .login-panel {
+        border: 1px solid var(--rule);
+        border-radius: var(--radius-lg);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        padding: 26px;
+      }
+      .login-panel h2 {
+        margin: 0 0 5px;
+        font-size: 20px;
+        letter-spacing: -0.025em;
+      }
+      .login-panel > p {
+        margin: 0 0 22px;
+        color: var(--ink-2);
+        font-size: 13px;
+      }
+      .login-form {
+        display: grid;
+        gap: 14px;
+      }
+      .form-foot {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid var(--rule);
+        font-size: 12px;
+      }
+      .form-foot a {
+        color: var(--accent-2);
+        font-weight: 600;
+      }
+      .form-foot a:hover {
+        text-decoration: underline;
+      }
+
+      /* Detail */
+      .detail-layout {
+        display: grid;
+        grid-template-columns: 300px minmax(0, 1fr);
+        gap: 18px;
+        align-items: start;
+      }
+      .mini-list {
+        border: 1px solid var(--rule);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        background: var(--surface);
+      }
+      .mini-row {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        width: 100%;
+        min-height: 52px;
+        padding: 8px 11px;
+        border: 0;
+        border-bottom: 1px solid var(--rule);
+        background: transparent;
+        text-align: left;
+        color: inherit;
+      }
+      .mini-row:last-child {
+        border-bottom: 0;
+      }
+      .mini-row:hover {
+        background: var(--surface-2);
+      }
+      .mini-row[aria-current='true'] {
+        background: var(--accent-soft);
+      }
+      .mini-row .item-mark {
+        width: 26px;
+        height: 26px;
+      }
+      .detail-panel {
+        border: 1px solid var(--rule);
+        border-radius: var(--radius-lg);
+        background: var(--surface);
+        overflow: hidden;
+      }
+      .detail-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 20px;
+        border-bottom: 1px solid var(--rule);
+      }
+      .detail-title {
+        display: flex;
+        gap: 13px;
+        align-items: center;
+        min-width: 0;
+      }
+      .detail-title .item-mark {
+        width: 42px;
+        height: 42px;
+        font-size: 13px;
+      }
+      .detail-title h2 {
+        margin: 0;
+        font-size: 22px;
+        letter-spacing: -0.03em;
+      }
+      .detail-title p {
+        margin: 3px 0 0;
+        color: var(--ink-3);
+      }
+      .detail-actions {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .detail-body {
+        display: grid;
+      }
+      .detail-row {
+        display: grid;
+        grid-template-columns: 150px minmax(0, 1fr) auto;
+        gap: 14px;
+        align-items: center;
+        padding: 13px 20px;
+        border-bottom: 1px solid var(--rule);
+        min-height: 48px;
+      }
+      .detail-row:last-child {
+        border-bottom: 0;
+      }
+      .detail-row > .label {
+        padding-top: 2px;
+      }
+      .value {
+        font-size: 13px;
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      .password-value {
+        letter-spacing: 0.16em;
+        font-family: var(--font-mono);
+      }
+      .value-actions {
+        display: flex;
+        gap: 2px;
+      }
+      .totp-line {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .totp-code {
+        font-family: var(--font-mono);
+        font-size: 16px;
+        letter-spacing: 0.1em;
+        font-weight: 650;
+      }
+      .totp-bar {
+        width: 84px;
+        height: 3px;
+        background: var(--rule);
+        overflow: hidden;
+        border-radius: 2px;
+      }
+      .totp-bar span {
+        display: block;
+        width: 62%;
+        height: 100%;
+        background: var(--accent);
+      }
+      .note {
+        padding: 14px 20px 20px;
+        color: var(--ink-2);
+        font-size: 13px;
+        background: var(--surface-2);
+      }
+
+      /* Editor */
+      .editor-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 260px;
+        gap: 18px;
+        align-items: start;
+      }
+      .form-panel {
+        border: 1px solid var(--rule);
+        border-radius: var(--radius-lg);
+        background: var(--surface);
+        overflow: hidden;
+      }
+      .form-section {
+        padding: 18px;
+        border-bottom: 1px solid var(--rule);
+      }
+      .form-section:last-child {
+        border-bottom: 0;
+      }
+      .form-section h3 {
+        margin: 0 0 2px;
+        font-size: 14px;
+      }
+      .form-section > p {
+        margin: 0 0 14px;
+        color: var(--ink-3);
+        font-size: 12px;
+      }
+      .form-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 14px;
+      }
+      .form-grid .wide {
+        grid-column: 1 / -1;
+      }
+      .field-row {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .field-row .input {
+        flex: 1;
+      }
+      .side-note {
+        border: 1px solid var(--rule);
+        border-radius: var(--radius-lg);
+        background: var(--surface-2);
+        padding: 15px;
+      }
+      .side-note h3 {
+        margin: 0 0 6px;
+        font-size: 13px;
+      }
+      .side-note p {
+        margin: 0;
+        color: var(--ink-2);
+        font-size: 12px;
+      }
+      .side-note ul {
+        margin: 12px 0 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 8px;
+      }
+      .side-note li {
+        display: flex;
+        gap: 7px;
+        color: var(--ink-2);
+        font-size: 12px;
+      }
+      .savebar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 18px;
+        border-top: 1px solid var(--rule);
+        background: var(--surface);
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+      }
+      .savebar .meta {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-3);
+      }
+
+      /* Settings */
+      .settings-layout {
+        display: grid;
+        grid-template-columns: 210px minmax(0, 1fr);
+        gap: 28px;
+        align-items: start;
+      }
+      .section-nav {
+        position: sticky;
+        top: 80px;
+        display: grid;
+        gap: 2px;
+      }
+      .section-nav a {
+        display: block;
+        padding: 7px 9px;
+        border-left: 2px solid transparent;
+        color: var(--ink-2);
+        font-size: 12px;
+      }
+      .section-nav a:hover {
+        color: var(--ink);
+        background: var(--surface-2);
+      }
+      .section-nav a[aria-current='true'] {
+        border-left-color: var(--accent);
+        color: var(--accent-2);
+        background: var(--accent-soft);
+        font-weight: 600;
+      }
+      .settings-stack {
+        display: grid;
+        gap: 14px;
+      }
+      .settings-panel {
+        border: 1px solid var(--rule);
+        border-radius: var(--radius-lg);
+        background: var(--surface);
+      }
+      .settings-head {
+        padding: 15px 18px;
+        border-bottom: 1px solid var(--rule);
+      }
+      .settings-head h2 {
+        margin: 0 0 2px;
+        font-size: 15px;
+      }
+      .settings-head p {
+        margin: 0;
+        color: var(--ink-3);
+        font-size: 12px;
+      }
+      .settings-body {
+        padding: 18px;
+        display: grid;
+        gap: 14px;
+      }
+      .setting-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--rule);
+      }
+      .setting-row:first-child {
+        padding-top: 0;
+      }
+      .setting-row:last-child {
+        border-bottom: 0;
+        padding-bottom: 0;
+      }
+      .setting-row h3 {
+        margin: 0 0 2px;
+        font-size: 13px;
+      }
+      .setting-row p {
+        margin: 0;
+        color: var(--ink-3);
+        font-size: 12px;
+        max-width: 52ch;
+      }
+      .checkline {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+      }
+      .checkline input {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--accent);
+      }
+      .saved {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: var(--success);
+        font-family: var(--font-mono);
+        font-size: 10px;
+      }
+      .subtle-panel {
+        border: 1px solid var(--warning);
+        border-radius: 6px;
+        background: var(--warning-soft);
+        padding: 10px 12px;
+        font-size: 12px;
+      }
+
+      /* Admin */
+      .admin-layout {
+        display: grid;
+        gap: 14px;
+      }
+      .admin-top {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 0.75fr);
+        gap: 14px;
+        align-items: start;
+      }
+      .invite-form {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) 130px auto;
+        gap: 8px;
+        align-items: end;
+      }
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      .table th {
+        text-align: left;
+        padding: 9px 12px;
+        background: var(--surface-2);
+        border-bottom: 1px solid var(--rule);
+        font-family: var(--font-mono);
+        font-size: 9px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ink-3);
+        white-space: nowrap;
+      }
+      .table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--rule);
+        vertical-align: middle;
+      }
+      .table tr:last-child td {
+        border-bottom: 0;
+      }
+      .table .user {
+        font-weight: 600;
+      }
+      .table .sub {
+        color: var(--ink-3);
+        font-size: 11px;
+      }
+      .table-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+      .pending-list {
+        display: grid;
+      }
+      .pending-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 11px 14px;
+        border-bottom: 1px solid var(--rule);
+      }
+      .pending-row:last-child {
+        border-bottom: 0;
+      }
+      .pending-main {
+        min-width: 0;
+      }
+      .pending-main strong {
+        display: block;
+        font-size: 12px;
+      }
+      .pending-main span {
+        display: block;
+        color: var(--ink-3);
+        font-size: 11px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .expiry {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--warning);
+        white-space: nowrap;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 20px;
+        padding: 0 6px;
+        border: 1px solid var(--rule);
+        border-radius: 3px;
+        font-family: var(--font-mono);
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--ink-3);
+      }
+      .badge.ok {
+        border-color: color-mix(in oklch, var(--success) 40%, var(--rule));
+        color: var(--success);
+        background: var(--success-soft);
+      }
+      .badge.warn {
+        border-color: color-mix(in oklch, var(--warning) 45%, var(--rule));
+        color: var(--warning);
+        background: var(--warning-soft);
+      }
+      .badge.off {
+        color: var(--danger);
+        border-color: color-mix(in oklch, var(--danger) 40%, var(--rule));
+        background: var(--danger-soft);
+      }
+      .role-cell {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+      }
+      .role-cell .select {
+        width: auto;
+        min-width: 92px;
+        min-height: 30px;
+        font-size: 11px;
+      }
+
+      .screen[hidden] {
+        display: none !important;
+      }
+      .public-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 24px;
+        max-width: 1040px;
+        margin: 0 auto;
+      }
+      .public-top .brand {
+        margin: 0;
+      }
+
+      /* Interaction layer */
+      [hidden] {
+        display: none !important;
+      }
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 60;
+        display: grid;
+        place-items: center;
+        padding: 20px;
+        background: rgb(10 18 26 / 42%);
+      }
+      .modal-card {
+        width: min(430px, 100%);
+        background: var(--surface);
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--radius-lg);
+        padding: 20px;
+        box-shadow: 0 18px 50px rgb(0 0 0 / 18%);
+      }
+      .modal-card h2 {
+        margin: 0 0 6px;
+        font-size: 18px;
+        letter-spacing: -0.02em;
+      }
+      .modal-card p {
+        margin: 0;
+        color: var(--ink-2);
+        font-size: 13px;
+      }
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 7px;
+        margin-top: 20px;
+      }
+      .lock-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 70;
+        display: grid;
+        place-items: center;
+        padding: 20px;
+        background: color-mix(in oklch, var(--paper) 92%, transparent);
+        backdrop-filter: blur(3px);
+      }
+      .lock-card {
+        width: min(380px, 100%);
+        background: var(--surface);
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--radius-lg);
+        padding: 22px;
+        box-shadow: 0 18px 50px rgb(0 0 0 / 16%);
+      }
+      .lock-card .brand {
+        margin: 0 0 22px;
+      }
+      .lock-card h2 {
+        margin: 0 0 5px;
+        font-size: 22px;
+        letter-spacing: -0.03em;
+      }
+      .lock-card p {
+        margin: 0 0 16px;
+        color: var(--ink-2);
+        font-size: 13px;
+      }
+      .lock-form {
+        display: grid;
+        gap: 12px;
+      }
+      .lock-foot {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-top: 4px;
+      }
+      .toast-stack {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        z-index: 80;
+        display: grid;
+        gap: 7px;
+        width: min(360px, calc(100vw - 32px));
+      }
+      .toast {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 38px;
+        padding: 8px 11px;
+        border: 1px solid var(--rule-strong);
+        border-radius: 5px;
+        background: var(--ink);
+        color: var(--paper);
+        font-size: 12px;
+        box-shadow: 0 6px 22px rgb(0 0 0 / 18%);
+        animation: toast-in 0.16s ease-out;
+      }
+      .toast.error {
+        background: var(--danger);
+        color: white;
+        border-color: var(--danger);
+      }
+      .toast.success {
+        background: var(--success);
+        color: white;
+        border-color: var(--success);
+      }
+      .toast .icon {
+        width: 14px;
+        height: 14px;
+      }
+      @keyframes toast-in {
+        from {
+          opacity: 0;
+          transform: translateY(5px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .spin {
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .row-link {
+        cursor: pointer;
+      }
+      .is-hidden {
+        display: none !important;
+      }
+
+      /* Setup wizard */
+      .setup-shell {
+        max-width: 1040px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 240px minmax(0, 1fr);
+        gap: 46px;
+        padding: 38px 24px 64px;
+        align-items: start;
+      }
+      .setup-rail h1 {
+        margin: 8px 0 8px;
+        font-size: 28px;
+        line-height: 1.05;
+        letter-spacing: -0.04em;
+      }
+      .setup-rail > p {
+        margin: 0;
+        color: var(--ink-2);
+        font-size: 13px;
+        max-width: 26ch;
+      }
+      .setup-steps {
+        list-style: none;
+        margin: 0 0 26px;
+        padding: 0;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .setup-step-label {
+        display: grid;
+        gap: 7px;
+        min-width: 0;
+        padding: 10px 0 0;
+        border-top: 2px solid var(--rule);
+        color: var(--ink-3);
+      }
+      .setup-step-label .num {
+        font-family: var(--font-mono);
+        font-size: 9px;
+        letter-spacing: 0.07em;
+      }
+      .setup-step-label strong {
+        display: block;
+        font-size: 11px;
+        font-weight: 650;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .setup-step-label small {
+        display: block;
+        font-size: 10px;
+        margin-top: 2px;
+        color: var(--ink-3);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .setup-step-label[aria-current='step'] {
+        border-top-color: var(--accent);
+        color: var(--ink);
+      }
+      .setup-step-label[aria-current='step'] .num,
+      .setup-step-label[aria-current='step'] strong {
+        color: var(--accent-2);
+      }
+      .setup-step-label.done {
+        border-top-color: var(--success);
+        color: var(--ink-2);
+      }
+      .setup-step-label.done .num {
+        color: var(--success);
+      }
+      .setup-step-label.done .num::after {
+        content: ' · done';
+        font-size: 8px;
+        letter-spacing: 0.04em;
+      }
+      .setup-panel {
+        border: 1px solid var(--rule);
+        border-radius: var(--radius-lg);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        padding: 26px;
+        min-height: 430px;
+      }
+      .setup-panel h2 {
+        margin: 0 0 5px;
+        font-size: 21px;
+        letter-spacing: -0.03em;
+      }
+      .setup-panel > p,
+      .setup-step > p {
+        margin: 0 0 20px;
+        color: var(--ink-2);
+        font-size: 13px;
+      }
+      .setup-step {
+        display: grid;
+        gap: 14px;
+      }
+      .setup-form {
+        display: grid;
+        gap: 14px;
+      }
+      .setup-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 6px;
+        padding-top: 16px;
+        border-top: 1px solid var(--rule);
+      }
+      .setup-actions .right {
+        display: flex;
+        gap: 7px;
+        margin-left: auto;
+      }
+      .strength {
+        height: 4px;
+        border-radius: 2px;
+        background: var(--rule);
+        overflow: hidden;
+      }
+      .strength span {
+        display: block;
+        height: 100%;
+        width: 0;
+        background: var(--danger);
+        transition: width 0.15s ease;
+      }
+      .strength[data-score='2'] span {
+        background: var(--warning);
+      }
+      .strength[data-score='3'] span,
+      .strength[data-score='4'] span {
+        background: var(--success);
+      }
+      .strength-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+      }
+      .recovery-key {
+        font-family: var(--font-mono);
+        font-size: 16px;
+        line-height: 1.6;
+        letter-spacing: 0.06em;
+        word-break: break-word;
+        background: var(--surface-2);
+        border: 1px solid var(--rule);
+        border-radius: var(--radius);
+        padding: 12px;
+      }
+      .recovery-actions {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .qr-layout {
+        display: grid;
+        grid-template-columns: 152px minmax(0, 1fr);
+        gap: 20px;
+        align-items: start;
+      }
+      .qr-grid {
+        display: grid;
+        grid-template-columns: repeat(11, 1fr);
+        gap: 2px;
+        width: 142px;
+        height: 142px;
+        padding: 8px;
+        border: 1px solid var(--rule-strong);
+        background: #fff;
+        border-radius: 4px;
+      }
+      .qr-grid i {
+        display: block;
+        background: #fff;
+        border-radius: 0.5px;
+      }
+      .qr-grid i.on {
+        background: #111820;
+      }
+      .qr-caption {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--ink-3);
+        margin-top: 7px;
+      }
+      .setup-done {
+        display: grid;
+        place-items: center;
+        text-align: center;
+        min-height: 380px;
+        gap: 8px;
+        align-content: center;
+      }
+      .setup-done .done-mark {
+        display: grid;
+        place-items: center;
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        background: var(--success-soft);
+        color: var(--success);
+        margin-bottom: 4px;
+      }
+      .setup-done h2 {
+        margin: 0;
+      }
+      .setup-done p {
+        max-width: 40ch;
+        margin: 0 0 12px;
+      }
+
+      @media (max-width: 900px) {
+        .public-shell {
+          grid-template-columns: 1fr;
+          gap: 36px;
+          padding-top: 30px;
+          max-width: 560px;
+        }
+        .login-intro h1 {
+          max-width: 12ch;
+        }
+        .login-intro .brand {
+          margin-bottom: 28px;
+        }
+        .detail-layout,
+        .editor-layout,
+        .settings-layout,
+        .admin-top {
+          grid-template-columns: 1fr;
+        }
+        .mini-list {
+          display: none;
+        }
+        .section-nav {
+          position: static;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 2px;
+          border-bottom: 1px solid var(--rule);
+        }
+        .section-nav a {
+          border-left: 0;
+          border-bottom: 2px solid transparent;
+        }
+        .section-nav a[aria-current='true'] {
+          border-left-color: transparent;
+          border-bottom-color: var(--accent);
+        }
+        .invite-form {
+          grid-template-columns: 1fr 1fr;
+        }
+        .invite-form .field:last-of-type,
+        .invite-form .btn {
+          grid-column: span 1;
+        }
+      }
+
+      @media (max-width: 900px) {
+        .setup-shell {
+          grid-template-columns: 1fr;
+          gap: 26px;
+          padding-top: 26px;
+          max-width: 580px;
+        }
+        .setup-rail h1 {
+          font-size: 25px;
+        }
+        .setup-rail > p {
+          max-width: 52ch;
+        }
+        .setup-steps {
+          gap: 5px;
+          margin: 0 0 18px;
+        }
+        .setup-step-label {
+          padding-top: 8px;
+        }
+        .setup-step-label strong {
+          font-size: 10px;
+        }
+        .setup-step-label small {
+          display: none;
+        }
+        .setup-panel {
+          padding: 20px;
+          min-height: 0;
+        }
+        .qr-layout {
+          grid-template-columns: 1fr;
+        }
+        .qr-grid {
+          width: 132px;
+          height: 132px;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .appbar-inner {
+          padding: 0 16px;
+        }
+        .iconbtn.mobile-only {
+          display: inline-grid;
+        }
+        .appnav {
+          display: none;
+        }
+        .account-name {
+          display: none;
+        }
+        .shell {
+          padding: 20px 16px 48px;
+        }
+        .pagehead {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .pagehead h1 {
+          font-size: 25px;
+        }
+        .pagehead-actions {
+          width: 100%;
+        }
+        .pagehead-actions .btn.primary {
+          flex: 1;
+        }
+        .list-head {
+          display: none;
+        }
+        .vault-row {
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 8px;
+          padding: 11px 12px;
+          min-height: 62px;
+        }
+        .vault-row > :nth-child(2) {
+          display: none;
+        }
+        .vault-row > :nth-child(3) {
+          display: none;
+        }
+        .vault-row > :nth-child(4) {
+          align-self: stretch;
+        }
+        .item-sub {
+          max-width: 44vw;
+        }
+        .toolrow .search {
+          flex-basis: 100%;
+        }
+        .toolrow .select {
+          flex: 1 1 130px;
+        }
+        .detail-top {
+          flex-direction: column;
+        }
+        .detail-actions {
+          width: 100%;
+          justify-content: flex-start;
+        }
+        .detail-row {
+          grid-template-columns: 1fr auto;
+          gap: 4px 10px;
+          padding: 12px 15px;
+        }
+        .detail-row > .label {
+          grid-column: 1 / -1;
+        }
+        .detail-row > .value-actions {
+          grid-column: 2;
+          grid-row: 2;
+        }
+        .detail-row > .value {
+          grid-column: 1;
+          grid-row: 2;
+        }
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+        .form-grid .wide {
+          grid-column: auto;
+        }
+        .invite-form {
+          grid-template-columns: 1fr;
+        }
+        .table-wrap {
+          overflow-x: clip;
+        }
+        .table thead {
+          display: none;
+        }
+        .table,
+        .table tbody,
+        .table tr,
+        .table td {
+          display: block;
+          width: 100%;
+        }
+        .table tr {
+          padding: 10px 12px;
+          border-bottom: 1px solid var(--rule);
+        }
+        .table td {
+          padding: 3px 0;
+          border: 0;
+        }
+        .table td::before {
+          content: attr(data-label);
+          display: block;
+          font-family: var(--font-mono);
+          font-size: 9px;
+          letter-spacing: 0.07em;
+          text-transform: uppercase;
+          color: var(--ink-3);
+          margin-bottom: 2px;
+        }
+        .table td:last-child::before {
+          display: none;
+        }
+        .table-actions {
+          justify-content: flex-start;
+          margin-top: 6px;
+        }
+        .role-cell {
+          justify-content: flex-start;
+        }
+        .pending-row {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 7px;
+        }
+        .reviewbar {
+          align-items: center;
+          gap: 8px;
+          min-height: 44px;
+          padding: 5px 10px;
+          overflow: hidden;
+        }
+        .review-label {
+          display: none;
+        }
+        .review-tabs {
+          order: 1;
+          flex-wrap: nowrap;
+          overflow-x: auto;
+          flex: 1;
+          width: auto;
+          scrollbar-width: none;
+        }
+        .review-tabs::-webkit-scrollbar {
+          display: none;
+        }
+        .review-tab {
+          flex: 0 0 auto;
+        }
+        .review-theme {
+          order: 2;
+          margin-left: 0;
+          flex: 0 0 auto;
+        }
+        .public-shell {
+          min-height: auto;
+        }
+        .login-panel {
+          padding: 20px;
+        }
+      }
+      @media (max-width: 420px) {
+        .login-intro h1 {
+          font-size: 36px;
+        }
+        .item-sub {
+          max-width: 34vw;
+        }
+        .detail-title h2 {
+          font-size: 19px;
+        }
+        .toolrow .select {
+          flex-basis: 100%;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          scroll-behavior: auto !important;
+          transition: none !important;
+          animation: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body data-view="vault">
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="i-shield" viewBox="0 0 24 24">
+        <path d="M12 3l7 3v5c0 4.5-3 7.5-7 10-4-2.5-7-5.5-7-10V6l7-3z" />
+        <path d="M9.5 12l1.7 1.7L15 10" />
+      </symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="6.5" />
+        <path d="M16 16l4 4" />
+      </symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24">
+        <rect x="5" y="10" width="14" height="10" rx="2" />
+        <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+      </symbol>
+      <symbol id="i-key" viewBox="0 0 24 24">
+        <circle cx="8" cy="12" r="4" />
+        <path d="M12 12h8l-2 2m-2-2v3" />
+      </symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24">
+        <rect x="8" y="8" width="11" height="11" rx="2" />
+        <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+      </symbol>
+      <symbol id="i-eye" viewBox="0 0 24 24">
+        <path d="M3 12s3.3-5 9-5 9 5 9 5-3.3 5-9 5-9-5-9-5z" />
+        <circle cx="12" cy="12" r="2" />
+      </symbol>
+      <symbol id="i-settings" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3" />
+        <path
+          d="M19 13.5v-3l-2-.6a6 6 0 0 0-.7-1.7l1-1.8-2.1-2.1-1.8 1a6 6 0 0 0-1.7-.7L11.1 3h-3l-.6 2a6 6 0 0 0-1.7.7l-1.8-1-2.1 2.1 1 1.8a6 6 0 0 0-.7 1.7L2.5 10.5v3l2 .6a6 6 0 0 0 .7 1.7l-1 1.8 2.1 2.1 1.8-1a6 6 0 0 0 1.7.7l.6 2h3l.6-2a6 6 0 0 0 1.7-.7l1.8 1 2.1-2.1-1-1.8a6 6 0 0 0 .7-1.7l2-.6z"
+        />
+      </symbol>
+      <symbol id="i-users" viewBox="0 0 24 24">
+        <circle cx="9" cy="8" r="3" />
+        <path d="M3 19c.5-3 2.5-4.5 6-4.5s5.5 1.5 6 4.5" />
+        <path d="M17 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" />
+        <path d="M18 14c2 .3 3 1.5 3 4" />
+      </symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24">
+        <path d="M4 7h16M9 3h6l1 4H8l1-4zM6 7l1 14h10l1-14" />
+        <path d="M10 11v6M14 11v6" />
+      </symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6h7l2 2h9v11H3V6z" /></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="8" />
+        <path d="M12 8v4l3 2" />
+      </symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l4 4L19 6" /></symbol>
+      <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6" /></symbol>
+      <symbol id="i-more" viewBox="0 0 24 24">
+        <circle cx="5" cy="12" r="1" />
+        <circle cx="12" cy="12" r="1" />
+        <circle cx="19" cy="12" r="1" />
+      </symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" /></symbol>
+      <symbol id="i-external" viewBox="0 0 24 24">
+        <path d="M14 4h6v6M20 4l-9 9" />
+        <path d="M19 14v5H5V5h5" />
+      </symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></symbol>
+    </svg>
+
+    <div class="reviewbar">
+      <span class="review-label">UX PoC · review</span>
+      <div class="review-tabs" role="tablist" aria-label="Preview screens">
+        <button class="review-tab" role="tab" aria-selected="false" data-screen="login">01 Login</button>
+        <button class="review-tab" role="tab" aria-selected="true" data-screen="vault">02 Vault</button>
+        <button class="review-tab" role="tab" aria-selected="false" data-screen="detail">03 Detail</button>
+        <button class="review-tab" role="tab" aria-selected="false" data-screen="editor">04 Editor</button>
+        <button class="review-tab" role="tab" aria-selected="false" data-screen="settings">05 Settings</button>
+        <button class="review-tab" role="tab" aria-selected="false" data-screen="admin">06 Admin</button>
+        <button class="review-tab" role="tab" aria-selected="false" data-screen="setup">07 Setup</button>
+      </div>
+      <button class="review-theme" id="theme-toggle" type="button">Dark mode</button>
+    </div>
+
+    <header class="appbar" data-appbar>
+      <div class="appbar-inner">
+        <a class="brand" href="#" data-noop>
+          <span class="brand-mark"
+            ><svg class="icon"><use href="#i-shield" /></svg
+          ></span>
+          <span>Bridgewarden<small>zero-knowledge vault</small></span>
+        </a>
+        <nav class="appnav" aria-label="Primary">
+          <a class="navlink" href="#" data-screen-link="vault" aria-current="page">Vault</a>
+          <a class="navlink" href="#" data-noop>Generator</a>
+          <a class="navlink" href="#" data-noop>Trash <span class="navcount">3</span></a>
+          <a class="navlink" href="#" data-screen-link="settings">Settings</a>
+          <a class="navlink" href="#" data-screen-link="admin">Users</a>
+        </nav>
+        <div class="appbar-actions">
+          <button class="iconbtn mobile-only" type="button" aria-label="Open menu">
+            <svg class="icon"><use href="#i-menu" /></svg>
+          </button>
+          <button class="iconbtn" type="button" aria-label="Search vault">
+            <svg class="icon"><use href="#i-search" /></svg>
+          </button>
+          <button class="iconbtn" type="button" id="lock-button" aria-label="Lock vault">
+            <svg class="icon"><use href="#i-lock" /></svg>
+          </button>
+          <div class="account"><span class="avatar">A</span><span class="account-name">admin@example.com</span></div>
+        </div>
+      </div>
+    </header>
+
+    <main class="shell">
+      <section class="screen" data-screen-panel="login" hidden>
+        <div class="public-top">
+          <a class="brand" href="#" data-noop>
+            <span class="brand-mark"
+              ><svg class="icon"><use href="#i-shield" /></svg
+            ></span>
+            <span>Bridgewarden<small>zero-knowledge vault</small></span>
+          </a>
+          <span class="label">Private by design</span>
+        </div>
+        <div class="public-shell">
+          <div class="login-intro">
+            <p class="label" style="margin-bottom: 12px">A quieter place for your passwords</p>
+            <h1>Your vault.<br />Only yours.</h1>
+            <p>Sign in locally. The server stores ciphertext, never your master password.</p>
+            <div class="trust-list">
+              <div class="trust-item">
+                <svg class="icon"><use href="#i-key" /></svg
+                ><span>Your master password never leaves this browser.</span>
+              </div>
+              <div class="trust-item">
+                <svg class="icon"><use href="#i-lock" /></svg
+                ><span>Vault keys stay in memory and lock with the tab.</span>
+              </div>
+              <div class="trust-item">
+                <svg class="icon"><use href="#i-shield" /></svg
+                ><span>Recovery is possible without sending a password.</span>
+              </div>
+            </div>
+          </div>
+          <div class="login-panel">
+            <h2>Sign in</h2>
+            <p>Unlock your vault with your master password.</p>
+            <form class="login-form" id="login-form">
+              <div class="field">
+                <label for="login-email">Email</label>
+                <input
+                  class="input"
+                  id="login-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  autocomplete="username"
+                  value="admin@example.com"
+                />
+              </div>
+              <div class="field">
+                <div style="display: flex; justify-content: space-between; gap: 12px; align-items: baseline">
+                  <label for="login-password">Master password</label>
+                  <a class="small subtle-link" href="#" id="forgot-link" style="color: var(--accent-2); font-size: 11px"
+                    >Forgot?</a
+                  >
+                </div>
+                <input
+                  class="input"
+                  id="login-password"
+                  type="password"
+                  placeholder="Enter your master password"
+                  autocomplete="current-password"
+                  value="correct horse battery staple"
+                />
+              </div>
+              <p class="error" id="login-error" role="alert" hidden></p>
+              <button class="btn primary full" id="login-submit" type="submit">Sign in</button>
+            </form>
+            <div class="form-foot">
+              <a href="#" id="recovery-link">Use a recovery key</a>
+              <span class="muted">Need access? Ask your administrator.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" data-screen-panel="vault">
+        <div class="pagehead">
+          <div>
+            <span class="label">Vault / all items</span>
+            <h1>All items</h1>
+            <p id="vault-summary">Everything encrypted on this device. 12 items across 4 folders.</p>
+          </div>
+          <div class="pagehead-actions">
+            <button class="btn" type="button" id="vault-search-button">
+              <svg class="icon"><use href="#i-search" /></svg>Search <span class="kbd">⌘ K</span>
+            </button>
+            <button class="btn primary" type="button" data-open-editor>
+              <svg class="icon"><use href="#i-plus" /></svg>New item
+            </button>
+          </div>
+        </div>
+        <div class="statusline">
+          <span class="status-dot"></span><span class="small">Synced 2 minutes ago</span>
+          <span class="label" style="margin-left: auto" id="vault-visible">12 visible</span>
+          <span class="label">AES-GCM · local unlock</span>
+        </div>
+        <div class="toolrow">
+          <div class="search">
+            <svg class="icon"><use href="#i-search" /></svg
+            ><input
+              class="input"
+              id="vault-search"
+              placeholder="Filter name, username, or URL"
+              aria-label="Filter vault"
+            />
+          </div>
+          <div class="chips" aria-label="Quick filters">
+            <button class="chip" type="button" data-filter="all" aria-pressed="true">
+              All <span class="mono" data-count="all">12</span>
+            </button>
+            <button class="chip" type="button" data-filter="login" aria-pressed="false">
+              Logins <span class="mono" data-count="login">8</span>
+            </button>
+            <button class="chip" type="button" data-filter="note" aria-pressed="false">
+              Notes <span class="mono" data-count="note">4</span>
+            </button>
+            <button class="chip" type="button" data-filter="favorite" aria-pressed="false">
+              Favorites <span class="mono" data-count="favorite">3</span>
+            </button>
+          </div>
+          <select class="select" id="vault-folder" aria-label="Folder">
+            <option value="all">All folders</option>
+            <option value="Work">Work</option>
+            <option value="Personal">Personal</option>
+            <option value="Family">Family</option>
+            <option value="Home">Home</option>
+          </select>
+          <select class="select" id="vault-sort" aria-label="Sort">
+            <option value="updated">Updated recently</option>
+            <option value="name">Name A–Z</option>
+            <option value="created">Recently created</option>
+          </select>
+          <button class="btn ghost sm" type="button" id="vault-clear">Clear</button>
+        </div>
+        <div class="panel">
+          <div class="list" id="vault-rows"></div>
+          <div class="empty-inline small" id="vault-footer">
+            <span id="vault-showing">Showing 5 of 12 items</span> ·
+            <button class="btn ghost sm" type="button" id="vault-more">Load more</button>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 12px">
+          <span class="small muted"
+            ><span class="mono">j</span> / <span class="mono">k</span> to move · <span class="mono">↵</span> to
+            open</span
+          >
+          <span class="small muted">Clipboard clears 30s after copy</span>
+        </div>
+      </section>
+
+      <section class="screen" data-screen-panel="detail" hidden>
+        <div class="pagehead">
+          <div>
+            <span class="label">Vault / detail</span>
+            <h1 id="detail-page-title">Item</h1>
+            <p>Read the record without leaving the list context.</p>
+          </div>
+          <div class="pagehead-actions">
+            <button class="btn" type="button" id="detail-back">
+              <svg class="icon"><use href="#i-arrow-left" /></svg>Back to vault
+            </button>
+          </div>
+        </div>
+        <div class="detail-layout">
+          <aside class="mini-list" id="detail-mini" aria-label="Vault items"></aside>
+          <article class="detail-panel">
+            <div class="detail-top">
+              <div class="detail-title">
+                <span class="item-mark" id="detail-mark">GH</span>
+                <div>
+                  <h2 id="detail-name">GitHub</h2>
+                  <p id="detail-sub">Login · Work · updated 2 hours ago</p>
+                </div>
+              </div>
+              <div class="detail-actions">
+                <button class="btn sm" type="button" id="detail-open">
+                  <svg class="icon"><use href="#i-external" /></svg>Open
+                </button>
+                <button class="btn sm" type="button" id="detail-edit">
+                  <svg class="icon"><use href="#i-arrow-left" /></svg>Edit
+                </button>
+                <button class="btn sm danger" type="button" id="detail-trash">
+                  <svg class="icon"><use href="#i-trash" /></svg>Trash
+                </button>
+              </div>
+            </div>
+            <div class="detail-body">
+              <div class="detail-row">
+                <span class="label">Username</span><span class="value" id="detail-username">dev@bridgewarden.app</span
+                ><span class="value-actions"
+                  ><button class="iconbtn" type="button" data-copy-field="username" aria-label="Copy username">
+                    <svg class="icon"><use href="#i-copy" /></svg></button
+                ></span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Password</span
+                ><span class="value password-value" id="detail-password">••••••••••••••</span
+                ><span class="value-actions"
+                  ><button class="iconbtn" type="button" id="detail-reveal" aria-label="Reveal password">
+                    <svg class="icon"><use href="#i-eye" /></svg></button
+                  ><button class="iconbtn" type="button" data-copy-field="password" aria-label="Copy password">
+                    <svg class="icon"><use href="#i-copy" /></svg></button
+                ></span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Website</span
+                ><span class="value"
+                  ><a href="#" id="detail-url" style="color: var(--accent-2); font-weight: 600"
+                    >https://github.com</a
+                  ></span
+                ><span class="value-actions"
+                  ><button class="iconbtn" type="button" data-copy-field="url" aria-label="Copy website">
+                    <svg class="icon"><use href="#i-copy" /></svg></button
+                ></span>
+              </div>
+              <div class="detail-row" id="detail-totp-row">
+                <span class="label">One-time code</span
+                ><span class="value"
+                  ><span class="totp-line"
+                    ><span class="totp-code" id="detail-totp">482 109</span><span class="totp-bar"><span></span></span
+                    ><span class="tiny muted">18s</span></span
+                  ></span
+                ><span class="value-actions"
+                  ><button class="iconbtn" type="button" data-copy-field="totp" aria-label="Copy one-time code">
+                    <svg class="icon"><use href="#i-copy" /></svg></button
+                ></span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Folder</span
+                ><span class="value"><span class="tag" id="detail-folder">Work</span></span
+                ><span class="value-actions"></span>
+              </div>
+            </div>
+            <div class="note" id="detail-note">
+              Recovery codes and personal notes live in the encrypted payload. Nothing on this screen is sent to the
+              server in plaintext.
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="screen" data-screen-panel="editor" hidden>
+        <div class="pagehead">
+          <div>
+            <span class="label">Vault / editor</span>
+            <h1 id="editor-title">New login</h1>
+            <p>Save is always reachable. Nothing leaves this browser unencrypted.</p>
+          </div>
+          <div class="pagehead-actions">
+            <button class="btn" type="button" data-editor-cancel>
+              <svg class="icon"><use href="#i-arrow-left" /></svg>Cancel</button
+            ><button class="btn primary" type="button" data-editor-save>
+              <svg class="icon"><use href="#i-check" /></svg>Save item
+            </button>
+          </div>
+        </div>
+        <div class="editor-layout">
+          <form class="form-panel" id="editor-form">
+            <div class="form-section">
+              <h3>Basics</h3>
+              <p>Choose how this record is organized.</p>
+              <div class="form-grid">
+                <div class="field">
+                  <label for="editor-name">Name <span style="color: var(--danger)">*</span></label
+                  ><input class="input" id="editor-name" aria-describedby="editor-name-error" /><span
+                    class="error"
+                    id="editor-name-error"
+                    hidden
+                    >Name is required.</span
+                  >
+                </div>
+                <div class="field">
+                  <label for="editor-folder">Folder</label
+                  ><select class="select" id="editor-folder">
+                    <option>Work</option>
+                    <option>Personal</option>
+                    <option>Family</option>
+                    <option>Home</option></select
+                  ><span class="hint">Create a folder from the vault menu.</span>
+                </div>
+                <div class="field">
+                  <label for="editor-type">Type</label
+                  ><select class="select" id="editor-type">
+                    <option value="login">Login</option>
+                    <option value="note">Secure note</option></select
+                  ><span class="hint">Type is locked after the first save.</span>
+                </div>
+                <div class="field">
+                  <label for="editor-favorite">Favorite</label
+                  ><label
+                    class="checkline"
+                    style="
+                      min-height: 38px;
+                      padding: 0 10px;
+                      border: 1px solid var(--rule-strong);
+                      border-radius: var(--radius);
+                    "
+                    ><input type="checkbox" id="editor-favorite" /> Pin to favorites</label
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="form-section">
+              <h3>Credentials</h3>
+              <p>Only encrypted fields are stored on the server.</p>
+              <div class="form-grid">
+                <div class="field">
+                  <label for="editor-username">Username</label><input class="input" id="editor-username" />
+                </div>
+                <div class="field">
+                  <label for="editor-password">Password</label>
+                  <div class="field-row">
+                    <input class="input" id="editor-password" type="password" /><button
+                      class="iconbtn"
+                      type="button"
+                      id="editor-toggle-password"
+                      aria-label="Show password"
+                    >
+                      <svg class="icon"><use href="#i-eye" /></svg></button
+                    ><button class="iconbtn" type="button" id="editor-generate" aria-label="Generate password">
+                      <svg class="icon"><use href="#i-key" /></svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="field wide">
+                  <label for="editor-url">Website</label><input class="input" id="editor-url" />
+                </div>
+                <div class="field wide">
+                  <label for="editor-totp">One-time code secret</label>
+                  <div class="field-row">
+                    <input class="input" id="editor-totp" placeholder="otpauth:// or base32 secret" /><button
+                      class="btn sm"
+                      type="button"
+                    >
+                      Paste
+                    </button>
+                  </div>
+                  <span class="hint">The secret is encrypted with the item payload.</span>
+                </div>
+              </div>
+            </div>
+            <div class="form-section">
+              <h3>Notes</h3>
+              <p>Freeform encrypted notes.</p>
+              <div class="field">
+                <textarea class="textarea" id="editor-notes" placeholder="Add a note…"></textarea>
+              </div>
+            </div>
+            <div class="savebar">
+              <span class="meta" id="editor-meta">LAST SAVED · NOT YET</span>
+              <div style="display: flex; gap: 6px">
+                <button class="btn" type="button" data-editor-cancel>Cancel</button
+                ><button class="btn primary" type="button" data-editor-save>Save item</button>
+              </div>
+            </div>
+          </form>
+          <aside class="side-note">
+            <h3>Before you save</h3>
+            <p>Items are encrypted locally with a fresh IV. The form never sends plaintext fields to the server.</p>
+            <ul>
+              <li>
+                <svg class="icon" style="color: var(--success)"><use href="#i-check" /></svg
+                ><span>Name and type identify the record.</span>
+              </li>
+              <li>
+                <svg class="icon" style="color: var(--success)"><use href="#i-check" /></svg
+                ><span>Password and notes stay inside ciphertext.</span>
+              </li>
+              <li>
+                <svg class="icon" style="color: var(--warning)"><use href="#i-lock" /></svg
+                ><span>Type cannot be changed after the first save.</span>
+              </li>
+            </ul>
+          </aside>
+        </div>
+      </section>
+
+      <section class="screen" data-screen-panel="settings" hidden>
+        <div class="pagehead">
+          <div>
+            <span class="label">Account / settings</span>
+            <h1>Settings</h1>
+            <p>Account security and local behavior. Changes apply to this device where noted.</p>
+          </div>
+          <div class="pagehead-actions"><span class="badge ok">Session active</span></div>
+        </div>
+        <div class="settings-layout">
+          <nav class="section-nav" aria-label="Settings sections">
+            <a href="#password" aria-current="true">Master password</a>
+            <a href="#auto-lock">Auto-lock</a>
+            <a href="#two-factor">Two-factor</a>
+          </nav>
+          <div class="settings-stack">
+            <section class="settings-panel" id="password">
+              <div class="settings-head">
+                <h2>Master password</h2>
+                <p>Re-wrap the vault key. Vault items are not re-encrypted.</p>
+              </div>
+              <form class="settings-body" id="password-form">
+                <div class="form-grid">
+                  <div class="field wide">
+                    <label for="current-password">Current master password</label
+                    ><input class="input" id="current-password" type="password" />
+                  </div>
+                  <div class="field">
+                    <label for="new-password">New master password</label
+                    ><input class="input" id="new-password" type="password" />
+                  </div>
+                  <div class="field">
+                    <label for="confirm-password">Confirm new password</label
+                    ><input class="input" id="confirm-password" type="password" />
+                  </div>
+                </div>
+                <div class="subtle-panel">
+                  Use at least 12 characters. A password manager-generated value is recommended.
+                </div>
+                <div
+                  style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap"
+                >
+                  <span class="small muted">Other sessions will be revoked after the change.</span
+                  ><button class="btn primary" type="submit">Change password</button>
+                </div>
+                <p class="small" id="password-status" role="status" hidden></p>
+              </form>
+            </section>
+            <section class="settings-panel" id="auto-lock">
+              <div class="settings-head">
+                <h2>Auto-lock</h2>
+                <p>Local preference. The session and encrypted cache stay on this device.</p>
+              </div>
+              <div class="settings-body">
+                <div class="setting-row">
+                  <div>
+                    <h3>Lock after inactivity</h3>
+                    <p>Choose a window that matches your environment.</p>
+                  </div>
+                  <select class="select" id="auto-lock-minutes" style="width: 150px">
+                    <option>15 minutes</option>
+                    <option>30 minutes</option>
+                    <option>1 hour</option>
+                    <option>Never</option>
+                  </select>
+                </div>
+                <div class="setting-row">
+                  <div>
+                    <h3>Lock when the tab is hidden</h3>
+                    <p>Useful on shared or portable devices.</p>
+                  </div>
+                  <label class="checkline"><input type="checkbox" id="auto-lock-hidden" /> Enabled</label>
+                </div>
+                <div style="display: flex; justify-content: flex-end">
+                  <span class="saved" id="auto-lock-saved"
+                    ><svg class="icon" style="width: 13px; height: 13px"><use href="#i-check" /></svg>Saved on this
+                    device</span
+                  >
+                </div>
+              </div>
+            </section>
+            <section class="settings-panel" id="two-factor">
+              <div class="settings-head">
+                <h2>Two-factor authentication</h2>
+                <p>Require a time-based code when signing in.</p>
+              </div>
+              <div class="settings-body">
+                <div class="setting-row">
+                  <div>
+                    <h3>Authenticator app</h3>
+                    <p id="two-factor-state">Enabled · 8 backup codes remaining</p>
+                  </div>
+                  <span class="badge ok" id="two-factor-badge">Enabled</span>
+                </div>
+                <div class="setting-row">
+                  <div>
+                    <h3>Backup codes</h3>
+                    <p>Regenerating invalidates every existing code.</p>
+                  </div>
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap">
+                    <button class="btn sm" type="button" id="regenerate-codes">Regenerate</button
+                    ><button class="btn sm danger" type="button" id="disable-2fa">Disable 2FA</button>
+                  </div>
+                </div>
+                <div class="subtle-panel">
+                  Disabling or regenerating requires your master password and revokes other sessions. You will be asked
+                  to confirm.
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" data-screen-panel="admin" hidden>
+        <div class="pagehead">
+          <div>
+            <span class="label">Admin / users</span>
+            <h1>User management</h1>
+            <p>Invite family members, manage roles, and revoke access.</p>
+          </div>
+          <div class="pagehead-actions">
+            <button class="btn primary" type="button" id="focus-invite">
+              <svg class="icon"><use href="#i-plus" /></svg>Invite user
+            </button>
+          </div>
+        </div>
+        <div class="admin-layout">
+          <div class="admin-top">
+            <div class="panel">
+              <div class="panel-head">
+                <h2>Invite a user</h2>
+                <span class="label">24h link</span>
+              </div>
+              <div class="panel-body">
+                <form class="invite-form" id="invite-form">
+                  <div class="field">
+                    <label for="invite-email">Email</label
+                    ><input class="input" id="invite-email" type="email" placeholder="member@example.com" />
+                  </div>
+                  <div class="field">
+                    <label for="invite-name">Display name</label
+                    ><input class="input" id="invite-name" placeholder="Member" />
+                  </div>
+                  <div class="field">
+                    <label for="invite-role">Role</label
+                    ><select class="select" id="invite-role">
+                      <option value="Member">Member</option>
+                      <option value="Admin">Admin</option>
+                    </select>
+                  </div>
+                  <button class="btn primary" type="submit">Create link</button>
+                </form>
+                <div class="small muted" style="margin-top: 10px">
+                  The setup link is shown once and expires in 24 hours.
+                </div>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-head">
+                <h2>Pending setup</h2>
+                <span class="mono tiny muted" id="pending-count">2</span>
+              </div>
+              <div class="pending-list" id="pending-list"></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Users</h2>
+              <div style="display: flex; gap: 6px; align-items: center">
+                <span class="badge ok" id="active-count">4 active</span
+                ><button class="iconbtn" type="button" aria-label="More user actions">
+                  <svg class="icon"><use href="#i-more" /></svg>
+                </button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>2FA</th>
+                    <th>Status</th>
+                    <th style="text-align: right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-users-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" data-screen-panel="setup" hidden>
+        <div class="public-top">
+          <a class="brand" href="#" data-noop>
+            <span class="brand-mark"
+              ><svg class="icon"><use href="#i-shield" /></svg
+            ></span>
+            <span>Bridgewarden<small>zero-knowledge vault</small></span>
+          </a>
+          <span class="label">First-run setup</span>
+        </div>
+        <div class="setup-shell">
+          <aside class="setup-rail">
+            <span class="label">Setup / <span id="setup-step-count">step 1 of 4</span></span>
+            <h1>Create your vault</h1>
+            <p>One pass. Your master password and vault key stay in this browser.</p>
+          </aside>
+          <div class="setup-panel">
+            <ol class="setup-steps" aria-label="Setup progress">
+              <li class="setup-step-label" data-setup-step-label="1">
+                <span class="num">01</span>
+                <div><strong>Account</strong><small>Who is this vault for?</small></div>
+              </li>
+              <li class="setup-step-label" data-setup-step-label="2">
+                <span class="num">02</span>
+                <div><strong>Password</strong><small>Protect the vault.</small></div>
+              </li>
+              <li class="setup-step-label" data-setup-step-label="3">
+                <span class="num">03</span>
+                <div><strong>Recovery</strong><small>Keep one way back in.</small></div>
+              </li>
+              <li class="setup-step-label" data-setup-step-label="4">
+                <span class="num">04</span>
+                <div><strong>Two-factor</strong><small>Optional second lock.</small></div>
+              </li>
+            </ol>
+            <div class="setup-step" data-setup-step="1">
+              <div>
+                <span class="label">Step 01</span>
+                <h2>Name your vault</h2>
+                <p>
+                  This identity is used for sign-in and account recovery. Nothing here is sent as plaintext vault
+                  content.
+                </p>
+              </div>
+              <form class="setup-form" data-setup-form="1">
+                <div class="field">
+                  <label for="setup-email">Email</label
+                  ><input class="input" id="setup-email" type="email" value="admin@example.com" autocomplete="email" />
+                </div>
+                <div class="field">
+                  <label for="setup-name">Display name</label
+                  ><input class="input" id="setup-name" value="Alfian" autocomplete="name" />
+                </div>
+                <div class="setup-actions">
+                  <span class="small muted">You can change the display name later.</span>
+                  <div class="right"><button class="btn primary" type="submit">Continue</button></div>
+                </div>
+              </form>
+            </div>
+
+            <div class="setup-step" data-setup-step="2" hidden>
+              <div>
+                <span class="label">Step 02</span>
+                <h2>Choose a master password</h2>
+                <p>This password unlocks the vault on this device. It is never stored on the server.</p>
+              </div>
+              <form class="setup-form" data-setup-form="2">
+                <div class="field">
+                  <label for="setup-password">Master password</label
+                  ><input class="input" id="setup-password" type="password" autocomplete="new-password" />
+                  <div class="strength-row">
+                    <div class="strength" id="setup-strength" data-score="0"><span></span></div>
+                    <span class="tiny muted" id="setup-strength-label">12+ characters</span>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="setup-confirm">Confirm master password</label
+                  ><input class="input" id="setup-confirm" type="password" autocomplete="new-password" /><span
+                    class="hint"
+                    id="setup-password-hint"
+                    >Use at least 12 characters.</span
+                  >
+                </div>
+                <div class="setup-actions">
+                  <button class="btn" type="button" data-setup-prev>Back</button>
+                  <div class="right"><button class="btn primary" type="submit">Create keys</button></div>
+                </div>
+              </form>
+            </div>
+
+            <div class="setup-step" data-setup-step="3" hidden>
+              <div>
+                <span class="label">Step 03</span>
+                <h2>Save your recovery key</h2>
+                <p>This key is displayed once. It can unwrap the vault if the master password is lost.</p>
+              </div>
+              <form class="setup-form" data-setup-form="3">
+                <div class="field">
+                  <label>Recovery key</label>
+                  <div class="recovery-key" id="setup-recovery-key">…</div>
+                  <div class="recovery-actions">
+                    <button class="btn sm" type="button" id="setup-copy-key">
+                      <svg class="icon"><use href="#i-copy" /></svg>Copy</button
+                    ><button class="btn sm" type="button" id="setup-download-key">
+                      <svg class="icon"><use href="#i-external" /></svg>Download
+                    </button>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="setup-recovery-confirm">Type the first 6 characters</label
+                  ><input class="input" id="setup-recovery-confirm" autocomplete="off" placeholder="ABCDE2" /><span
+                    class="hint"
+                    >Stored only as a one-way verifier.</span
+                  >
+                </div>
+                <div class="setup-actions">
+                  <button class="btn" type="button" data-setup-prev>Back</button>
+                  <div class="right"><button class="btn primary" type="submit">Confirm key</button></div>
+                </div>
+              </form>
+            </div>
+
+            <div class="setup-step" data-setup-step="4" hidden>
+              <div>
+                <span class="label">Step 04 · optional</span>
+                <h2>Add a second factor</h2>
+                <p>Scan the code with an authenticator app, or skip and enable it later in Settings.</p>
+              </div>
+              <form class="setup-form" data-setup-form="4">
+                <div class="qr-layout">
+                  <div>
+                    <div class="qr-grid" id="setup-qr" aria-label="QR enrollment preview"></div>
+                    <div class="qr-caption">QR preview · PoC</div>
+                  </div>
+                  <div class="field">
+                    <label for="setup-2fa-code">6-digit code</label
+                    ><input
+                      class="input"
+                      id="setup-2fa-code"
+                      inputmode="numeric"
+                      maxlength="6"
+                      placeholder="000000"
+                    /><span class="hint">Optional. You can continue without it.</span>
+                    <div class="mono small muted" style="margin-top: 8px">JBSW Y3DP EHPK 3PXP</div>
+                  </div>
+                </div>
+                <div class="setup-actions">
+                  <button class="btn" type="button" data-setup-prev>Back</button>
+                  <div class="right">
+                    <button class="btn" type="button" id="setup-skip-2fa">Skip for now</button
+                    ><button class="btn primary" type="submit">Enable and finish</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            <div class="setup-done" data-setup-step="5" hidden>
+              <span class="done-mark"
+                ><svg class="icon" style="width: 22px; height: 22px"><use href="#i-check" /></svg
+              ></span>
+              <span class="label">Setup complete</span>
+              <h2>Your vault is ready</h2>
+              <p>
+                The first admin is configured. You can add family members from Users and enable extra security from
+                Settings.
+              </p>
+              <button class="btn primary" type="button" id="setup-done-button">Continue to vault</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="modal-backdrop" id="modal" hidden>
+      <div
+        class="modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        aria-describedby="modal-body"
+      >
+        <h2 id="modal-title">Confirm</h2>
+        <p id="modal-body"></p>
+        <div class="modal-actions">
+          <button class="btn" type="button" id="modal-cancel">Cancel</button>
+          <button class="btn primary" type="button" id="modal-confirm">Confirm</button>
+        </div>
+      </div>
+    </div>
+    <div class="lock-overlay" id="lock-overlay" hidden>
+      <div class="lock-card" role="dialog" aria-modal="true" aria-labelledby="lock-title">
+        <a class="brand" href="#" data-noop>
+          <span class="brand-mark"
+            ><svg class="icon"><use href="#i-shield" /></svg
+          ></span>
+          <span>Bridgewarden<small>zero-knowledge vault</small></span>
+        </a>
+        <h2 id="lock-title">Vault locked</h2>
+        <p>Your session stays signed in. Unlock locally to continue.</p>
+        <form class="lock-form" id="lock-form">
+          <div class="field">
+            <label for="lock-password">Master password</label
+            ><input
+              class="input"
+              id="lock-password"
+              type="password"
+              autocomplete="current-password"
+              placeholder="Enter your master password"
+            />
+          </div>
+          <p class="error" id="lock-error" role="alert" hidden>Password is required.</p>
+          <button class="btn primary full" type="submit">Unlock vault</button>
+        </form>
+        <div class="lock-foot">
+          <button class="btn ghost sm" type="button" id="lock-signout">Sign out</button
+          ><span class="tiny muted">Auto-lock stays on</span>
+        </div>
+      </div>
+    </div>
+    <div class="toast-stack" id="toasts" aria-live="polite" aria-atomic="true"></div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const screens = [...document.querySelectorAll('[data-screen-panel]')];
+      const tabs = [...document.querySelectorAll('.review-tab')];
+      const links = [...document.querySelectorAll('[data-screen-link]')];
+      const appbar = document.querySelector('[data-appbar]');
+      const vaultRows = $('vault-rows');
+      const vaultSearch = $('vault-search');
+      const detailMini = $('detail-mini');
+      const adminBody = $('admin-users-body');
+      const pendingList = $('pending-list');
+      const modal = $('modal');
+      const toastStack = $('toasts');
+      const lockOverlay = $('lock-overlay');
+      const lockPassword = $('lock-password');
+      const lockError = $('lock-error');
+
+      const items = [
+        {
+          id: 'github',
+          mark: 'GH',
+          name: 'GitHub',
+          username: 'dev@bridgewarden.app',
+          url: 'github.com',
+          href: 'https://github.com',
+          folder: 'Work',
+          updated: '2h ago',
+          order: 12,
+          created: 9,
+          type: 'login',
+          favorite: true,
+          password: 'correct horse battery staple',
+          totp: '482 109',
+          notes: 'Recovery codes and personal notes live in the encrypted payload.',
+        },
+        {
+          id: 'bank',
+          mark: 'BK',
+          name: 'Bank · personal',
+          username: 'family account',
+          url: 'bank.example',
+          href: 'https://bank.example',
+          folder: 'Personal',
+          updated: 'Yesterday',
+          order: 11,
+          created: 8,
+          type: 'login',
+          favorite: false,
+          password: 'vaulted-password-01',
+          totp: '',
+          notes: 'Joint account. Card is in the family folder.',
+        },
+        {
+          id: 'wifi',
+          mark: 'WF',
+          name: 'Home Wi-Fi',
+          username: 'router · 5 GHz',
+          url: '192.168.1.1',
+          href: '',
+          folder: 'Home',
+          updated: 'Tue',
+          order: 10,
+          created: 7,
+          type: 'login',
+          favorite: true,
+          password: 'wifi-network-key',
+          totp: '',
+          notes: 'Guest network is separate.',
+        },
+        {
+          id: 'netflix',
+          mark: 'NF',
+          name: 'Family Netflix',
+          username: 'shared with 4 people',
+          url: 'netflix.com',
+          href: 'https://netflix.com',
+          folder: 'Family',
+          updated: 'Mon',
+          order: 9,
+          created: 6,
+          type: 'login',
+          favorite: false,
+          password: 'family-streaming',
+          totp: '',
+          notes: 'Plan is shared with the household.',
+        },
+        {
+          id: 'domain',
+          mark: 'DK',
+          name: 'Domain renewal',
+          username: 'secure note',
+          url: '',
+          href: '',
+          folder: 'Work',
+          updated: '12 Nov',
+          order: 8,
+          created: 5,
+          type: 'note',
+          favorite: false,
+          password: '',
+          totp: '',
+          notes: 'Renew bridgewarden.app before 3 December. Keep the registrar receipt in the finance folder.',
+        },
+        {
+          id: 'proton',
+          mark: 'PM',
+          name: 'Proton Mail',
+          username: 'hello@bridgewarden.app',
+          url: 'mail.proton.me',
+          href: 'https://mail.proton.me',
+          folder: 'Personal',
+          updated: '10 Nov',
+          order: 7,
+          created: 4,
+          type: 'login',
+          favorite: true,
+          password: 'mail-vault-password',
+          totp: '915 204',
+          notes: '',
+        },
+        {
+          id: 'router',
+          mark: 'RB',
+          name: 'Router backup',
+          username: 'admin console',
+          url: '192.168.1.2',
+          href: '',
+          folder: 'Home',
+          updated: '9 Nov',
+          order: 6,
+          created: 3,
+          type: 'note',
+          favorite: false,
+          password: '',
+          totp: '',
+          notes: 'Recovery PIN is stored offline. Do not store it in this note.',
+        },
+        {
+          id: 'icloud',
+          mark: 'IC',
+          name: 'Family iCloud',
+          username: 'family@example.com',
+          url: 'icloud.com',
+          href: 'https://icloud.com',
+          folder: 'Family',
+          updated: '8 Nov',
+          order: 5,
+          created: 2,
+          type: 'login',
+          favorite: false,
+          password: 'icloud-family-password',
+          totp: '',
+          notes: '',
+        },
+        {
+          id: 'insurance',
+          mark: 'IN',
+          name: 'Insurance policy',
+          username: 'secure note',
+          url: '',
+          href: '',
+          folder: 'Personal',
+          updated: '6 Nov',
+          order: 4,
+          created: 1,
+          type: 'note',
+          favorite: false,
+          password: '',
+          totp: '',
+          notes: 'Policy number and renewal date. Keep the document reference here.',
+        },
+        {
+          id: 'studio',
+          mark: 'ST',
+          name: 'Studio server',
+          username: 'deploy@studio',
+          url: 'studio.example',
+          href: 'https://studio.example',
+          folder: 'Work',
+          updated: '4 Nov',
+          order: 3,
+          created: 1,
+          type: 'login',
+          favorite: false,
+          password: 'server-only-password',
+          totp: '338 770',
+          notes: '',
+        },
+        {
+          id: 'school',
+          mark: 'SC',
+          name: 'School portal',
+          username: 'parent@example.com',
+          url: 'school.example',
+          href: 'https://school.example',
+          folder: 'Family',
+          updated: '2 Nov',
+          order: 2,
+          created: 1,
+          type: 'login',
+          favorite: false,
+          password: 'school-portal-password',
+          totp: '',
+          notes: '',
+        },
+        {
+          id: 'guest',
+          mark: 'GW',
+          name: 'Guest Wi-Fi',
+          username: 'secure note',
+          url: '',
+          href: '',
+          folder: 'Home',
+          updated: '1 Nov',
+          order: 1,
+          created: 1,
+          type: 'note',
+          favorite: false,
+          password: '',
+          totp: '',
+          notes: 'Rotate the guest password when visitors leave.',
+        },
+      ];
+
+      const users = [
+        {
+          id: 'alfian',
+          name: 'Alfian',
+          email: 'admin@example.com',
+          role: 'Admin',
+          status: 'active',
+          twofa: true,
+          self: true,
+        },
+        {
+          id: 'sam',
+          name: 'Sam',
+          email: 'sam@example.com',
+          role: 'Member',
+          status: 'active',
+          twofa: false,
+          self: false,
+        },
+        {
+          id: 'alex',
+          name: 'Alex',
+          email: 'alex@example.com',
+          role: 'Admin',
+          status: 'active',
+          twofa: true,
+          self: false,
+        },
+        {
+          id: 'rina',
+          name: 'Rina',
+          email: 'rina@example.com',
+          role: 'Member',
+          status: 'disabled',
+          twofa: true,
+          self: false,
+        },
+      ];
+      const pending = [
+        { id: 'pending-sam', name: 'Sam', email: 'sam@example.com', role: 'Member', expires: '18h' },
+        { id: 'pending-alex', name: 'Alex', email: 'alex@example.com', role: 'Admin', expires: '3h' },
+      ];
+
+      let filter = 'all';
+      let query = '';
+      let folder = 'all';
+      let sort = 'updated';
+      let visibleLimit = 5;
+      let activeId = items[0].id;
+      let reveal = false;
+      let editingId = null;
+      let twoFactorEnabled = true;
+
+      const escape = (value) =>
+        String(value ?? '').replace(
+          /[&<>"']/g,
+          (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char],
+        );
+      const initials = (name) =>
+        name
+          .split(/\s+/)
+          .map((part) => part[0])
+          .join('')
+          .slice(0, 2)
+          .toUpperCase() || 'IT';
+      const nowLabel = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      function toast(message, tone = 'default') {
+        const node = document.createElement('div');
+        node.className = `toast ${tone}`;
+        node.innerHTML = `<svg class="icon" aria-hidden="true"><use href="${tone === 'error' ? '#i-x' : '#i-check'}"/></svg><span>${escape(message)}</span>`;
+        toastStack.appendChild(node);
+        setTimeout(() => node.remove(), 2800);
+      }
+
+      let modalAction = null;
+      let lastFocus = null;
+      function openConfirm({ title, body, confirm = 'Confirm', danger = false, onConfirm }) {
+        $('modal-title').textContent = title;
+        $('modal-body').textContent = body;
+        const button = $('modal-confirm');
+        button.textContent = confirm;
+        button.className = danger ? 'btn danger' : 'btn primary';
+        modalAction = onConfirm;
+        lastFocus = document.activeElement;
+        modal.hidden = false;
+        setTimeout(() => button.focus(), 0);
+      }
+      function closeModal() {
+        modal.hidden = true;
+        modalAction = null;
+        if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
+      }
+      $('modal-cancel').addEventListener('click', closeModal);
+      $('modal-confirm').addEventListener('click', () => {
+        const action = modalAction;
+        closeModal();
+        action?.();
+      });
+      modal.addEventListener('click', (event) => {
+        if (event.target === modal) closeModal();
+      });
+
+      function show(name) {
+        document.body.dataset.view = name;
+        screens.forEach((panel) => {
+          panel.hidden = panel.dataset.screenPanel !== name;
+        });
+        tabs.forEach((tab) => tab.setAttribute('aria-selected', String(tab.dataset.screen === name)));
+        appbar.style.display = name === 'login' || name === 'setup' ? 'none' : '';
+        links.forEach((link) => {
+          const active = link.dataset.screenLink === name || (name === 'detail' && link.dataset.screenLink === 'vault');
+          if (active) link.setAttribute('aria-current', 'page');
+          else link.removeAttribute('aria-current');
+        });
+        if (name === 'vault') renderVault();
+        if (name === 'admin') renderUsers();
+        if (name === 'setup') renderSetup();
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
+
+      function filteredItems() {
+        const needle = query.trim().toLowerCase();
+        const list = items.filter((item) => {
+          const matchesFilter = filter === 'all' || (filter === 'favorite' ? item.favorite : item.type === filter);
+          const matchesFolder = folder === 'all' || item.folder === folder;
+          const matchesQuery =
+            !needle ||
+            [item.name, item.username, item.url, item.folder, item.notes].join(' ').toLowerCase().includes(needle);
+          return matchesFilter && matchesFolder && matchesQuery;
+        });
+        const field = sort === 'name' ? 'name' : sort === 'created' ? 'created' : 'order';
+        return list.sort((a, b) => (field === 'name' ? a.name.localeCompare(b.name) : b[field] - a[field]));
+      }
+
+      function renderVault() {
+        const result = filteredItems();
+        const visible = result.slice(0, visibleLimit);
+        const counts = {
+          all: items.length,
+          login: items.filter((item) => item.type === 'login').length,
+          note: items.filter((item) => item.type === 'note').length,
+          favorite: items.filter((item) => item.favorite).length,
+        };
+        document.querySelectorAll('[data-count]').forEach((node) => {
+          node.textContent = counts[node.dataset.count];
+        });
+        $('vault-visible').textContent = `${result.length} visible`;
+        $('vault-summary').textContent =
+          `${items.length} items across ${new Set(items.map((item) => item.folder)).size} folders.`;
+        $('vault-rows').innerHTML =
+          `<div class="list-head"><span class="label">Name</span><span class="label">Location</span><span class="label">Folder</span><span class="label" style="text-align:right">Updated</span></div>` +
+          (visible.length
+            ? visible
+                .map(
+                  (item) => `
+        <button class="vault-row" type="button" data-id="${escape(item.id)}" aria-label="Open ${escape(item.name)}">
+          <span class="item-main"><span class="item-mark">${escape(item.mark)}</span><span class="item-copy"><span class="item-name">${escape(item.name)} ${item.favorite ? '<span class="star" aria-label="Favorite">★</span>' : ''}</span><span class="item-sub">${escape(item.username)}</span></span></span>
+          <span class="small muted">${escape(item.url || '—')}</span><span><span class="tag">${escape(item.folder)}</span></span><span class="small muted row-end">${escape(item.updated)}</span>
+        </button>`,
+                )
+                .join('')
+            : '<div class="empty-inline small">No items match these filters. <button class="btn ghost sm" type="button" data-clear-empty>Clear filters</button></div>');
+        $('vault-showing').textContent = `Showing ${visible.length} of ${result.length} items`;
+        $('vault-more').hidden = result.length <= visibleLimit;
+        $('vault-more').textContent = `Load more (${Math.min(4, result.length - visibleLimit)})`;
+        document
+          .querySelectorAll('[data-filter]')
+          .forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.filter === filter)));
+      }
+
+      function renderMini() {
+        detailMini.innerHTML =
+          `<div class="panel-head"><h2 style="font-size:12px">All items</h2><span class="mono tiny muted">${items.length}</span></div>` +
+          items
+            .slice(0, 7)
+            .map(
+              (item) =>
+                `<button class="mini-row" type="button" data-id="${escape(item.id)}" ${item.id === activeId ? 'aria-current="true"' : ''}><span class="item-mark">${escape(item.mark)}</span><span class="item-copy"><span class="item-name">${escape(item.name)}</span><span class="item-sub">${escape(item.username)}</span></span></button>`,
+            )
+            .join('');
+      }
+
+      function renderDetail() {
+        const item = items.find((entry) => entry.id === activeId);
+        if (!item) return;
+        $('detail-page-title').textContent = item.name;
+        $('detail-mark').textContent = item.mark;
+        $('detail-name').textContent = item.name;
+        $('detail-sub').textContent =
+          `${item.type === 'login' ? 'Login' : 'Secure note'} · ${item.folder} · updated ${item.updated}`;
+        $('detail-username').textContent = item.username || 'Not set';
+        $('detail-password').textContent = item.password
+          ? reveal
+            ? item.password
+            : '•'.repeat(Math.min(Math.max(item.password.length, 12), 18))
+          : 'Not set';
+        $('detail-password').style.letterSpacing = reveal || !item.password ? 'normal' : '.16em';
+        $('detail-reveal').setAttribute('aria-label', reveal ? 'Hide password' : 'Reveal password');
+        $('detail-reveal').disabled = !item.password;
+        $('detail-url').textContent = item.url || '—';
+        $('detail-url').dataset.href = item.href || '';
+        $('detail-totp-row').hidden = !item.totp;
+        $('detail-totp').textContent = item.totp || '—';
+        $('detail-folder').textContent = item.folder;
+        $('detail-note').textContent = item.notes || 'No notes attached to this item.';
+        renderMini();
+      }
+
+      function openDetail(id) {
+        activeId = id;
+        reveal = false;
+        renderDetail();
+        show('detail');
+      }
+
+      function openEditor(item = null) {
+        editingId = item?.id ?? null;
+        $('editor-title').textContent = item ? `Edit ${item.name}` : 'New login';
+        $('editor-name').value = item?.name ?? '';
+        $('editor-username').value = item?.username ?? '';
+        $('editor-password').value = item?.password ?? '';
+        $('editor-url').value = item?.url ?? '';
+        $('editor-totp').value = item?.totp ?? '';
+        $('editor-notes').value = item?.notes ?? '';
+        $('editor-folder').value = item?.folder ?? 'Work';
+        $('editor-type').value = item?.type ?? 'login';
+        $('editor-type').disabled = Boolean(item);
+        $('editor-favorite').checked = Boolean(item?.favorite);
+        $('editor-meta').textContent = item ? `EDITING · ${item.name.toUpperCase()}` : 'LAST SAVED · NOT YET';
+        $('editor-name').classList.remove('invalid');
+        $('editor-name').removeAttribute('aria-invalid');
+        $('editor-name-error').hidden = true;
+        show('editor');
+        setTimeout(() => $('editor-name').focus(), 40);
+      }
+
+      function saveEditor() {
+        const name = $('editor-name').value.trim();
+        if (!name) {
+          $('editor-name-error').hidden = false;
+          $('editor-name').classList.add('invalid');
+          $('editor-name').setAttribute('aria-invalid', 'true');
+          $('editor-name').focus();
+          toast('Name is required', 'error');
+          return;
+        }
+        const payload = {
+          name,
+          username: $('editor-username').value.trim(),
+          password: $('editor-password').value,
+          url: $('editor-url').value.trim(),
+          href: $('editor-url').value.trim().startsWith('http') ? $('editor-url').value.trim() : '',
+          totp: $('editor-totp').value.trim(),
+          notes: $('editor-notes').value.trim(),
+          folder: $('editor-folder').value,
+          type: $('editor-type').value,
+          favorite: $('editor-favorite').checked,
+          updated: 'Just now',
+          order: 99,
+        };
+        if (editingId) {
+          Object.assign(
+            items.find((item) => item.id === editingId),
+            payload,
+          );
+        } else {
+          const id = `item-${Date.now()}`;
+          items.unshift({ ...payload, id, mark: initials(name), created: 99 });
+          activeId = id;
+        }
+        editingId = null;
+        renderVault();
+        show('vault');
+        toast('Item saved');
+      }
+
+      function generateEditorPassword() {
+        const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
+        const bytes = crypto.getRandomValues(new Uint32Array(20));
+        $('editor-password').value = [...bytes].map((byte) => alphabet[byte % alphabet.length]).join('');
+        toast('New password generated');
+      }
+
+      function renderUsers() {
+        const activeCount = users.filter((user) => user.status === 'active').length;
+        $('active-count').textContent = `${activeCount} active`;
+        adminBody.innerHTML = users
+          .map(
+            (user) => `
+      <tr data-user-id="${escape(user.id)}">
+        <td data-label="User"><div class="user">${escape(user.name)}</div><div class="sub">${escape(user.email)}</div></td>
+        <td data-label="Role"><div class="role-cell"><select class="select" data-role-select="${escape(user.id)}" aria-label="Role for ${escape(user.name)}" ${user.self ? 'disabled' : ''}><option ${user.role === 'Member' ? 'selected' : ''}>Member</option><option ${user.role === 'Admin' ? 'selected' : ''}>Admin</option></select><button class="btn sm" type="button" data-save-role="${escape(user.id)}" ${user.self ? 'disabled' : ''}>Save</button></div></td>
+        <td data-label="2FA"><span class="badge ${user.twofa ? 'ok' : 'warn'}">${user.twofa ? 'On' : 'Off'}</span></td>
+        <td data-label="Status"><span class="badge ${user.status === 'active' ? 'ok' : 'off'}">${user.status === 'active' ? 'Active' : 'Disabled'}</span></td>
+        <td data-label="Actions"><div class="table-actions"><button class="btn sm" type="button" data-toggle-user="${escape(user.id)}" ${user.self ? 'disabled' : ''}>${user.status === 'active' ? 'Disable' : 'Enable'}</button><button class="btn sm" type="button" data-revoke-user="${escape(user.id)}" ${user.self ? 'disabled' : ''}>Revoke sessions</button></div></td>
+      </tr>`,
+          )
+          .join('');
+      }
+
+      function renderPending() {
+        $('pending-count').textContent = pending.length;
+        pendingList.innerHTML = pending.length
+          ? pending
+              .map(
+                (invite) => `
+      <div class="pending-row">
+        <div class="pending-main"><strong>${escape(invite.name)} · ${escape(invite.role)}</strong><span>${escape(invite.email)}</span></div>
+        <span class="expiry">expires in ${escape(invite.expires)}</span>
+        <button class="btn sm danger" type="button" data-revoke-pending="${escape(invite.id)}">Revoke</button>
+      </div>`,
+              )
+              .join('')
+          : '<div class="empty-inline small">No pending invitations.</div>';
+      }
+
+      function renderTwoFactor() {
+        $('two-factor-state').textContent = twoFactorEnabled
+          ? 'Enabled · 8 backup codes remaining'
+          : 'Disabled · no backup codes';
+        $('two-factor-badge').textContent = twoFactorEnabled ? 'Enabled' : 'Off';
+        $('two-factor-badge').className = `badge ${twoFactorEnabled ? 'ok' : 'warn'}`;
+        $('disable-2fa').textContent = twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA';
+        $('disable-2fa').className = `btn sm ${twoFactorEnabled ? 'danger' : ''}`;
+        $('regenerate-codes').disabled = !twoFactorEnabled;
+      }
+
+      function copyValue(value, label) {
+        if (!value) return toast(`${label} is not set`, 'error');
+        try {
+          if (navigator.clipboard && window.isSecureContext)
+            navigator.clipboard.writeText(value).catch(() => undefined);
+          toast(`${label} copied · clears in 30s`, 'success');
+        } catch {
+          toast(`${label} copied · clears in 30s`, 'success');
+        }
+      }
+
+      tabs.forEach((tab) => tab.addEventListener('click', () => show(tab.dataset.screen)));
+      links.forEach((link) =>
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          show(link.dataset.screenLink);
+        }),
+      );
+      document
+        .querySelectorAll('[data-noop]')
+        .forEach((link) => link.addEventListener('click', (event) => event.preventDefault()));
+
+      $('theme-toggle').addEventListener('click', () => {
+        const dark = document.documentElement.dataset.theme === 'dark';
+        document.documentElement.dataset.theme = dark ? 'light' : 'dark';
+        $('theme-toggle').textContent = dark ? 'Dark mode' : 'Light mode';
+      });
+
+      $('login-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const email = $('login-email').value.trim();
+        const password = $('login-password').value;
+        if (!email || !password) {
+          $('login-error').hidden = false;
+          $('login-error').textContent = 'Enter your email and master password.';
+          toast('Email and master password are required', 'error');
+          return;
+        }
+        $('login-error').hidden = true;
+        const button = $('login-submit');
+        button.disabled = true;
+        button.textContent = 'Signing in…';
+        setTimeout(() => {
+          button.disabled = false;
+          button.textContent = 'Sign in';
+          show('vault');
+          toast('Vault unlocked');
+        }, 450);
+      });
+      $('recovery-link').addEventListener('click', (event) => {
+        event.preventDefault();
+        openConfirm({
+          title: 'Recovery access',
+          body: 'The full flow uses your recovery key to set a new master password. This PoC keeps that screen out of scope.',
+          confirm: 'Back to sign in',
+          onConfirm: () => {},
+        });
+      });
+      $('forgot-link').addEventListener('click', (event) => {
+        event.preventDefault();
+        toast('Use your recovery key, or ask an administrator.');
+      });
+
+      $('vault-search').addEventListener('input', (event) => {
+        query = event.target.value;
+        visibleLimit = 5;
+        renderVault();
+      });
+      $('vault-search-button').addEventListener('click', () => {
+        show('vault');
+        $('vault-search').focus();
+      });
+      $('vault-folder').addEventListener('change', (event) => {
+        folder = event.target.value;
+        visibleLimit = 5;
+        renderVault();
+      });
+      $('vault-sort').addEventListener('change', (event) => {
+        sort = event.target.value;
+        renderVault();
+      });
+      document.querySelectorAll('[data-filter]').forEach((button) =>
+        button.addEventListener('click', () => {
+          filter = button.dataset.filter;
+          visibleLimit = 5;
+          renderVault();
+        }),
+      );
+      $('vault-clear').addEventListener('click', () => {
+        query = '';
+        filter = 'all';
+        folder = 'all';
+        sort = 'updated';
+        visibleLimit = 5;
+        $('vault-search').value = '';
+        $('vault-folder').value = 'all';
+        $('vault-sort').value = 'updated';
+        renderVault();
+      });
+      $('vault-more').addEventListener('click', () => {
+        visibleLimit += 4;
+        renderVault();
+      });
+      document
+        .querySelectorAll('[data-open-editor]')
+        .forEach((button) => button.addEventListener('click', () => openEditor()));
+      document.addEventListener('click', (event) => {
+        const row = event.target.closest('[data-id]');
+        if (row && (row.classList.contains('vault-row') || row.classList.contains('mini-row')))
+          openDetail(row.dataset.id);
+        const clearEmpty = event.target.closest('[data-clear-empty]');
+        if (clearEmpty) $('vault-clear').click();
+      });
+
+      $('detail-back').addEventListener('click', () => show('vault'));
+      $('detail-reveal').addEventListener('click', () => {
+        reveal = !reveal;
+        renderDetail();
+      });
+      $('detail-open').addEventListener('click', () => {
+        const item = items.find((entry) => entry.id === activeId);
+        toast(
+          item?.href ? `Would open ${item.href}` : 'No website saved for this item',
+          item?.href ? 'default' : 'error',
+        );
+      });
+      $('detail-edit').addEventListener('click', () => openEditor(items.find((entry) => entry.id === activeId)));
+      $('detail-trash').addEventListener('click', () => {
+        const item = items.find((entry) => entry.id === activeId);
+        if (!item) return;
+        openConfirm({
+          title: 'Move item to trash?',
+          body: `${item.name} will move to Trash and stay recoverable for 30 days.`,
+          confirm: 'Move to trash',
+          danger: true,
+          onConfirm: () => {
+            items.splice(
+              items.findIndex((entry) => entry.id === activeId),
+              1,
+            );
+            show('vault');
+            toast('Item moved to trash');
+          },
+        });
+      });
+      document.querySelectorAll('[data-copy-field]').forEach((button) =>
+        button.addEventListener('click', () => {
+          const item = items.find((entry) => entry.id === activeId);
+          if (!item) return;
+          const field = button.dataset.copyField;
+          copyValue(
+            field === 'totp' ? item.totp : item[field],
+            field === 'url' ? 'Website' : field[0].toUpperCase() + field.slice(1),
+          );
+        }),
+      );
+
+      $('editor-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        saveEditor();
+      });
+      document.querySelectorAll('[data-editor-save]').forEach((button) => button.addEventListener('click', saveEditor));
+      document
+        .querySelectorAll('[data-editor-cancel]')
+        .forEach((button) => button.addEventListener('click', () => show('vault')));
+      $('editor-name').addEventListener('input', () => {
+        $('editor-name-error').hidden = true;
+        $('editor-name').classList.remove('invalid');
+        $('editor-name').removeAttribute('aria-invalid');
+      });
+      $('editor-toggle-password').addEventListener('click', () => {
+        const input = $('editor-password');
+        input.type = input.type === 'password' ? 'text' : 'password';
+      });
+      $('editor-generate').addEventListener('click', generateEditorPassword);
+
+      $('password-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const status = $('password-status');
+        const current = $('current-password').value;
+        const next = $('new-password').value;
+        const confirm = $('confirm-password').value;
+        status.hidden = false;
+        if (!current) {
+          status.textContent = 'Enter your current master password.';
+          status.style.color = 'var(--danger)';
+          return;
+        }
+        if (next.length < 12) {
+          status.textContent = 'Use at least 12 characters.';
+          status.style.color = 'var(--danger)';
+          return;
+        }
+        if (next !== confirm) {
+          status.textContent = 'The new passwords do not match.';
+          status.style.color = 'var(--danger)';
+          return;
+        }
+        status.textContent = 'Password changed. Other sessions were revoked.';
+        status.style.color = 'var(--success)';
+        $('password-form').reset();
+        toast('Password changed');
+      });
+      $('auto-lock-minutes').addEventListener('change', (event) => {
+        $('auto-lock-saved').textContent = `Saved on this device · ${nowLabel()}`;
+        if (event.target.value === 'Never')
+          toast('Auto-lock is off. The vault stays unlocked until you sign out.', 'error');
+        else toast('Auto-lock preference saved');
+      });
+      $('auto-lock-hidden').addEventListener('change', () => {
+        $('auto-lock-saved').textContent = `Saved on this device · ${nowLabel()}`;
+        toast('Hide-tab lock updated');
+      });
+      $('regenerate-codes').addEventListener('click', () => {
+        if (!twoFactorEnabled) return;
+        openConfirm({
+          title: 'Regenerate backup codes?',
+          body: 'Every existing backup code will stop working. Your current session stays active.',
+          confirm: 'Regenerate codes',
+          danger: true,
+          onConfirm: () => {
+            $('two-factor-state').textContent = 'Enabled · 10 backup codes remaining';
+            toast('10 new backup codes generated');
+          },
+        });
+      });
+      $('disable-2fa').addEventListener('click', () => {
+        if (!twoFactorEnabled) {
+          twoFactorEnabled = true;
+          renderTwoFactor();
+          toast('Two-factor enabled');
+          return;
+        }
+        openConfirm({
+          title: 'Disable two-factor?',
+          body: 'The account will rely on the master password alone until you enable it again.',
+          confirm: 'Disable 2FA',
+          danger: true,
+          onConfirm: () => {
+            twoFactorEnabled = false;
+            renderTwoFactor();
+            toast('Two-factor disabled');
+          },
+        });
+      });
+
+      $('focus-invite').addEventListener('click', () => {
+        $('invite-email').focus();
+      });
+      $('invite-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const email = $('invite-email').value.trim();
+        const name = $('invite-name').value.trim();
+        const role = $('invite-role').value;
+        if (!email || !name) {
+          toast('Email and display name are required', 'error');
+          (!email ? $('invite-email') : $('invite-name')).focus();
+          return;
+        }
+        pending.unshift({ id: `pending-${Date.now()}`, name, email, role, expires: '23h' });
+        renderPending();
+        $('invite-form').reset();
+        toast('Setup link created · shown once');
+      });
+      $('pending-list').addEventListener('click', (event) => {
+        const button = event.target.closest('[data-revoke-pending]');
+        if (!button) return;
+        const invite = pending.find((entry) => entry.id === button.dataset.revokePending);
+        if (!invite) return;
+        openConfirm({
+          title: 'Revoke invitation?',
+          body: `The setup link for ${invite.email} will stop working immediately.`,
+          confirm: 'Revoke invitation',
+          danger: true,
+          onConfirm: () => {
+            pending.splice(pending.indexOf(invite), 1);
+            renderPending();
+            toast('Invitation revoked');
+          },
+        });
+      });
+      adminBody.addEventListener('click', (event) => {
+        const save = event.target.closest('[data-save-role]');
+        const toggle = event.target.closest('[data-toggle-user]');
+        const revoke = event.target.closest('[data-revoke-user]');
+        if (save) {
+          const user = users.find((entry) => entry.id === save.dataset.saveRole);
+          const select = adminBody.querySelector(`[data-role-select="${save.dataset.saveRole}"]`);
+          if (user && select) {
+            user.role = select.value;
+            renderUsers();
+            toast(`${user.name} is now ${user.role}`);
+          }
+        }
+        if (toggle) {
+          const user = users.find((entry) => entry.id === toggle.dataset.toggleUser);
+          if (!user) return;
+          if (user.status === 'active') {
+            openConfirm({
+              title: `Disable ${user.name}?`,
+              body: 'Their sessions will be revoked and they will not be able to sign in.',
+              confirm: 'Disable user',
+              danger: true,
+              onConfirm: () => {
+                user.status = 'disabled';
+                renderUsers();
+                toast(`${user.name} disabled`);
+              },
+            });
+          } else {
+            user.status = 'active';
+            renderUsers();
+            toast(`${user.name} enabled`);
+          }
+        }
+        if (revoke) {
+          const user = users.find((entry) => entry.id === revoke.dataset.revokeUser);
+          if (user)
+            openConfirm({
+              title: 'Revoke sessions?',
+              body: `All sessions for ${user.name} will be invalidated.`,
+              confirm: 'Revoke sessions',
+              danger: true,
+              onConfirm: () => toast(`Sessions revoked for ${user.name}`),
+            });
+        }
+      });
+
+      $('lock-button').addEventListener('click', () => {
+        lockOverlay.hidden = false;
+        lockError.hidden = true;
+        lockPassword.value = '';
+        lockPassword.focus();
+      });
+      $('lock-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (!lockPassword.value) {
+          lockError.hidden = false;
+          return;
+        }
+        lockOverlay.hidden = true;
+        show('vault');
+        toast('Vault unlocked');
+      });
+      $('lock-signout').addEventListener('click', () => {
+        lockOverlay.hidden = true;
+        show('login');
+        toast('Signed out');
+      });
+      document.addEventListener('keydown', (event) => {
+        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+          event.preventDefault();
+          show('vault');
+          $('vault-search').focus();
+        }
+        if (event.key === 'Escape' && !modal.hidden) closeModal();
+      });
+
+      /* Setup wizard */
+      let setupStep = 1;
+      let setupRecovery = '';
+      const recoveryAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      const setupStrength = $('setup-strength');
+      const setupStrengthLabel = $('setup-strength-label');
+
+      function generateRecoveryKey() {
+        const bytes = crypto.getRandomValues(new Uint32Array(26));
+        return [...bytes]
+          .map((byte) => recoveryAlphabet[byte % recoveryAlphabet.length])
+          .join('')
+          .replace(/(.{5})(?=.)/g, '$1-');
+      }
+
+      function renderSetup() {
+        document.querySelectorAll('[data-setup-step]').forEach((step) => {
+          step.hidden = Number(step.dataset.setupStep) !== setupStep;
+        });
+        document.querySelectorAll('[data-setup-step-label]').forEach((label) => {
+          const step = Number(label.dataset.setupStepLabel);
+          label.classList.toggle('done', step < setupStep);
+          if (step === setupStep) label.setAttribute('aria-current', 'step');
+          else label.removeAttribute('aria-current');
+        });
+        $('setup-step-count').textContent = setupStep > 4 ? 'complete' : `step ${setupStep} of 4`;
+        if (setupStep === 3) {
+          if (!setupRecovery) setupRecovery = generateRecoveryKey();
+          $('setup-recovery-key').textContent = setupRecovery;
+          $('setup-recovery-confirm').value = '';
+        }
+        if (setupStep === 4) {
+          $('setup-qr').innerHTML = Array.from({ length: 121 }, (_, index) => {
+            const finder =
+              (index % 11 < 3 || index % 11 > 7) && (Math.floor(index / 11) < 3 || Math.floor(index / 11) > 7);
+            return `<i class="${finder || (index * 7 + Math.floor(index / 11) * 5) % 9 < 4 ? 'on' : ''}"></i>`;
+          }).join('');
+        }
+        setTimeout(() => {
+          const focus =
+            setupStep === 1
+              ? $('setup-email')
+              : setupStep === 2
+                ? $('setup-password')
+                : setupStep === 3
+                  ? $('setup-recovery-confirm')
+                  : setupStep === 4
+                    ? $('setup-2fa-code')
+                    : $('setup-done-button');
+          focus?.focus();
+        }, 30);
+      }
+
+      function updateSetupStrength() {
+        const value = $('setup-password').value;
+        const sets = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((pattern) => pattern.test(value)).length;
+        const score = !value
+          ? 0
+          : Math.min(4, (value.length >= 12 ? 2 : 1) + (value.length >= 16 ? 1 : 0) + (sets >= 3 ? 1 : 0));
+        setupStrength.dataset.score = String(score);
+        setupStrength.querySelector('span').style.width = `${score * 25}%`;
+        setupStrengthLabel.textContent = !value
+          ? '12+ characters'
+          : ['Weak', 'Weak', 'Fair', 'Strong', 'Very strong'][score];
+      }
+
+      $('setup-password').addEventListener('input', updateSetupStrength);
+      document.querySelectorAll('[data-setup-form]').forEach((form) =>
+        form.addEventListener('submit', (event) => {
+          event.preventDefault();
+          const step = Number(form.dataset.setupForm);
+          if (step === 1) {
+            if (!$('setup-email').value.trim() || !$('setup-name').value.trim())
+              return toast('Email and display name are required', 'error');
+            setupStep = 2;
+          }
+          if (step === 2) {
+            const password = $('setup-password').value;
+            if (password.length < 12) {
+              $('setup-password-hint').textContent = 'Use at least 12 characters.';
+              $('setup-password-hint').className = 'error';
+              $('setup-password').focus();
+              return;
+            }
+            if (password !== $('setup-confirm').value) {
+              $('setup-password-hint').textContent = 'The passwords do not match.';
+              $('setup-password-hint').className = 'error';
+              $('setup-confirm').focus();
+              return;
+            }
+            $('setup-password-hint').className = 'hint';
+            setupStep = 3;
+          }
+          if (step === 3) {
+            const expected = setupRecovery.replaceAll('-', '').slice(0, 6).toUpperCase();
+            if ($('setup-recovery-confirm').value.replaceAll('-', '').trim().toUpperCase() !== expected) {
+              toast('Type the first 6 characters of the recovery key', 'error');
+              $('setup-recovery-confirm').focus();
+              return;
+            }
+            setupStep = 4;
+          }
+          if (step === 4) {
+            if ($('setup-2fa-code').value.length !== 6) return toast('Enter a 6-digit code or skip for now', 'error');
+            setupStep = 5;
+          }
+          renderSetup();
+        }),
+      );
+      document.querySelectorAll('[data-setup-prev]').forEach((button) =>
+        button.addEventListener('click', () => {
+          setupStep = Math.max(1, setupStep - 1);
+          renderSetup();
+        }),
+      );
+      $('setup-copy-key').addEventListener('click', () => copyValue(setupRecovery, 'Recovery key'));
+      $('setup-download-key').addEventListener('click', () => {
+        try {
+          const blob = new Blob(
+            [`Bridgewarden recovery key\n\n${setupRecovery}\n\nKeep this offline. It is shown once.\n`],
+            { type: 'text/plain' },
+          );
+          const url = URL.createObjectURL(blob);
+          const anchor = document.createElement('a');
+          anchor.href = url;
+          anchor.download = 'bridgewarden-recovery-key.txt';
+          document.body.appendChild(anchor);
+          anchor.click();
+          anchor.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 0);
+          toast('Recovery key downloaded', 'success');
+        } catch {
+          toast('Download is not available in this preview', 'error');
+        }
+      });
+      $('setup-skip-2fa').addEventListener('click', () => {
+        setupStep = 5;
+        renderSetup();
+      });
+      $('setup-done-button').addEventListener('click', () => {
+        show('vault');
+        toast('Vault ready');
+      });
+
+      renderVault();
+      renderUsers();
+      renderPending();
+      renderTwoFactor();
+      const initial = location.hash.replace('#', '');
+      if (initial === 'detail') {
+        openDetail(items[0].id);
+      } else if (initial === 'editor') {
+        openEditor();
+      } else {
+        show(screens.some((panel) => panel.dataset.screenPanel === initial) ? initial : 'vault');
+      }
+      window.addEventListener('hashchange', () => {
+        const next = location.hash.replace('#', '');
+        if (screens.some((panel) => panel.dataset.screenPanel === next)) show(next);
+      });
+    </script>
+  </body>
+</html>

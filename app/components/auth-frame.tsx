@@ -2,8 +2,9 @@ import type { ReactNode } from 'react';
 
 import type { LucideIcon } from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
+import { FramedPanel } from '~/components/framed-panel';
 
+export const AUTH_TITLE_ID = 'auth-heading';
 export const AUTH_PANEL_HEADING_ID = 'auth-panel-heading';
 
 type AuthFrameProps = {
@@ -18,11 +19,11 @@ type AuthFrameProps = {
 };
 
 export const AuthFrame = ({ title, description, points, panel, children }: AuthFrameProps) => (
-  <section aria-labelledby="auth-heading" className="flex w-full flex-1 items-center py-2 sm:py-6 lg:py-10">
+  <section aria-labelledby={AUTH_TITLE_ID} className="flex w-full flex-1 items-center py-2 sm:py-6 lg:py-10">
     <div className="mx-auto grid w-full max-w-5xl items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(340px,440px)] lg:gap-16">
       <div className="min-w-0">
         <h1
-          id="auth-heading"
+          id={AUTH_TITLE_ID}
           className="max-w-[12ch] text-balance text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl"
         >
           {title}
@@ -43,21 +44,9 @@ export const AuthFrame = ({ title, description, points, panel, children }: AuthF
           </ul>
         ) : null}
       </div>
-      <Card className="min-w-0 gap-0 py-0 shadow-none">
-        <CardHeader className="px-5 pt-5 pb-4 sm:px-6 sm:pt-6">
-          <CardTitle
-            id={AUTH_PANEL_HEADING_ID}
-            role="heading"
-            aria-level={2}
-            tabIndex={-1}
-            className="text-xl tracking-tight"
-          >
-            {panel.title}
-          </CardTitle>
-          {panel.description ? <CardDescription>{panel.description}</CardDescription> : null}
-        </CardHeader>
-        <CardContent className="px-5 pb-5 sm:px-6 sm:pb-6">{children}</CardContent>
-      </Card>
+      <FramedPanel headingId={AUTH_PANEL_HEADING_ID} title={panel.title} description={panel.description}>
+        {children}
+      </FramedPanel>
     </div>
   </section>
 );

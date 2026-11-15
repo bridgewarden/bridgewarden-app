@@ -1,6 +1,5 @@
-import { useEffect, useRef } from 'react';
-
-import { AUTH_PANEL_HEADING_ID, AuthFrame } from '~/components/auth-frame';
+import { AUTH_PANEL_HEADING_ID, AUTH_TITLE_ID, AuthFrame } from '~/components/auth-frame';
+import { useStepFocus } from '~/hooks/use-step-focus';
 import { t } from '~/lib/i18n/en';
 
 import { useRecoveryFlow } from '../recover.hooks';
@@ -20,13 +19,7 @@ const ERROR_KEYS: Record<
 
 export const RecoveryFlow = () => {
   const flow = useRecoveryFlow();
-  const previousStep = useRef(flow.step);
-
-  useEffect(() => {
-    if (previousStep.current === flow.step) return;
-    previousStep.current = flow.step;
-    document.getElementById(AUTH_PANEL_HEADING_ID)?.focus();
-  }, [flow.step]);
+  useStepFocus(flow.step, AUTH_TITLE_ID, AUTH_PANEL_HEADING_ID, { focusTitleOnMount: false });
 
   const formError = flow.error ? t(ERROR_KEYS[flow.error]) : null;
   const panel =

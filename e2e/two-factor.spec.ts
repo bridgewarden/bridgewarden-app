@@ -23,6 +23,7 @@ const signIn = async (page: Page) => {
 const openChallenge = async (page: Page) => {
   await signIn(page);
   await expect(page.getByRole('heading', { name: en['login.twoFactorTitle'] })).toBeVisible();
+  await expect(page.getByLabel(en['login.totpCode'])).toBeFocused();
 };
 
 const logout = async (page: Page) => {
@@ -84,13 +85,28 @@ test('logs in with a backup code', async ({ page }) => {
   await logout(page);
 });
 
-test('logs in with TOTP', async ({ page }) => {
+test('logs in with TOTP while the challenge input is busy', async ({ page }) => {
   await openChallenge(page);
   await expectNoSeriousA11yViolations(page, 'two-factor challenge');
-  await page.getByLabel(en['login.totpCode']).fill(nextStepCode(secret));
+  let release: () => void = () => undefined;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/auth/2fa', async (route) => {
+    await pending;
+    await route.continue();
+  });
+
+  const codeInput = page.getByLabel(en['login.totpCode']);
+  const backupButton = page.getByRole('button', { name: en['login.useBackupCode'] });
+  await codeInput.fill(nextStepCode(secret));
   await page.getByRole('button', { name: en['login.verifyCode'] }).click();
+  await expect(codeInput).toBeDisabled();
+  await expect(backupButton).toBeDisabled();
+  release();
 
   await expect(page).toHaveURL(/\/app$/);
+  await page.unroute('**/auth/2fa');
   await logout(page);
 });
 

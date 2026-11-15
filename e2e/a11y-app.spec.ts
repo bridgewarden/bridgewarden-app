@@ -29,6 +29,7 @@ test('core vault surfaces and dialogs are accessible', async ({ page }) => {
   await firstItem.focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog')).toBeVisible();
+  await page.waitForTimeout(250);
   await expectNoSeriousA11yViolations(page, 'item detail dialog');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toBeHidden();

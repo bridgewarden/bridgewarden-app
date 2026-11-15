@@ -39,6 +39,7 @@ test('enrolls TOTP and captures backup codes', async ({ page }) => {
 
   await page.getByRole('link', { name: en['common.settings'] }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(en['settings.title']);
+  await waitForHydration(page);
 
   await page.getByLabel(en['settings.twoFactor.password'], { exact: true }).fill(E2E_ADMIN.password);
   expect(

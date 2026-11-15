@@ -15,7 +15,8 @@ const signIn = async (page: Page) => {
 test('unauthenticated home redirects to login', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveURL(/\/login\?next=%2Fapp$/);
-  await expect(page.getByRole('button', { name: en['common.lock'] })).toBeDisabled();
+  await expect(page.getByRole('button', { name: en['common.theme'] })).toBeVisible();
+  await expect(page.getByRole('button', { name: en['common.lock'] })).toHaveCount(0);
 });
 
 test('unauthenticated app access returns to the requested path after login', async ({ page }) => {
@@ -35,6 +36,10 @@ test('login unlocks the app, redirects an authenticated visit, and logout revoke
 
   await expect(page).toHaveURL(/\/app$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(en['vault.title']);
+  await expect(page.getByRole('link', { name: en['vault.title'], exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
   await expect(page.getByText(E2E_ADMIN.displayName)).toBeVisible();
 
   const session = (await page.context().cookies()).find((cookie) => cookie.name === 'bw_session');

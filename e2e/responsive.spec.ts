@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { en } from '../app/lib/i18n/en';
-import { signIn, unlockVault } from './fixtures';
+import { E2E_ADMIN, signIn, unlockVault } from './fixtures';
 
 const assertNoOverflow = async (page: import('@playwright/test').Page) => {
   await expect
@@ -27,6 +27,7 @@ for (const width of [360, 768, 1024]) {
       const box = await menu.boundingBox();
       expect(box?.width).toBeGreaterThanOrEqual(44);
       await menu.click();
+      await expect(page.getByRole('menu').getByText(E2E_ADMIN.displayName)).toBeVisible();
       await expect(page.getByRole('menuitem', { name: en['trash.title'] })).toBeVisible();
       await page.keyboard.press('Escape');
     }

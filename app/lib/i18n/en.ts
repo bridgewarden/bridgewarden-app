@@ -1,5 +1,6 @@
 export const en = {
   'app.name': 'Bridgewarden',
+  'app.zeroKnowledge': 'Zero-knowledge vault',
   'app.tagline': 'Zero-knowledge password manager for personal and family use, deployed on Cloudflare.',
 
   'common.signIn': 'Sign in',
@@ -14,6 +15,7 @@ export const en = {
   'common.close': 'Close',
   'common.retry': 'Retry',
   'common.menu': 'Account menu',
+  'common.primaryNavigation': 'Primary navigation',
   'common.offline': 'You are offline. Cached content remains available.',
   'common.backToVault': 'Back to vault',
 

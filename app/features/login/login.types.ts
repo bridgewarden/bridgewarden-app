@@ -1,3 +1,8 @@
+export type LoginFieldErrors = {
+  email: string | null;
+  password: string | null;
+};
+
 export type PreloginResponse =
   { ok: true; kdfAlg: string; kdfSalt: string; kdfIterations: number } | { ok: false; error: string };
 

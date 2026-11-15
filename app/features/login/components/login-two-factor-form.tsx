@@ -35,10 +35,6 @@ export const LoginTwoFactorForm = ({ challenge, busy, actions }: LoginTwoFactorF
       }}
     >
       <div className="space-y-2">
-        <h2 className="text-lg font-medium">{t('login.twoFactorTitle')}</h2>
-        <p className="text-sm text-muted-foreground">{t('login.twoFactorDescription')}</p>
-      </div>
-      <div className="space-y-2">
         <Label htmlFor="login-2fa-code">{backupMode ? t('login.backupCode') : t('login.totpCode')}</Label>
         <Input
           ref={inputRef}
@@ -48,6 +44,7 @@ export const LoginTwoFactorForm = ({ challenge, busy, actions }: LoginTwoFactorF
           inputMode={backupMode ? 'text' : 'numeric'}
           maxLength={backupMode ? 32 : 6}
           placeholder={backupMode ? 'XXXXX-XXXXX' : '000000'}
+          disabled={busy}
           value={code}
           aria-invalid={error !== null}
           aria-describedby={error ? 'login-2fa-error' : undefined}
@@ -62,14 +59,20 @@ export const LoginTwoFactorForm = ({ challenge, busy, actions }: LoginTwoFactorF
           {error}
         </p>
       ) : null}
+      <Button type="submit" className="min-h-11 w-full" disabled={busy}>
+        {busy ? t('login.signingIn') : t('login.verifyCode')}
+      </Button>
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" className="min-h-11" disabled={busy}>
-          {busy ? t('login.signingIn') : t('login.verifyCode')}
-        </Button>
-        <Button type="button" variant="outline" className="min-h-11" disabled={busy} onClick={onToggleBackupMode}>
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11 flex-1"
+          disabled={busy}
+          onClick={onToggleBackupMode}
+        >
           {backupMode ? t('login.useTotp') : t('login.useBackupCode')}
         </Button>
-        <Button type="button" variant="ghost" className="min-h-11" disabled={busy} onClick={onBack}>
+        <Button type="button" variant="ghost" className="min-h-11 flex-1" disabled={busy} onClick={onBack}>
           {t('login.back')}
         </Button>
       </div>

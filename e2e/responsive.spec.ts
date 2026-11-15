@@ -1,13 +1,32 @@
 import { expect, test } from '@playwright/test';
 
 import { en } from '../app/lib/i18n/en';
-import { E2E_ADMIN, signIn, unlockVault } from './fixtures';
+import { E2E_ADMIN, signIn, unlockVault, waitForHydration } from './fixtures';
 
 const assertNoOverflow = async (page: import('@playwright/test').Page) => {
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
     .toBe(true);
 };
+
+for (const width of [320, 390, 1440]) {
+  test(`auth pages fit at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto('/login');
+    await waitForHydration(page);
+    await assertNoOverflow(page);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+    const loginButton = await page.getByRole('button', { name: en['login.submit'] }).boundingBox();
+    expect(loginButton?.height).toBeGreaterThanOrEqual(44);
+
+    await page.goto('/recover');
+    await waitForHydration(page);
+    await assertNoOverflow(page);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+    const recoverButton = await page.getByRole('button', { name: en['recover.email.submit'] }).boundingBox();
+    expect(recoverButton?.height).toBeGreaterThanOrEqual(44);
+  });
+}
 
 for (const width of [360, 768, 1024]) {
   test(`core surfaces fit at ${width}px`, async ({ page }) => {

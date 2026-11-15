@@ -1,3 +1,6 @@
+import { KeyRoundIcon, ShieldCheckIcon } from 'lucide-react';
+
+import { AuthFrame } from '~/components/auth-frame';
 import { t } from '~/lib/i18n/en';
 
 import { useLoginFlow } from '../login.hooks';
@@ -6,15 +9,22 @@ import { LoginTwoFactorForm } from './login-two-factor-form';
 
 export const LoginPanel = () => {
   const flow = useLoginFlow();
+  const challenge = Boolean(flow.challengeToken);
 
   return (
-    <section className="mx-auto w-full max-w-md space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">{t('login.title')}</h1>
-        <p className="text-muted-foreground">{t('login.description')}</p>
-      </div>
-
-      {flow.challengeToken ? (
+    <AuthFrame
+      title={t('login.guidance.title')}
+      description={t('app.tagline')}
+      points={[
+        { icon: KeyRoundIcon, text: t('login.point.local') },
+        { icon: ShieldCheckIcon, text: t('login.point.recovery') },
+      ]}
+      panel={{
+        title: challenge ? t('login.twoFactorTitle') : t('login.title'),
+        description: challenge ? t('login.twoFactorDescription') : t('login.description'),
+      }}
+    >
+      {challenge ? (
         <LoginTwoFactorForm
           challenge={{
             code: flow.challengeCode,
@@ -33,7 +43,7 @@ export const LoginPanel = () => {
       ) : (
         <LoginCredentialsForm
           credentials={{ email: flow.email, password: flow.password }}
-          errors={{ field: flow.fieldError, form: flow.formError }}
+          errors={{ email: flow.fieldErrors.email, password: flow.fieldErrors.password, form: flow.formError }}
           busy={flow.busy}
           actions={{
             onEmailChange: flow.changeEmail,
@@ -42,6 +52,6 @@ export const LoginPanel = () => {
           }}
         />
       )}
-    </section>
+    </AuthFrame>
   );
 };

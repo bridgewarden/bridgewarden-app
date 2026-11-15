@@ -7,14 +7,14 @@ import { TOTP_CODE_PATTERN } from '~/lib/totp-code';
 import { clearVaultKey } from '~/lib/vault/key-store';
 
 import { useLoginRequestEffects, useLoginSuccessEffects } from './hooks';
-import type { ChallengeResponse, LoginResponse, PreloginResponse } from './login.types';
+import type { ChallengeResponse, LoginFieldErrors, LoginResponse, PreloginResponse } from './login.types';
 
 export const useLoginFlow = () => {
   const [searchParams] = useSearchParams();
   const next = safeNextPath(searchParams.get('next'));
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fieldError, setFieldError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<LoginFieldErrors>({ email: null, password: null });
   const [formError, setFormError] = useState<string | null>(null);
   const [challengeToken, setChallengeToken] = useState<string | null>(null);
   const [challengeCode, setChallengeCode] = useState('');
@@ -61,12 +61,12 @@ export const useLoginFlow = () => {
 
   const changeEmail = (value: string) => {
     setEmail(value);
-    setFieldError(null);
+    setFieldErrors((errors) => ({ ...errors, email: null }));
   };
 
   const changePassword = (value: string) => {
     setPassword(value);
-    setFieldError(null);
+    setFieldErrors((errors) => ({ ...errors, password: null }));
   };
 
   const changeChallengeCode = (value: string) => {
@@ -76,13 +76,18 @@ export const useLoginFlow = () => {
 
   const submitCredentials = () => {
     const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail || !password) {
-      setFieldError(t('login.missingFields'));
+    const errors: LoginFieldErrors = {
+      email: normalizedEmail ? null : t('common.required'),
+      password: password ? null : t('common.required'),
+    };
+
+    if (errors.email || errors.password) {
+      setFieldErrors(errors);
       setFormError(null);
       return;
     }
 
-    setFieldError(null);
+    setFieldErrors({ email: null, password: null });
     setFormError(null);
     setFlowActive(true);
     clearVaultKey();
@@ -134,7 +139,7 @@ export const useLoginFlow = () => {
   return {
     email,
     password,
-    fieldError,
+    fieldErrors,
     formError,
     challengeToken,
     challengeCode,

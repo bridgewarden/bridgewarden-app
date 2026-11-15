@@ -1,12 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFetcher } from 'react-router';
 
+import { t } from '~/lib/i18n/en';
+
 import { prepareRecoveryReset } from '../../lib/crypto/recovery-reset';
 import { isMasterPasswordAcceptable } from '../../lib/password-policy';
 import { storeKeyMaterial } from '../../lib/vault/key-material';
 import { setVaultKey } from '../../lib/vault/key-store';
 import type { VaultKeyMaterial } from '../../lib/vault/types';
-import type { RecoveryError, RecoveryLookupResponse, RecoveryResetResponse, RecoveryStep } from './recover.types';
+import type {
+  RecoveryError,
+  RecoveryFieldErrors,
+  RecoveryLookupResponse,
+  RecoveryResetResponse,
+  RecoveryStep,
+} from './recover.types';
+
+const EMPTY_FIELD_ERRORS: RecoveryFieldErrors = {
+  recoveryKey: null,
+  password: null,
+  confirmation: null,
+};
 
 type Prepared = {
   vaultKey: Uint8Array;
@@ -26,6 +40,7 @@ export const useRecoveryFlow = () => {
   const [newRecoveryKey, setNewRecoveryKey] = useState('');
   const [sessionIssued, setSessionIssued] = useState(true);
   const [error, setError] = useState<RecoveryError | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<RecoveryFieldErrors>(EMPTY_FIELD_ERRORS);
   const [preparing, setPreparing] = useState(false);
   const preparedRef = useRef<Prepared | null>(null);
   const handledLookup = useRef<RecoveryLookupResponse | null>(null);
@@ -71,23 +86,40 @@ export const useRecoveryFlow = () => {
         setPassword('');
         setConfirmation('');
         setWrapper(null);
+        setFieldErrors(EMPTY_FIELD_ERRORS);
+        setError(null);
         setStep('success');
       });
     }
   }, [email, resetFetcher.data]);
 
   const submitEmail = () => {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    setEmail(normalizedEmail);
     setError(null);
-    lookupFetcher.submit({ email }, { method: 'post', action: '/auth/recover/lookup', encType: 'application/json' });
+    lookupFetcher.submit(
+      { email: normalizedEmail },
+      { method: 'post', action: '/auth/recover/lookup', encType: 'application/json' },
+    );
   };
 
   const submitReset = async () => {
     if (!wrapper) return;
-    if (!isMasterPasswordAcceptable(password) || password !== confirmation) {
-      setError('invalid');
+
+    const errors: RecoveryFieldErrors = {
+      recoveryKey: recoveryKey.trim() ? null : t('common.required'),
+      password: isMasterPasswordAcceptable(password) ? null : t('password.hint'),
+      confirmation: password === confirmation ? null : t('password.mismatch'),
+    };
+
+    if (errors.recoveryKey || errors.password || errors.confirmation) {
+      setFieldErrors(errors);
+      setError(null);
       return;
     }
 
+    setFieldErrors(EMPTY_FIELD_ERRORS);
     setError(null);
     setPreparing(true);
 
@@ -109,6 +141,16 @@ export const useRecoveryFlow = () => {
     }
   };
 
+  const backToEmail = () => {
+    setWrapper(null);
+    setRecoveryKey('');
+    setPassword('');
+    setConfirmation('');
+    setFieldErrors(EMPTY_FIELD_ERRORS);
+    setError(null);
+    setStep('email');
+  };
+
   return {
     step,
     email,
@@ -118,6 +160,7 @@ export const useRecoveryFlow = () => {
     newRecoveryKey,
     sessionIssued,
     error,
+    fieldErrors,
     busy: preparing || lookupFetcher.state !== 'idle' || resetFetcher.state !== 'idle',
     changeEmail: (value: string) => {
       setEmail(value);
@@ -125,16 +168,20 @@ export const useRecoveryFlow = () => {
     },
     changeRecoveryKey: (value: string) => {
       setRecoveryKey(value);
+      setFieldErrors((errors) => ({ ...errors, recoveryKey: null }));
       setError(null);
     },
     changePassword: (value: string) => {
       setPassword(value);
+      setFieldErrors((errors) => ({ ...errors, password: null, confirmation: null }));
       setError(null);
     },
     changeConfirmation: (value: string) => {
       setConfirmation(value);
+      setFieldErrors((errors) => ({ ...errors, confirmation: null }));
       setError(null);
     },
+    backToEmail,
     submitEmail,
     submitReset,
   };

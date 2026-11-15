@@ -1,9 +1,8 @@
+import { PasswordStrengthMeter } from '~/components/password-strength-meter';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
 import { t, type MessageKey } from '~/lib/i18n/en';
-
-import { STRENGTH_KEYS, STRENGTH_WIDTH } from '../setup.constants';
 
 type SetupPasswordStepProps = {
   values: { password: string; confirmPassword: string };
@@ -38,12 +37,12 @@ export const SetupPasswordStep = ({ values, fieldError, deriving, score, actions
         autoComplete="new-password"
         spellCheck={false}
         value={values.password}
-        aria-invalid={fieldError === 'setup.password.hint'}
+        aria-invalid={fieldError === 'password.hint'}
         aria-describedby={fieldError ? 'setup-password-hint setup-password-error' : 'setup-password-hint'}
         onChange={(event) => actions.onPasswordChange(event.target.value)}
       />
       <p id="setup-password-hint" className="text-sm text-muted-foreground">
-        {t('setup.password.hint')}
+        {t('password.hint')}
       </p>
     </div>
     <div className="space-y-2">
@@ -54,25 +53,12 @@ export const SetupPasswordStep = ({ values, fieldError, deriving, score, actions
         autoComplete="new-password"
         spellCheck={false}
         value={values.confirmPassword}
-        aria-invalid={fieldError === 'setup.password.mismatch'}
+        aria-invalid={fieldError === 'password.mismatch'}
         aria-describedby={fieldError ? 'setup-password-error' : undefined}
         onChange={(event) => actions.onConfirmPasswordChange(event.target.value)}
       />
     </div>
-    <div className="space-y-1">
-      <div
-        role="progressbar"
-        aria-label={t('setup.password.strength')}
-        aria-valuemin={0}
-        aria-valuemax={4}
-        aria-valuenow={score}
-        aria-valuetext={t(STRENGTH_KEYS[score])}
-        className="h-2 w-full overflow-hidden rounded-full bg-muted"
-      >
-        <div className={`h-full bg-primary transition-all ${STRENGTH_WIDTH[score]}`} />
-      </div>
-      <p className="text-sm text-muted-foreground">{t(STRENGTH_KEYS[score])}</p>
-    </div>
+    <PasswordStrengthMeter score={score} />
     {fieldError ? (
       <p id="setup-password-error" role="alert" className="text-sm text-destructive">
         {t(fieldError)}

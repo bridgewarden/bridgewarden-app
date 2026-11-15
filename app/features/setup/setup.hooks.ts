@@ -2,6 +2,7 @@ import { useEffect, useReducer, useRef, useState } from 'react';
 import { useBlocker, useFetcher, useNavigate } from 'react-router';
 
 import { t, type MessageKey } from '~/lib/i18n/en';
+import { passwordScore } from '~/lib/password-policy';
 import { storeKeyMaterial } from '~/lib/vault/key-material';
 import { clearVaultKey, setVaultKey } from '~/lib/vault/key-store';
 
@@ -9,7 +10,6 @@ import { ERROR_KEY } from './setup.constants';
 import { generateSetupKeyMaterial, toSetupPayload } from '../../lib/crypto/setup-keys';
 import {
   isMasterPasswordValid,
-  passwordScore,
   passwordsMatch,
   recoveryConfirmationMatches,
   stepNumber,
@@ -110,12 +110,12 @@ export const useSetupFlow = () => {
 
   const submitPassword = async () => {
     if (!isMasterPasswordValid(password)) {
-      setFieldError('setup.password.hint');
+      setFieldError('password.hint');
       return;
     }
 
     if (!passwordsMatch(password, confirmPassword)) {
-      setFieldError('setup.password.mismatch');
+      setFieldError('password.mismatch');
       return;
     }
 

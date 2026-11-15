@@ -19,6 +19,49 @@ test('unauthenticated home redirects to login', async ({ page }) => {
   await expect(page.getByRole('button', { name: en['common.lock'] })).toHaveCount(0);
 });
 
+test('login focuses email and validates each field separately', async ({ page }) => {
+  await page.goto('/login');
+  await waitForHydration(page);
+
+  const email = page.getByLabel(en['login.email']);
+  const password = page.getByLabel(en['login.password']);
+  const submit = page.getByRole('button', { name: en['login.submit'] });
+
+  await expect(email).toBeFocused();
+  await submit.click();
+  await expect(email).toBeFocused();
+  await expect(email).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.locator('#login-email-error')).toHaveText(en['common.required']);
+
+  await email.fill(E2E_ADMIN.email);
+  await submit.click();
+  await expect(password).toBeFocused();
+  await expect(password).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.locator('#login-password-error')).toHaveText(en['common.required']);
+});
+
+test('login shows a generic form alert for rejected credentials', async ({ page }) => {
+  await page.goto('/login');
+  await waitForHydration(page);
+
+  await page.getByLabel(en['login.email']).fill(E2E_ADMIN.email);
+  await page.getByLabel(en['login.password']).fill('wrong master password');
+  await page.getByRole('button', { name: en['login.submit'] }).click();
+
+  await expect(page.getByRole('alert')).toHaveText(en['login.invalidCredentials']);
+});
+
+test('login exposes the recovery entry', async ({ page }) => {
+  await page.goto('/login');
+  await waitForHydration(page);
+
+  await page.getByRole('link', { name: en['login.recovery'] }).click();
+
+  await expect(page).toHaveURL(/\/recover$/);
+  await expect(page.getByRole('heading', { name: en['recover.title'] })).toBeVisible();
+  await expect(page.getByLabel(en['recover.email.label'])).toBeFocused();
+});
+
 test('unauthenticated app access returns to the requested path after login', async ({ page }) => {
   await page.goto('/app/trash?x=1');
   await expect(page).toHaveURL(/\/login\?next=/);

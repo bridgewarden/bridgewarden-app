@@ -1,6 +1,8 @@
+import { MIN_MASTER_PASSWORD_LENGTH } from '~/lib/password-policy';
+
 import { normalizeRecoveryKey } from '../../lib/crypto/recovery';
 
-import { MIN_MASTER_PASSWORD_LENGTH, SETUP_STEPS } from './setup.constants';
+import { SETUP_STEPS } from './setup.constants';
 import type { AccountInput, SetupStep } from './setup.types';
 
 export const isMasterPasswordValid = (password: string): boolean => password.length >= MIN_MASTER_PASSWORD_LENGTH;
@@ -22,17 +24,6 @@ export const recoveryConfirmationMatches = (recoveryKey: string, confirmation: s
   const actual = normalizeRecoveryKey(confirmation);
 
   return expected.length === 6 && actual.length >= 6 && actual.slice(0, 6) === expected;
-};
-
-export const passwordScore = (password: string): number => {
-  if (!password) return 0;
-
-  return [
-    password.length >= MIN_MASTER_PASSWORD_LENGTH,
-    /[a-z]/.test(password) && /[A-Z]/.test(password),
-    /\d/.test(password),
-    /[^A-Za-z0-9]/.test(password),
-  ].filter(Boolean).length;
 };
 
 export const stepNumber = (step: SetupStep): number | null => {

@@ -142,21 +142,6 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
 
   return (
     <div className="flex min-h-screen flex-col">
-      {user && !twoFactorEnabled ? (
-        <Alert
-          role="status"
-          inert={locked}
-          className="rounded-none border-x-0 border-t-0 px-4 py-2 [&>svg]:mx-auto [&>svg]:size-4"
-        >
-          <ShieldAlertIcon aria-hidden="true" />
-          <AlertDescription className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-2 text-center">
-            <span>{t('twoFactor.banner')}</span>
-            <Link to="/app/settings" className="font-medium underline underline-offset-4">
-              {t('twoFactor.enableNow')}
-            </Link>
-          </AlertDescription>
-        </Alert>
-      ) : null}
       <AppHeader
         theme={theme}
         user={user}
@@ -168,8 +153,19 @@ export const AppShell = ({ children, theme, user, twoFactorEnabled }: AppShellPr
         onLock={lockVault}
         onLogout={logout}
       />
+      {user && !twoFactorEnabled ? (
+        <Alert role="status" inert={locked} className="rounded-none border-x-0 border-t-0 px-4 py-2">
+          <ShieldAlertIcon aria-hidden="true" />
+          <AlertDescription className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-2 text-center">
+            <span>{t('twoFactor.banner')}</span>
+            <Link to="/app/settings" className="font-medium underline underline-offset-4">
+              {t('twoFactor.enableNow')}
+            </Link>
+          </AlertDescription>
+        </Alert>
+      ) : null}
       <OfflineBanner />
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-8">
+      <main className="mx-auto flex w-full min-w-0 max-w-6xl flex-1 flex-col px-4 py-6 sm:px-6">
         {locked ? (
           <LockedOverlay signingOut={fetcher.state !== 'idle'} onUnlock={unlockVault} onSignOut={logout} />
         ) : (

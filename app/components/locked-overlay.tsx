@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { LockIcon } from 'lucide-react';
 
 import { Button } from '~/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '~/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '~/components/ui/dialog';
 import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
 import { t } from '~/lib/i18n/en';
@@ -17,15 +17,29 @@ type LockedOverlayProps = {
   onSignOut: () => void;
 };
 
+const LOCKOUT_NOTICE_MS = 1200;
+
 export const LockedOverlay = ({ signingOut, onUnlock, onSignOut }: LockedOverlayProps) => {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<LockError | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const signOutTimer = useRef<number | null>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
+    return () => {
+      if (signOutTimer.current !== null) window.clearTimeout(signOutTimer.current);
+    };
   }, []);
+
+  const signOut = () => {
+    if (signOutTimer.current !== null) {
+      window.clearTimeout(signOutTimer.current);
+      signOutTimer.current = null;
+    }
+    onSignOut();
+  };
 
   const submit = async () => {
     if (!password || busy) return;
@@ -35,10 +49,14 @@ export const LockedOverlay = ({ signingOut, onUnlock, onSignOut }: LockedOverlay
     try {
       const result = await onUnlock(password);
       setPassword('');
+
       if (result.status === 'locked-out') {
         setError('locked-out');
-        onSignOut();
-      } else if (result.status !== 'ok') {
+        signOutTimer.current = window.setTimeout(signOut, LOCKOUT_NOTICE_MS);
+        return;
+      }
+
+      if (result.status !== 'ok') {
         setError(result.status);
         inputRef.current?.focus();
       }
@@ -51,79 +69,79 @@ export const LockedOverlay = ({ signingOut, onUnlock, onSignOut }: LockedOverlay
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 p-4 backdrop-blur">
-      <Card role="dialog" aria-modal="true" aria-labelledby="locked-title" className="w-full max-w-md shadow-lg">
-        <CardHeader>
+    <Dialog open>
+      <DialogContent
+        showCloseButton={false}
+        className="max-w-md bg-card duration-0 data-[state=closed]:animate-none data-[state=open]:animate-none"
+        onEscapeKeyDown={(event) => event.preventDefault()}
+        onInteractOutside={(event) => event.preventDefault()}
+      >
+        <DialogHeader>
           <LockIcon className="size-8" aria-hidden="true" />
-          <CardTitle id="locked-title" role="heading" aria-level={1} className="text-2xl">
-            {t('lock.title')}
-          </CardTitle>
-          <CardDescription>{t('lock.description')}</CardDescription>
-        </CardHeader>
+          <DialogTitle className="text-2xl">{t('lock.title')}</DialogTitle>
+          <DialogDescription>{t('lock.description')}</DialogDescription>
+        </DialogHeader>
 
-        <CardContent>
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void submit();
-            }}
-          >
-            <div className="space-y-2">
-              <Label htmlFor="unlock-password">{t('lock.password')}</Label>
-              <Input
-                id="unlock-password"
-                ref={inputRef}
-                type="password"
-                autoComplete="current-password"
-                spellCheck={false}
-                maxLength={1024}
-                value={password}
-                aria-invalid={error !== null}
-                aria-describedby={error ? 'unlock-error' : undefined}
-                readOnly={busy || signingOut}
-                disabled={error === 'unavailable'}
-                onChange={(event) => {
-                  setPassword(event.target.value);
-                  setError(null);
-                }}
-              />
-            </div>
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submit();
+          }}
+        >
+          <div className="space-y-2">
+            <Label htmlFor="unlock-password">{t('lock.password')}</Label>
+            <Input
+              id="unlock-password"
+              ref={inputRef}
+              className="h-11"
+              type="password"
+              autoComplete="current-password"
+              spellCheck={false}
+              maxLength={1024}
+              value={password}
+              aria-invalid={error !== null}
+              aria-describedby={error ? 'unlock-error' : undefined}
+              readOnly={busy || signingOut}
+              disabled={error === 'unavailable'}
+              onChange={(event) => {
+                setPassword(event.target.value);
+                setError(null);
+              }}
+            />
+          </div>
 
-            {error ? (
-              <p id="unlock-error" role="alert" className="text-sm text-destructive">
-                {t(
-                  error === 'invalid'
-                    ? 'lock.invalid'
-                    : error === 'locked-out'
-                      ? 'lock.tooManyAttempts'
-                      : 'lock.unavailable',
-                )}
-              </p>
-            ) : null}
+          {error ? (
+            <p id="unlock-error" role="alert" className="text-sm text-destructive">
+              {t(
+                error === 'invalid'
+                  ? 'lock.invalid'
+                  : error === 'locked-out'
+                    ? 'lock.tooManyAttempts'
+                    : 'lock.unavailable',
+              )}
+            </p>
+          ) : null}
 
-            <Button
-              type="submit"
-              className="min-h-11 w-full"
-              disabled={busy || signingOut || !password || error === 'unavailable' || error === 'locked-out'}
-            >
-              {busy ? t('lock.unlocking') : t('lock.submit')}
-            </Button>
-          </form>
-        </CardContent>
-
-        <CardFooter>
           <Button
-            type="button"
-            variant="outline"
+            type="submit"
             className="min-h-11 w-full"
-            disabled={busy || signingOut}
-            onClick={onSignOut}
+            disabled={busy || signingOut || !password || error === 'unavailable' || error === 'locked-out'}
           >
-            {t('lock.signOut')}
+            {busy ? t('lock.unlocking') : t('lock.submit')}
           </Button>
-        </CardFooter>
-      </Card>
-    </div>
+        </form>
+
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11 w-full"
+          disabled={busy || signingOut}
+          onClick={signOut}
+        >
+          {signingOut ? t('lock.signingOut') : t('lock.signOut')}
+        </Button>
+      </DialogContent>
+    </Dialog>
   );
 };

@@ -1,9 +1,14 @@
+import { Link } from 'react-router';
+
+import { ONBOARDING_PANEL_HEADING_ID, ONBOARDING_TITLE_ID, OnboardingShell } from '~/components/onboarding-shell';
 import { Button } from '~/components/ui/button';
-import { Input } from '~/components/ui/input';
-import { Label } from '~/components/ui/label';
+import { useStepFocus } from '~/hooks/use-step-focus';
 import { t } from '~/lib/i18n/en';
 
+import { MEMBER_SETUP_ERROR_KEY, type MemberSetupError } from '../member-setup.constants';
 import { useMemberSetup } from '../member-setup.hooks';
+import { MemberSetupPasswordStep } from './member-setup-password-step';
+import { MemberSetupRecoveryStep } from './member-setup-recovery-step';
 
 type MemberSetupPanelProps = {
   invitation: { email: string; displayName: string; role: string } | null;
@@ -11,99 +16,74 @@ type MemberSetupPanelProps = {
 
 export const MemberSetupPanel = ({ invitation }: MemberSetupPanelProps) => {
   const flow = useMemberSetup(invitation?.email ?? '');
+  const step = flow.material ? 'recovery' : 'password';
+  useStepFocus(step, ONBOARDING_TITLE_ID, ONBOARDING_PANEL_HEADING_ID);
+
+  const fieldError: MemberSetupError | null =
+    flow.error === 'password' || flow.error === 'mismatch' || flow.error === 'recovery' ? flow.error : null;
+  const formError = flow.error && !fieldError ? t(MEMBER_SETUP_ERROR_KEY[flow.error]) : null;
+
   if (!invitation) {
     return (
-      <section className="mx-auto w-full max-w-md space-y-4">
-        <h1 className="text-2xl font-semibold">{t('memberSetup.title')}</h1>
-        <p role="alert" className="text-sm text-destructive">
-          {t('memberSetup.invalid')}
-        </p>
-      </section>
+      <OnboardingShell
+        title={t('memberSetup.title')}
+        steps={[]}
+        currentStep={null}
+        panel={{ title: t('memberSetup.invalid') }}
+      >
+        <Button asChild className="min-h-11 w-full sm:w-auto">
+          <Link to="/login">{t('common.signIn')}</Link>
+        </Button>
+      </OnboardingShell>
     );
   }
 
   return (
-    <section className="mx-auto w-full max-w-md space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">{t('memberSetup.title')}</h1>
-        <p className="text-muted-foreground">
-          {invitation.displayName} · {invitation.email} · {invitation.role}
-        </p>
-      </div>
-
-      {flow.material ? (
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <p id="member-recovery-label" className="text-sm font-medium">
-              {t('memberSetup.recoveryLabel')}
-            </p>
-            <code
-              id="member-recovery-key"
-              aria-labelledby="member-recovery-label"
-              className="block rounded-md border bg-muted px-3 py-2 font-mono text-sm break-all select-all"
-            >
-              {flow.recoveryKey}
-            </code>
-            <p className="text-sm text-muted-foreground">{t('memberSetup.recoveryWarning')}</p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="member-recovery-confirm">{t('memberSetup.recoveryConfirm')}</Label>
-            <Input
-              id="member-recovery-confirm"
-              value={flow.confirmation}
-              aria-invalid={flow.error === 'recovery'}
-              onChange={(event) => flow.changeConfirmation(event.target.value)}
-            />
-          </div>
-          {flow.error ? (
-            <p role="alert" className="text-sm text-destructive">
-              {t(`memberSetup.error.${flow.error}` as 'memberSetup.error.server')}
-            </p>
-          ) : null}
-          <Button type="button" className="min-h-11" disabled={flow.busy} onClick={flow.submit}>
-            {t('memberSetup.submit')}
-          </Button>
+    <OnboardingShell
+      title={t('memberSetup.title')}
+      summary={
+        <div className="space-y-1">
+          <p className="font-medium text-foreground">{invitation.displayName}</p>
+          <p className="break-all">{invitation.email}</p>
+          <p className="font-mono text-[10px] tracking-[0.08em] uppercase">{invitation.role}</p>
         </div>
-      ) : (
-        <form
-          className="space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void flow.generate();
+      }
+      steps={[
+        { id: 'password', label: t('memberSetup.password') },
+        { id: 'recovery', label: t('memberSetup.recoveryLabel') },
+      ]}
+      currentStep={step}
+      panel={{ title: t(step === 'password' ? 'memberSetup.password' : 'memberSetup.recoveryLabel') }}
+    >
+      {step === 'password' ? (
+        <MemberSetupPasswordStep
+          values={{ password: flow.password, confirmPassword: flow.confirmPassword }}
+          error={fieldError}
+          formError={formError}
+          busy={flow.deriving}
+          score={flow.score}
+          actions={{
+            onPasswordChange: flow.changePassword,
+            onConfirmPasswordChange: flow.changeConfirmPassword,
+            onSubmit: () => void flow.generate(),
           }}
-        >
-          <div className="space-y-2">
-            <Label htmlFor="member-password">{t('memberSetup.password')}</Label>
-            <Input
-              id="member-password"
-              type="password"
-              autoComplete="new-password"
-              value={flow.password}
-              aria-invalid={flow.error === 'password'}
-              onChange={(event) => flow.changePassword(event.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="member-password-confirm">{t('memberSetup.confirmPassword')}</Label>
-            <Input
-              id="member-password-confirm"
-              type="password"
-              autoComplete="new-password"
-              value={flow.confirmPassword}
-              aria-invalid={flow.error === 'mismatch'}
-              onChange={(event) => flow.changeConfirmPassword(event.target.value)}
-            />
-          </div>
-          {flow.error ? (
-            <p role="alert" className="text-sm text-destructive">
-              {t(`memberSetup.error.${flow.error}` as 'memberSetup.error.server')}
-            </p>
-          ) : null}
-          <Button type="submit" className="min-h-11" disabled={flow.deriving}>
-            {flow.deriving ? t('memberSetup.generating') : t('memberSetup.generate')}
-          </Button>
-        </form>
+        />
+      ) : (
+        <MemberSetupRecoveryStep
+          values={{ recoveryKey: flow.recoveryKey, confirmation: flow.confirmation }}
+          error={fieldError}
+          formError={formError}
+          busy={flow.busy}
+          status={{ copy: flow.copyStatus, download: flow.downloadStatus }}
+          actions={{
+            onConfirmationChange: flow.changeConfirmation,
+            onCopy: () => void flow.copyRecoveryKey(),
+            onDownload: flow.downloadRecoveryKey,
+            onBack: flow.backToPassword,
+            onSubmit: flow.submit,
+          }}
+        />
       )}
-    </section>
+    </OnboardingShell>
   );
 };

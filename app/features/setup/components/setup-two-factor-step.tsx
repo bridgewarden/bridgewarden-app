@@ -12,10 +12,6 @@ type SetupTwoFactorStepProps = {
 
 export const SetupTwoFactorStep = ({ errorMessage, canRetry, busy, onRetry, onContinue }: SetupTwoFactorStepProps) => (
   <div className="space-y-4">
-    <div className="space-y-2">
-      <h2 className="text-lg font-medium">{t('setup.twoFactor.heading')}</h2>
-      <p className="text-sm text-muted-foreground">{t('setup.twoFactor.description')}</p>
-    </div>
     <Alert variant="destructive" role="status">
       <AlertDescription>{t('setup.twoFactor.warning')}</AlertDescription>
     </Alert>
@@ -25,13 +21,13 @@ export const SetupTwoFactorStep = ({ errorMessage, canRetry, busy, onRetry, onCo
         <AlertDescription>{errorMessage}</AlertDescription>
       </Alert>
     ) : null}
-    <div className="flex gap-2">
+    <div className="flex flex-col-reverse gap-2 sm:flex-row">
       {canRetry ? (
-        <Button type="button" variant="outline" className="min-h-11" disabled={busy} onClick={onRetry}>
+        <Button type="button" variant="outline" className="min-h-11 w-full sm:w-auto" disabled={busy} onClick={onRetry}>
           {t('setup.retry')}
         </Button>
       ) : null}
-      <Button type="button" className="min-h-11" disabled={busy} onClick={onContinue}>
+      <Button type="button" className="min-h-11 w-full sm:flex-1" disabled={busy} onClick={onContinue}>
         {busy ? t('setup.submitting') : t('setup.twoFactor.continue')}
       </Button>
     </div>

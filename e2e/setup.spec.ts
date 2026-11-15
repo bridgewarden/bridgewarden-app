@@ -4,11 +4,25 @@ import { expect, test } from '@playwright/test';
 
 import { E2E_ADMIN, unlockVault, waitForHydration } from './fixtures';
 import { resetE2eDatabase } from './reset-database';
+import { assertNoOverflow } from './layout';
 
 test.describe.configure({ mode: 'serial' });
 test.beforeAll(() => {
   resetE2eDatabase();
 });
+
+for (const width of [320, 390, 1440]) {
+  test(`setup frame fits at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto('/setup');
+    await waitForHydration(page);
+    await assertNoOverflow(page);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+    await expect(page.locator('[aria-current="step"]')).toHaveCount(1);
+    const action = await page.getByRole('button', { name: 'Continue' }).boundingBox();
+    expect(action?.height).toBeGreaterThanOrEqual(44);
+  });
+}
 
 const zeros = (length: number) => Buffer.from(new Uint8Array(length)).toString('base64url');
 
@@ -58,6 +72,8 @@ test('creates the first admin through the wizard and locks setup', async ({ page
   await page.getByLabel('Email').fill(E2E_ADMIN.email);
   await page.getByLabel('Display name').fill(E2E_ADMIN.displayName);
   await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('heading', { name: 'Master password', level: 2 })).toBeFocused();
+  await expect(page.locator('[aria-current="step"]')).toHaveCount(1);
 
   await page.getByLabel('Master password', { exact: true }).fill(E2E_ADMIN.password);
   await page.getByLabel('Confirm master password').fill('different password');
@@ -66,8 +82,16 @@ test('creates the first admin through the wizard and locks setup', async ({ page
 
   await page.getByLabel('Confirm master password').fill(E2E_ADMIN.password);
   await page.getByRole('button', { name: 'Create keys' }).click();
+  await expect(page.getByRole('heading', { name: 'Save your recovery key', level: 2 })).toBeFocused();
 
-  const recoveryKey = (await page.locator('#setup-recovery-key').textContent())!.trim();
+  await page.getByRole('button', { name: 'Back' }).click();
+  await expect(page.getByRole('heading', { name: 'Master password', level: 2 })).toBeFocused();
+  await page.getByLabel('Master password', { exact: true }).fill(E2E_ADMIN.password);
+  await page.getByLabel('Confirm master password').fill(E2E_ADMIN.password);
+  await page.getByRole('button', { name: 'Create keys' }).click();
+  await expect(page.getByRole('heading', { name: 'Save your recovery key', level: 2 })).toBeFocused();
+
+  const recoveryKey = (await page.locator('#recovery-key').textContent())!.trim();
   await writeFile('.wrangler/e2e/recovery-key.txt', recoveryKey);
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.getByRole('button', { name: 'Copy' }).click();
@@ -88,7 +112,9 @@ test('creates the first admin through the wizard and locks setup', async ({ page
   await page.getByLabel('Type the first 6 characters').fill(recoveryKey.replaceAll('-', '').slice(0, 6).toLowerCase());
   await page.getByRole('button', { name: 'Confirm recovery key' }).click();
 
+  await expect(page.getByRole('heading', { name: 'Two-factor authentication', level: 2 })).toBeFocused();
   await expect(page.getByText('Two-factor is optional. We recommend enabling it right after setup;')).toBeVisible();
+  await expect(page.locator('#setup-qr')).toHaveCount(0);
   await page.getByRole('button', { name: 'Finish setup' }).click();
 
   await expect(page).toHaveURL(/\/app$/);

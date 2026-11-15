@@ -1,43 +1,17 @@
-import { useEffect } from 'react';
-
+import { copySecret } from '~/lib/clipboard';
 import { t } from '~/lib/i18n/en';
 
 type RecoveryActionsOptions = {
   recoveryKey: string;
-  copyStatus: 'idle' | 'copied' | 'failed';
   setCopyStatus: (status: 'idle' | 'copied' | 'failed') => void;
   setDownloadStatus: (status: 'idle' | 'downloaded' | 'failed') => void;
 };
 
-export const useRecoveryActions = ({
-  recoveryKey,
-  copyStatus,
-  setCopyStatus,
-  setDownloadStatus,
-}: RecoveryActionsOptions) => {
-  useEffect(() => {
-    if (copyStatus !== 'copied') return;
-
-    const timeout = window.setTimeout(async () => {
-      try {
-        await navigator.clipboard.writeText('');
-      } catch {
-        // Clipboard may be unavailable; the status still resets.
-      }
-      setCopyStatus('idle');
-    }, 60_000);
-
-    return () => window.clearTimeout(timeout);
-  }, [copyStatus, setCopyStatus]);
-
+export const useRecoveryActions = ({ recoveryKey, setCopyStatus, setDownloadStatus }: RecoveryActionsOptions) => {
   const copyRecoveryKey = async () => {
     setCopyStatus('idle');
-    try {
-      await navigator.clipboard.writeText(recoveryKey);
-      setCopyStatus('copied');
-    } catch {
-      setCopyStatus('failed');
-    }
+    const copied = await copySecret(recoveryKey);
+    setCopyStatus(copied ? 'copied' : 'failed');
   };
 
   const downloadRecoveryKey = () => {

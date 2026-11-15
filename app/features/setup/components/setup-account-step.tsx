@@ -22,10 +22,6 @@ export const SetupAccountStep = ({ account, errors, actions }: SetupAccountStepP
     }}
   >
     <div className="space-y-2">
-      <h2 className="text-lg font-medium">{t('setup.account.heading')}</h2>
-      <p className="text-sm text-muted-foreground">{t('setup.account.description')}</p>
-    </div>
-    <div className="space-y-2">
       <Label htmlFor="setup-email">{t('setup.account.email')}</Label>
       <Input
         id="setup-email"
@@ -60,7 +56,7 @@ export const SetupAccountStep = ({ account, errors, actions }: SetupAccountStepP
         {errors.message}
       </p>
     ) : null}
-    <Button type="submit" className="min-h-11">
+    <Button type="submit" className="min-h-11 w-full sm:w-auto">
       {t('setup.account.continue')}
     </Button>
   </form>

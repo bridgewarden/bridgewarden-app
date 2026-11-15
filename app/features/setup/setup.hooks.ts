@@ -1,23 +1,16 @@
-import { useEffect, useReducer, useRef, useState } from 'react';
-import { useBlocker, useFetcher, useNavigate } from 'react-router';
+import { useEffect, useReducer, useState } from 'react';
+import { useBlocker } from 'react-router';
 
+import { useRecoveryActions } from '~/hooks/use-recovery-actions';
 import { t, type MessageKey } from '~/lib/i18n/en';
 import { passwordScore } from '~/lib/password-policy';
-import { storeKeyMaterial } from '~/lib/vault/key-material';
 import { clearVaultKey, setVaultKey } from '~/lib/vault/key-store';
 
+import { generateSetupKeyMaterial } from '../../lib/crypto/setup-keys';
 import { ERROR_KEY } from './setup.constants';
-import { generateSetupKeyMaterial, toSetupPayload } from '../../lib/crypto/setup-keys';
-import {
-  isMasterPasswordValid,
-  passwordsMatch,
-  recoveryConfirmationMatches,
-  stepNumber,
-  validateAccount,
-} from './setup.lib';
+import { useSetupSubmission } from './hooks/use-setup-submission';
+import { isMasterPasswordValid, passwordsMatch, recoveryConfirmationMatches, validateAccount } from './setup.lib';
 import { initialSetupState, setupReducer } from './setup.state';
-import { useRecoveryActions } from './hooks';
-import type { SetupActionResponse } from './setup.types';
 
 export const useSetupFlow = () => {
   const [state, dispatch] = useReducer(setupReducer, initialSetupState);
@@ -28,16 +21,9 @@ export const useSetupFlow = () => {
   const [downloadStatus, setDownloadStatus] = useState<'idle' | 'downloaded' | 'failed'>('idle');
   const [fieldError, setFieldError] = useState<MessageKey | null>(null);
   const [deriving, setDeriving] = useState(false);
-  const fetcher = useFetcher<SetupActionResponse>();
-  const navigate = useNavigate();
-  const headingRef = useRef<HTMLHeadingElement>(null);
-  const wasSubmitting = useRef(false);
 
   const blocker = useBlocker(state.keys !== null && state.step !== 'done' && state.step !== 'configured');
-
-  useEffect(() => {
-    headingRef.current?.focus();
-  }, [state.step]);
+  const submission = useSetupSubmission({ state, dispatch });
 
   useEffect(() => {
     if (state.keys === null) return;
@@ -50,53 +36,6 @@ export const useSetupFlow = () => {
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
   }, [state.keys]);
-
-  useEffect(() => {
-    if (!fetcher.data) return;
-
-    if (fetcher.data.ok) {
-      const keys = state.keys;
-      if (keys) {
-        void storeKeyMaterial(state.email, keys).catch(() => undefined);
-      }
-      dispatch({ type: 'succeeded' });
-      return;
-    }
-
-    if (fetcher.data.error === 'forbidden' || fetcher.data.error === 'already-configured') {
-      clearVaultKey();
-    }
-
-    dispatch({ type: 'failed', error: fetcher.data.error });
-  }, [fetcher.data, state.email, state.keys]);
-
-  useEffect(() => {
-    if (state.step === 'done' && fetcher.state === 'idle') {
-      navigate('/app', { replace: true });
-    }
-  }, [state.step, fetcher.state, navigate]);
-
-  useEffect(() => {
-    if (fetcher.state !== 'idle') {
-      wasSubmitting.current = true;
-      return;
-    }
-
-    if (wasSubmitting.current && state.step === 'submitting' && !fetcher.data) {
-      dispatch({ type: 'failed', error: 'network' });
-    }
-
-    wasSubmitting.current = false;
-  }, [fetcher.state, state.step, fetcher.data]);
-
-  const submitSetup = () => {
-    if (!state.keys) return;
-
-    fetcher.submit(toSetupPayload(state.keys, { email: state.email, displayName: state.displayName }), {
-      method: 'post',
-      encType: 'application/json',
-    });
-  };
 
   const submitAccount = () => {
     const account = validateAccount(state.email, state.displayName);
@@ -149,20 +88,9 @@ export const useSetupFlow = () => {
 
   const { copyRecoveryKey, downloadRecoveryKey } = useRecoveryActions({
     recoveryKey: state.recoveryKey,
-    copyStatus,
     setCopyStatus,
     setDownloadStatus,
   });
-
-  const continueTwoFactor = () => {
-    dispatch({ type: 'two-factor-continued' });
-    submitSetup();
-  };
-
-  const retry = () => {
-    dispatch({ type: 'retry' });
-    submitSetup();
-  };
 
   const leave = () => {
     clearVaultKey();
@@ -177,12 +105,21 @@ export const useSetupFlow = () => {
     setFieldError(null);
   };
 
+  const backToPassword = () => {
+    clearVaultKey();
+    dispatch({ type: 'back-to-password' });
+    setPassword('');
+    setConfirmPassword('');
+    setConfirmation('');
+    setCopyStatus('idle');
+    setDownloadStatus('idle');
+    setFieldError(null);
+  };
+
   return {
     view: state,
     blocker,
-    headingRef,
-    currentStep: stepNumber(state.step),
-    busy: fetcher.state !== 'idle' || state.step === 'submitting',
+    busy: submission.busy,
     errorMessage: state.error ? t(ERROR_KEY[state.error]) : null,
     fieldError,
     leave,
@@ -223,12 +160,13 @@ export const useSetupFlow = () => {
       },
       copyRecoveryKey,
       downloadRecoveryKey,
+      backToPassword,
       submitRecovery,
     },
     twoFactor: {
       canRetry: Boolean(state.error && state.keys),
-      retry,
-      continueTwoFactor,
+      retry: submission.retry,
+      continueTwoFactor: submission.continueTwoFactor,
     },
   };
 };

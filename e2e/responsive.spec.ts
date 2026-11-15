@@ -2,12 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { en } from '../app/lib/i18n/en';
 import { E2E_ADMIN, signIn, unlockVault, waitForHydration } from './fixtures';
-
-const assertNoOverflow = async (page: import('@playwright/test').Page) => {
-  await expect
-    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
-    .toBe(true);
-};
+import { assertNoOverflow } from './layout';
 
 for (const width of [320, 390, 1440]) {
   test(`auth pages fit at ${width}px`, async ({ page }) => {

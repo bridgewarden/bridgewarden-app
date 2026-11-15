@@ -26,10 +26,6 @@ export const SetupPasswordStep = ({ values, fieldError, deriving, score, actions
     }}
   >
     <div className="space-y-2">
-      <h2 className="text-lg font-medium">{t('setup.password.heading')}</h2>
-      <p className="text-sm text-muted-foreground">{t('setup.password.description')}</p>
-    </div>
-    <div className="space-y-2">
       <Label htmlFor="setup-password">{t('setup.password.label')}</Label>
       <Input
         id="setup-password"
@@ -64,11 +60,17 @@ export const SetupPasswordStep = ({ values, fieldError, deriving, score, actions
         {t(fieldError)}
       </p>
     ) : null}
-    <div className="flex gap-2">
-      <Button type="button" variant="outline" className="min-h-11" disabled={deriving} onClick={actions.onBack}>
+    <div className="flex flex-col-reverse gap-2 sm:flex-row">
+      <Button
+        type="button"
+        variant="outline"
+        className="min-h-11 w-full sm:w-auto"
+        disabled={deriving}
+        onClick={actions.onBack}
+      >
         {t('setup.back')}
       </Button>
-      <Button type="submit" className="min-h-11" disabled={deriving}>
+      <Button type="submit" className="min-h-11 w-full sm:flex-1" disabled={deriving}>
         {deriving ? t('setup.password.generating') : t('setup.password.continue')}
       </Button>
     </div>
